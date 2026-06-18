@@ -1,63 +1,46 @@
 # Credit Card Manager
 
-A private desktop app for credit-card churning. It replaces the unwieldy
-tracking spreadsheet with something purpose-built: your cards, the signup
-bonuses you're working, your recurring perks and renewal cycles, your 5/24
-velocity, and what your points are actually worth — for you, your spouse, and
-your businesses.
+A desktop app for tracking credit card churning. It keeps your cards, signup
+bonuses, recurring credits, annual-fee renewals, 5/24 status, and point balances
+in one place, across multiple people and businesses.
 
-Everything lives in a single SQLite file on your own machine. **No cloud, no
-account, no one else can see it.**
+It runs locally and stores everything in a SQLite file on your computer. There
+is no server and no account.
 
-## What it does
+## Features
 
-- **Cards** — every card across people and businesses, with statement/payment
-  dates, annual fees, and lifecycle status (applied → open → closed/rejected).
-- **Signup bonuses** — spend target, deadline, and progress, with the bonus's
-  **cash value computed automatically** from your point valuations (so "60,000
-  points" shows up as real dollars, and never goes stale).
-- **Points** — each program (Amex MR, Chase UR, airline miles…) with an owner,
-  a balance, and a cents-per-point valuation that drives every bonus's worth.
-- **Benefits** — recurring credits and perks (dining, travel, subscriptions)
-  with use-by windows, an "available now / expiring soon" view, and a one-click
-  *used* toggle so nothing is left on the table.
-- **5/24 velocity** — how many personal cards each person has opened in the last
-  24 months, who's under the limit, and when the next slot frees up.
-- **Referrals** — track referrals between the people you manage: who referred
-  whom, for which card, and whether the bonus has paid.
-- **Import your credit report** — drop in an Experian PDF and it bootstraps your
-  cards automatically, matching each account to a known card product. Anything
-  it can't fully identify becomes a card you finish later (see below).
-- **Needs-info inbox** — instead of forcing you to fill everything up front, the
-  app flags cards missing the details that matter for churning and walks you
-  through them one at a time.
-- **Export & backup** — download a full JSON backup (and restore from it), or
-  CSV files per table for analysis in Excel or Sheets.
-
-## Who it's for
-
-Anyone running an active churning setup (r/churning style) who has outgrown a
-spreadsheet — especially across **multiple people and businesses**, with
-referrals between them.
+- Cards across people and businesses, with statement and payment dates, annual
+  fees, and status (applied, open, closed, rejected).
+- Signup bonuses with spend targets, deadlines, and progress. The bonus value is
+  calculated from your point valuations rather than typed in by hand.
+- Point programs, each with an owner, a balance, and a cents-per-point value.
+- Recurring benefits with use-by dates, a view of what's available or expiring,
+  and a used/not-used toggle.
+- 5/24 tracking per person, including when the next slot opens up.
+- Referrals between the people you manage.
+- Credit report import. Load an Experian PDF and it creates a card for each
+  account, matching what it can to known products; you fill in the rest.
+- A list of cards that are missing important details, so you can complete them
+  over time instead of all at once.
+- Export to JSON (with restore) or CSV.
 
 ## Download
 
-**[⬇ Download the latest release](https://github.com/itsdrewmiller/credit-card-manager/releases/latest)**
+Get the latest release from the
+[releases page](https://github.com/itsdrewmiller/credit-card-manager/releases/latest).
 
-- **macOS** (Apple Silicon) — download the `.dmg`, open it, and drag the app to Applications.
-- **Windows** — download the `.exe` and run it.
+- macOS (Apple Silicon): open the `.dmg` and drag the app to Applications.
+- Windows: run the `.exe`.
 
-Your data is created on first launch and stays on your computer. Prefer to build
-it yourself? See [AGENTS.md](./AGENTS.md).
+Your data is created the first time you open the app. To build it yourself, see
+[AGENTS.md](./AGENTS.md).
 
-## Your data is private
+## Privacy
 
-The app is local-first: there is no server and nothing is uploaded. Your credit
-report PDFs and any spreadsheet you import are only ever read on your machine.
-Use **Export & Backup** regularly to keep your own copy.
+Nothing leaves your machine. Credit report PDFs and any spreadsheet you import
+are only read locally. Use the export feature to keep your own backups.
 
----
+## More
 
-Building from source or contributing? See [AGENTS.md](./AGENTS.md) for setup,
-architecture, and the development workflow. The feature roadmap lives in
-[FEATURE_MAP.md](./FEATURE_MAP.md).
+- Roadmap: [FEATURE_MAP.md](./FEATURE_MAP.md)
+- Development setup and architecture: [AGENTS.md](./AGENTS.md)
