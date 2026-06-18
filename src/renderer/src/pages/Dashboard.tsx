@@ -42,11 +42,9 @@ export function Dashboard(): React.ReactElement {
       )}
 
       {health.data && (
-        <SimpleGrid cols={{ base: 2, sm: 4 }}>
+        <SimpleGrid cols={{ base: 2, sm: 2 }}>
           <Stat label="People" value={health.data.counts.people} />
           <Stat label="Cards" value={health.data.counts.cards} />
-          <Stat label="Catalog Products" value={health.data.counts.products} />
-          <Stat label="Issuers" value={health.data.counts.issuers} />
         </SimpleGrid>
       )}
     </>
