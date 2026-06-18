@@ -15,6 +15,7 @@ export interface ParsedTradeline {
   /** Normalized to our enum. */
   responsibility: 'authorized_user' | 'individual'
   openedDate: string | null // ISO
+  closedDate: string | null // ISO, when the report shows a Date Closed
   statusRaw: string | null
   /** Normalized to our card status. */
   status: 'open' | 'closed'
@@ -99,14 +100,19 @@ function parseBlock(block: string[]): Map<string, string> {
   return fields
 }
 
+/** Equifax suffixes closed/paid accounts (e.g. "CHASE CARD - Closed"); drop it. */
+function cleanCreditor(name: string): string {
+  return name.replace(/\s*-\s*(Closed|Paid|Transferred|Inactive)\s*$/i, '').trim()
+}
+
 /** Find the creditor name for a block: the non-noise line just above the address. */
 function findCreditor(items: string[], anchor: number): string {
   // Typically: creditor (anchor-2), address (anchor-1), "Date Reported:" (anchor).
   for (let j = anchor - 2; j >= anchor - 8 && j >= 0; j--) {
     const s = items[j]?.trim()
-    if (s && !isNoise(s)) return s
+    if (s && !isNoise(s)) return cleanCreditor(s)
   }
-  return items[anchor - 2]?.trim() ?? 'Unknown'
+  return cleanCreditor(items[anchor - 2]?.trim() ?? 'Unknown')
 }
 
 export function parseEquifaxAccounts(items: string[]): ParsedTradeline[] {
@@ -133,6 +139,7 @@ export function parseEquifaxAccounts(items: string[]): ParsedTradeline[] {
       responsibilityRaw,
       responsibility: normResponsibility(responsibilityRaw),
       openedDate: parseUsDate(fields.get('Date Opened:')),
+      closedDate: dateClosed,
       statusRaw,
       status: dateClosed || /closed|paid/i.test(statusRaw ?? '') ? 'closed' : 'open',
       creditLimitCents: parseMoneyCents(fields.get('Credit Limit:')),

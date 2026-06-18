@@ -102,22 +102,16 @@ try {
   assert(owned.length === 1, "Drew owns 1 card")
 
   // --- Needs-info derivation (Phase 1) ---
-  // The CSR above has product+owner+fee+openedDate but no statement/payment day.
-  const csrMissing = cardMissingFields(csr)
-  assert(
-    csrMissing.includes('statementDay') &&
-      csrMissing.includes('paymentDay') &&
-      !csrMissing.includes('openedDate'),
-    'needs-info flags missing statement/payment days but not the set open date'
-  )
+  // The CSR above has product + owner + fee + openedDate, so it's complete.
+  assert(cardMissingFields(csr).length === 0, 'a fully-filled card has no missing fields')
 
-  // A bare imported stub is missing nearly everything.
+  // A bare imported stub is missing all required fields.
   const stub = db
     .insert(card)
     .values({ rawCreditorName: 'CHASE CARD', status: 'open', source: 'imported' })
     .returning()
     .get()
-  assert(cardMissingFields(stub).length === 6, 'a fresh import stub is missing all 6 required fields')
+  assert(cardMissingFields(stub).length === 4, 'a fresh import stub is missing all 4 required fields')
 
   // --- Benefit status + EV (Phase 3) ---
   const at = new Date('2026-06-18T00:00:00')

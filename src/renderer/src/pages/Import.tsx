@@ -106,6 +106,7 @@ export function Import(): React.ReactElement {
           cardProductId: pid ? Number(pid) : null,
           network: chosen?.network ?? null,
           openedDate: t.openedDate,
+          closedDate: t.closedDate,
           status: t.status,
           responsibility: t.responsibility
         }

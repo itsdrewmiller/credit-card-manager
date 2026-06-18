@@ -55,9 +55,7 @@ export const CARD_REQUIRED_FIELDS = [
   'cardProductId',
   'ownerPersonId',
   'annualFeeCents',
-  'openedDate',
-  'statementDay',
-  'paymentDay'
+  'openedDate'
 ] as const
 export type CardRequiredField = (typeof CARD_REQUIRED_FIELDS)[number]
 
@@ -66,7 +64,5 @@ export const CARD_FIELD_LABELS: Record<CardRequiredField | 'bonus', string> = {
   ownerPersonId: 'Owner',
   annualFeeCents: 'Annual fee',
   openedDate: 'Open date',
-  statementDay: 'Statement day',
-  paymentDay: 'Payment day',
   bonus: 'Signup bonus'
 }

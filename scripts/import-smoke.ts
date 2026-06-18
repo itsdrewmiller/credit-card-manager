@@ -37,8 +37,13 @@ try {
 
   // Creditor names are real (not page-header noise).
   assert(
-    tradelines.every((t) => t.creditorName.length > 2 && !/Page \d|Confirmation/.test(t.creditorName)),
-    'every tradeline has a real creditor name'
+    tradelines.every(
+      (t) =>
+        t.creditorName.length > 2 &&
+        !/Page \d|Confirmation/.test(t.creditorName) &&
+        !/-\s*(Closed|Paid)\s*$/i.test(t.creditorName)
+    ),
+    'creditor names are real and free of the "- Closed" suffix'
   )
   console.log('  e.g.', tradelines.slice(0, 4).map((t) => t.creditorName).join(', '))
 
@@ -60,6 +65,15 @@ try {
   const cards = tradelines.filter((t) => t.isCreditCard)
   console.log(`• ${cards.length} look like credit cards`)
   assert(cards.length > 0, 'detected credit-card tradelines')
+
+  // Closed accounts carry a closed date where the report shows one.
+  const closed = tradelines.filter((t) => t.status === 'closed')
+  const closedWithDate = closed.filter((t) => t.closedDate)
+  console.log(`• ${closed.length} closed accounts, ${closedWithDate.length} with a closed date`)
+  assert(
+    closedWithDate.every((t) => /^\d{4}-\d{2}-\d{2}$/.test(t.closedDate!)),
+    'closed dates normalized to ISO'
+  )
   assert(
     tradelines.every((t) => t.responsibility === 'individual' || t.responsibility === 'authorized_user'),
     'responsibility normalized to enum'
@@ -92,6 +106,7 @@ try {
           status: t.status,
           responsibility: t.responsibility,
           openedDate: t.openedDate,
+          closedDate: t.closedDate,
           source: 'imported'
         })
         .run()

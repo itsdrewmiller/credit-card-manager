@@ -13,8 +13,6 @@ const upsert = z.object({
   rawAccountLabel: z.string().nullish(),
   network: z.string().nullish(),
   last4: z.string().nullish(),
-  statementDay: z.number().int().min(1).max(31).nullish(),
-  paymentDay: z.number().int().min(1).max(31).nullish(),
   annualFeeCents: z.number().int().nullish(),
   status: z.enum(CARD_STATUSES).default('open'),
   responsibility: z.string().nullish(),

@@ -106,8 +106,6 @@ export const card = sqliteTable(
 
     network: text('network'),
     last4: text('last4'), // captured from the Equifax report where shown
-    statementDay: integer('statement_day'), // 1-31
-    paymentDay: integer('payment_day'), // 1-31
     annualFeeCents: integer('annual_fee_cents'),
 
     status: text('status').notNull().default('open'), // CARD_STATUS

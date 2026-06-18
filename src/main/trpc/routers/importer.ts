@@ -30,6 +30,7 @@ const commitRow = z.object({
   ownerPersonId: z.number().int().nullish(),
   network: z.string().nullish(),
   openedDate: z.string().nullish(),
+  closedDate: z.string().nullish(),
   status: z.enum(['open', 'closed']).default('open'),
   responsibility: z.string().nullish()
 })
@@ -83,6 +84,7 @@ export const importerRouter = router({
               status: r.status,
               responsibility: r.responsibility ?? null,
               openedDate: r.openedDate ?? null,
+              closedDate: r.closedDate ?? null,
               source: 'imported'
             })
             .run()

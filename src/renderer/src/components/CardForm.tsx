@@ -28,8 +28,6 @@ export interface CardFormValue {
   businessId: number | null
   network: string | null
   last4: string | null
-  statementDay: number | null
-  paymentDay: number | null
   annualFeeCents: number | null
   status: CardStatus
   responsibility: string | null
@@ -69,8 +67,6 @@ export function CardForm({
       businessId: initial?.businessId != null ? String(initial.businessId) : '',
       network: initial?.network ?? '',
       last4: initial?.last4 ?? '',
-      statementDay: initial?.statementDay ?? ('' as number | ''),
-      paymentDay: initial?.paymentDay ?? ('' as number | ''),
       annualFeeDollars: centsToDollars(initial?.annualFeeCents),
       status: initial?.status ?? 'open',
       responsibility: initial?.responsibility ?? '',
@@ -88,8 +84,6 @@ export function CardForm({
       businessId: v.businessId ? Number(v.businessId) : null,
       network: v.network || null,
       last4: v.last4 || null,
-      statementDay: v.statementDay === '' ? null : Number(v.statementDay),
-      paymentDay: v.paymentDay === '' ? null : Number(v.paymentDay),
       annualFeeCents: parseCents(v.annualFeeDollars),
       status: v.status as CardStatus,
       responsibility: v.responsibility || null,
@@ -158,15 +152,6 @@ export function CardForm({
           thousandSeparator=","
           {...form.getInputProps('annualFeeDollars')}
         />
-      </SimpleGrid>
-      <SimpleGrid cols={2} mb="sm">
-        <NumberInput
-          label="Statement day"
-          min={1}
-          max={31}
-          {...form.getInputProps('statementDay')}
-        />
-        <NumberInput label="Payment day" min={1} max={31} {...form.getInputProps('paymentDay')} />
       </SimpleGrid>
 
       <Divider my="sm" label="Dates" />
