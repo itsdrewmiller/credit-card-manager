@@ -20,6 +20,8 @@ is no server and no account.
 - Referrals between the people you manage.
 - Credit report import. Load an Equifax PDF and it creates a card for each
   account, matching what it can to known products; you fill in the rest.
+  Business cards don't appear on your personal credit report, so add those by
+  hand using the guided business-card wizard.
 - A list of cards that are missing important details, so you can complete them
   over time instead of all at once.
 - Export to JSON (with restore) or CSV.

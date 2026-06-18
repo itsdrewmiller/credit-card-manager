@@ -4,9 +4,7 @@ import {
   IconLayoutDashboard,
   IconInbox,
   IconUsers,
-  IconBuildingStore,
   IconCreditCard,
-  IconBooks,
   IconGift,
   IconCoins,
   IconTicket,
@@ -19,10 +17,8 @@ import { Routes, Route, useLocation, useNavigate } from 'react-router-dom'
 import { trpc } from './trpc'
 import { Dashboard } from './pages/Dashboard'
 import { NeedsInfo } from './pages/NeedsInfo'
-import { People } from './pages/People'
-import { Businesses } from './pages/Businesses'
+import { PeopleAndBusinesses } from './pages/PeopleAndBusinesses'
 import { Cards } from './pages/Cards'
-import { Catalog } from './pages/Catalog'
 import { Points } from './pages/Points'
 import { Bonuses } from './pages/Bonuses'
 import { Benefits } from './pages/Benefits'
@@ -41,10 +37,8 @@ interface NavItem {
 const NAV: NavItem[] = [
   { to: '/', label: 'Dashboard', icon: <IconLayoutDashboard size={18} /> },
   { to: '/needs-info', label: 'Needs info', icon: <IconInbox size={18} /> },
-  { to: '/people', label: 'People', icon: <IconUsers size={18} /> },
-  { to: '/businesses', label: 'Businesses', icon: <IconBuildingStore size={18} /> },
+  { to: '/people', label: 'People & Businesses', icon: <IconUsers size={18} /> },
   { to: '/cards', label: 'Cards', icon: <IconCreditCard size={18} /> },
-  { to: '/catalog', label: 'Card Catalog', icon: <IconBooks size={18} /> },
   { to: '/bonuses', label: 'Signup Bonuses', icon: <IconGift size={18} /> },
   { to: '/points', label: 'Points', icon: <IconCoins size={18} /> },
   { to: '/benefits', label: 'Benefits', icon: <IconTicket size={18} /> },
@@ -101,10 +95,8 @@ export function App(): React.ReactElement {
         <Routes>
           <Route path="/" element={<Dashboard />} />
           <Route path="/needs-info" element={<NeedsInfo />} />
-          <Route path="/people" element={<People />} />
-          <Route path="/businesses" element={<Businesses />} />
+          <Route path="/people" element={<PeopleAndBusinesses />} />
           <Route path="/cards" element={<Cards />} />
-          <Route path="/catalog" element={<Catalog />} />
           <Route path="/bonuses" element={<Bonuses />} />
           <Route path="/points" element={<Points />} />
           <Route path="/benefits" element={<Benefits />} />

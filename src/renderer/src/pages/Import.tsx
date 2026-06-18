@@ -14,9 +14,16 @@ import {
   Stack
 } from '@mantine/core'
 import { notifications } from '@mantine/notifications'
-import { IconFileTypePdf, IconUpload, IconInfoCircle, IconCheck } from '@tabler/icons-react'
+import {
+  IconFileTypePdf,
+  IconUpload,
+  IconInfoCircle,
+  IconCheck,
+  IconBuildingStore
+} from '@tabler/icons-react'
 import { trpc } from '../trpc'
 import { PageHeader } from '../components/PageHeader'
+import { BusinessCardWizard } from '../components/BusinessCardWizard'
 import { formatDate } from '@shared/format'
 import type { ImportPreview, TradelineRow } from '../lib/types'
 
@@ -46,6 +53,7 @@ export function Import(): React.ReactElement {
   const [preview, setPreview] = useState<ImportPreview | null>(null)
   const [include, setInclude] = useState<Record<number, boolean>>({})
   const [productOverride, setProductOverride] = useState<Record<number, string>>({})
+  const [wizardOpen, setWizardOpen] = useState(false)
 
   const parse = trpc.importer.parseEquifax.useMutation({
     onSuccess: (data) => {
@@ -154,6 +162,25 @@ export function Import(): React.ReactElement {
           </Button>
         </Group>
       </Card>
+
+      <Alert color="gray" icon={<IconBuildingStore size={18} />} mb="lg" variant="light">
+        <Group justify="space-between" wrap="nowrap">
+          <Text size="sm">
+            Business cards don&apos;t appear on your personal credit report — add those by hand with
+            the guided wizard.
+          </Text>
+          <Button
+            variant="default"
+            size="xs"
+            leftSection={<IconBuildingStore size={14} />}
+            onClick={() => setWizardOpen(true)}
+          >
+            Add business card
+          </Button>
+        </Group>
+      </Alert>
+
+      <BusinessCardWizard opened={wizardOpen} onClose={() => setWizardOpen(false)} />
 
       {preview && (
         <>
