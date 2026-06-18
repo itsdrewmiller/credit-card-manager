@@ -1,12 +1,29 @@
-import { app, BrowserWindow, shell, session, dialog } from 'electron'
+import { app, BrowserWindow, shell, session, dialog, ipcMain } from 'electron'
 import { join } from 'node:path'
 import { is } from '@electron-toolkit/utils'
-import { createIPCHandler } from 'electron-trpc/main'
 import { openDatabase, runMigrations, type DB } from './db'
 import { seedCatalog } from './db/seed'
 import { appRouter } from './trpc/router'
+import { createCallerFactory } from './trpc/trpc'
+import type { TrpcRequest } from '../preload'
 
 let db: DB
+
+const createCaller = createCallerFactory(appRouter)
+
+/** Dispatch a renderer tRPC request to the matching procedure on the caller. */
+function registerTrpcIpc(): void {
+  ipcMain.handle('trpc:request', async (_event, op: TrpcRequest) => {
+    const caller = createCaller({ db }) as Record<string, unknown>
+    const fn = op.path
+      .split('.')
+      .reduce<unknown>((obj, key) => (obj as Record<string, unknown>)?.[key], caller)
+    if (typeof fn !== 'function') {
+      throw new Error(`Unknown procedure: ${op.path}`)
+    }
+    return (fn as (input: unknown) => Promise<unknown>)(op.input)
+  })
+}
 
 function migrationsFolder(): string {
   // Bundled via electron-builder extraResources in production; project root in dev.
@@ -92,14 +109,11 @@ app.whenReady().then(() => {
     return
   }
 
-  const win = createWindow()
-  createIPCHandler({ router: appRouter, windows: [win], createContext: async () => ({ db }) })
+  registerTrpcIpc()
+  createWindow()
 
   app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) {
-      const w = createWindow()
-      createIPCHandler({ router: appRouter, windows: [w], createContext: async () => ({ db }) })
-    }
+    if (BrowserWindow.getAllWindows().length === 0) createWindow()
   })
 })
 
