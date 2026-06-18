@@ -1,4 +1,4 @@
-import { app, BrowserWindow, shell } from 'electron'
+import { app, BrowserWindow, shell, session } from 'electron'
 import { join } from 'node:path'
 import { is } from '@electron-toolkit/utils'
 import { createIPCHandler } from 'electron-trpc/main'
@@ -44,6 +44,7 @@ function createWindow(): BrowserWindow {
 
   if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
     win.loadURL(process.env['ELECTRON_RENDERER_URL'])
+    win.webContents.openDevTools({ mode: 'detach' })
   } else {
     win.loadFile(join(__dirname, '../renderer/index.html'))
   }
@@ -51,7 +52,27 @@ function createWindow(): BrowserWindow {
   return win
 }
 
+/**
+ * Content-Security-Policy via response headers. Dev needs 'unsafe-inline' /
+ * 'unsafe-eval' / ws: for Vite + React Fast Refresh; production is strict. The
+ * app loads only local content and talks to the backend over IPC, never HTTP.
+ */
+function installCsp(): void {
+  const policy = is.dev
+    ? "default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: ws: http://localhost:*"
+    : "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self'"
+  session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
+    callback({
+      responseHeaders: {
+        ...details.responseHeaders,
+        'Content-Security-Policy': [policy]
+      }
+    })
+  })
+}
+
 app.whenReady().then(() => {
+  installCsp()
   initDatabase()
 
   const win = createWindow()
