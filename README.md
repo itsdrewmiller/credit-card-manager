@@ -40,16 +40,35 @@ Anyone running an active churning setup (r/churning style) who has outgrown a
 spreadsheet — especially across **multiple people and businesses**, with
 referrals between them.
 
-## Installing
+## Download & install
 
-Grab the installer for your platform from the
-[**Releases**](https://github.com/itsdrewmiller/credit-card-manager/releases)
-page — `.dmg` for macOS, `.exe` for Windows — and open it. It runs like any other
-desktop app, no technical setup required. Your data is created on first launch
-and stays on your computer.
+Get the latest installer from the releases page — it runs like any other desktop
+app, no technical setup required. Your data is created on first launch and stays
+on your computer.
 
-> macOS builds are currently unsigned, so the first launch may need a
-> right-click → **Open** to get past Gatekeeper.
+➡️ **[Download the latest release](https://github.com/itsdrewmiller/credit-card-manager/releases/latest)**
+&nbsp;·&nbsp; [all releases](https://github.com/itsdrewmiller/credit-card-manager/releases)
+
+On the release, open **Assets** and pick the file for your computer:
+
+### macOS
+
+1. Download the **`.dmg`** file.
+2. Open it and drag **Credit Card Manager** into your Applications folder.
+3. The first time, **right-click the app → Open** (the build is unsigned, so a
+   normal double-click shows an "unidentified developer" warning). After that it
+   opens normally.
+
+> The macOS build is currently **Apple Silicon (arm64)** only.
+
+### Windows
+
+1. Download the **`.exe`** installer.
+2. Run it. If Windows SmartScreen warns, click **More info → Run anyway** (the
+   build isn't code-signed yet), then follow the installer.
+
+No installer for your platform yet? You can also
+[build from source](./AGENTS.md).
 
 ## Your data is private
 
