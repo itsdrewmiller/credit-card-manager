@@ -14,9 +14,10 @@ export interface IssuerMatch {
 }
 
 /**
- * Experian "Account Name" values are issuer-level (e.g. "CHASE CARD"), so we
- * fuzzy-match the creditor name to an issuer via the catalog's alias corpus.
- * The exact product stays unmatched (a stub the user completes later).
+ * Credit-report creditor names are issuer-level (e.g. "CHASE CARD",
+ * "Elan Fin Svcs/Fidelity"), so we fuzzy-match the creditor name to an issuer
+ * via the catalog's alias corpus. The exact product stays unmatched (a stub the
+ * user completes later).
  */
 export function buildIssuerMatcher(rows: AliasRow[]): {
   match: (creditorName: string) => IssuerMatch | null

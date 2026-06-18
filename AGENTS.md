@@ -43,7 +43,7 @@ run and the card-product catalog seeds automatically.
 | `npm run typecheck` | Type-check main + renderer |
 | `npm run db:generate` | Regenerate SQL migrations from `src/main/db/schema.ts` |
 | `npm run db:smoke` | Headless data-layer test (no Electron) — migrations, seed, FKs, bonus/velocity/benefit/backup logic |
-| `npm run import:smoke` | Headless importer test against a local `Experian Report.pdf` |
+| `npm run import:smoke` | Headless importer test against a local `Equifax Report.pdf` |
 | `npm run rebuild` | Rebuild `better-sqlite3` for Electron |
 | `npm run pack` | Build an unpacked app into `release/` (no installer) |
 | `npm run dist` | Build installers (DMG/NSIS/AppImage) via electron-builder into `release/` |
@@ -55,7 +55,7 @@ src/
   main/            Electron main process
     db/            Drizzle schema, migrations runner, seed catalog
     domain/        Pure churning logic (bonus value, 5/24, benefit status…)
-    import/        Experian PDF extraction, parser, fuzzy matcher
+    import/        Equifax PDF extraction, parser, fuzzy matcher
     trpc/          tRPC routers (the typed API the UI calls)
     index.ts       App entry: window, DB init, IPC handler
   preload/         Exposes the tRPC bridge to the renderer
@@ -90,13 +90,14 @@ from `process.resourcesPath/drizzle`.
 
 ## Credit-report importer
 
-Targets **Experian** PDFs (the cleanest export; Equifax/TransUnion samples are
-website prints with broken pagination). Pipeline:
-`src/main/import/pdf.ts` (text extraction) → `experian.ts` (label/value parser)
-→ `match.ts` (Fuse.js issuer match). Report names are issuer-level, so matching
-resolves the **issuer**; the exact product is left for the user. Account numbers
-are masked, so **last-4 is never available** from the report. Validate changes
-with `npm run import:smoke` against a local `Experian Report.pdf`.
+Targets **Equifax** PDFs. Pipeline: `src/main/import/pdf.ts` (text extraction) →
+`equifax.ts` (label/value parser) → `match.ts` (Fuse.js issuer match). Each
+account is a run of `Label:` / value pairs anchored by `Date Reported:`; the
+creditor name is the non-noise line just above the address. Creditor names are
+issuer-level, so matching resolves the **issuer** and leaves the exact product
+for the user. Equifax exposes the **last 4** of the account number (e.g.
+`*6720`), which we keep. Validate changes with `npm run import:smoke` against a
+local `Equifax Report.pdf`.
 
 ## Packaging
 
@@ -171,5 +172,5 @@ steps — set them and the next tagged release is signed.
 ## Data files (never commit)
 
 The credit-report PDFs and the legacy spreadsheet are **gitignored**. Drop
-Experian report samples in the repo root for the importer to work against — they
+Equifax report samples in the repo root for the importer to work against — they
 stay local.

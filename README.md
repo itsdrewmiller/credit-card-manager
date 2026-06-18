@@ -18,7 +18,7 @@ is no server and no account.
   and a used/not-used toggle.
 - 5/24 tracking per person, including when the next slot opens up.
 - Referrals between the people you manage.
-- Credit report import. Load an Experian PDF and it creates a card for each
+- Credit report import. Load an Equifax PDF and it creates a card for each
   account, matching what it can to known products; you fill in the rest.
 - A list of cards that are missing important details, so you can complete them
   over time instead of all at once.

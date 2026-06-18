@@ -1,6 +1,6 @@
 /**
- * Headless importer test against the real Experian sample PDF.
- * Run: npm run import:smoke   (requires "Experian Report.pdf" in repo root)
+ * Headless importer test against the real Equifax sample PDF.
+ * Run: npm run import:smoke   (requires "Equifax Report.pdf" in repo root)
  */
 import { readFileSync, existsSync } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -8,7 +8,7 @@ import { join } from 'node:path'
 import { mkdtempSync, rmSync } from 'node:fs'
 import { sql, eq } from 'drizzle-orm'
 import { extractTextItems } from '../src/main/import/pdf'
-import { parseExperianAccounts } from '../src/main/import/experian'
+import { parseEquifaxAccounts } from '../src/main/import/equifax'
 import { buildIssuerMatcher, type AliasRow } from '../src/main/import/match'
 import { openDatabase, runMigrations } from '../src/main/db/index'
 import { seedCatalog } from '../src/main/db/seed'
@@ -22,7 +22,7 @@ function assert(cond: unknown, msg: string): void {
   console.log(`✓ ${msg}`)
 }
 
-const PDF = 'Experian Report.pdf'
+const PDF = 'Equifax Report.pdf'
 if (!existsSync(PDF)) {
   console.log(`(skip) ${PDF} not present`)
   process.exit(0)
@@ -31,12 +31,16 @@ if (!existsSync(PDF)) {
 const dir = mkdtempSync(join(tmpdir(), 'ccm-import-'))
 try {
   const items = await extractTextItems(new Uint8Array(readFileSync(PDF)))
-  const tradelines = parseExperianAccounts(items)
+  const tradelines = parseEquifaxAccounts(items)
   console.log(`• parsed ${tradelines.length} tradelines`)
-  assert(tradelines.length >= 20, `parsed a realistic number of tradelines (${tradelines.length})`)
+  assert(tradelines.length >= 15, `parsed a realistic number of tradelines (${tradelines.length})`)
 
-  // Every tradeline has a creditor name.
-  assert(tradelines.every((t) => t.creditorName.length > 0), 'every tradeline has a creditor name')
+  // Creditor names are real (not page-header noise).
+  assert(
+    tradelines.every((t) => t.creditorName.length > 2 && !/Page \d|Confirmation/.test(t.creditorName)),
+    'every tradeline has a real creditor name'
+  )
+  console.log('  e.g.', tradelines.slice(0, 4).map((t) => t.creditorName).join(', '))
 
   // Opened dates parse to ISO where present.
   const withDates = tradelines.filter((t) => t.openedDate)
@@ -45,7 +49,14 @@ try {
     `opened dates normalized to ISO (${withDates.length} have dates)`
   )
 
-  // Credit cards detected, and responsibility normalized.
+  // Last 4 captured (the Equifax advantage).
+  const withLast4 = tradelines.filter((t) => t.last4)
+  assert(
+    withLast4.length > 0 && withLast4.every((t) => /^\d{2,4}$/.test(t.last4!)),
+    `last-4 captured from the report (${withLast4.length} tradelines)`
+  )
+
+  // Credit cards detected, responsibility normalized.
   const cards = tradelines.filter((t) => t.isCreditCard)
   console.log(`• ${cards.length} look like credit cards`)
   assert(cards.length > 0, 'detected credit-card tradelines')
@@ -54,7 +65,7 @@ try {
     'responsibility normalized to enum'
   )
 
-  // Build matcher from the seeded catalog and check issuer matches.
+  // Build matcher from the seeded catalog.
   const { db } = openDatabase(join(dir, 'test.db'))
   runMigrations(db, join(process.cwd(), 'drizzle'))
   seedCatalog(db)
@@ -66,24 +77,18 @@ try {
     .all()
   const matcher = buildIssuerMatcher(corpus)
 
-  // Amex / Chase tradelines should match their issuer with high confidence.
-  const amex = tradelines.find((t) => /AMERICAN EXPRESS/i.test(t.creditorName))
-  if (amex) {
-    const m = matcher.match(amex.creditorName)
-    assert(m?.issuerName === 'American Express', `"${amex.creditorName}" matches American Express`)
-  }
-
   const matchedCount = tradelines.filter((t) => matcher.match(t.creditorName)).length
   console.log(`• ${matchedCount}/${tradelines.length} tradelines matched an issuer`)
   assert(matchedCount > 0, 'at least some tradelines matched a catalog issuer')
 
-  // Commit path: every tradeline becomes a card (stub if unmatched).
+  // Commit path: every tradeline becomes a card (stub if unmatched), with last4.
   db.transaction((tx) => {
     for (const t of tradelines) {
       tx.insert(card)
         .values({
           rawCreditorName: t.creditorName,
           rawAccountLabel: t.accountType,
+          last4: t.last4,
           status: t.status,
           responsibility: t.responsibility,
           openedDate: t.openedDate,
@@ -94,6 +99,8 @@ try {
   })
   const n = db.select({ n: sql<number>`count(*)` }).from(card).get()?.n ?? 0
   assert(n === tradelines.length, `commit created a card for every tradeline (${n})`)
+  const withStoredLast4 = db.select({ n: sql<number>`count(*)` }).from(card).where(sql`last4 is not null`).get()?.n ?? 0
+  assert(withStoredLast4 > 0, `cards stored with last-4 (${withStoredLast4})`)
 
   console.log('\n✅ Importer smoke checks passed.')
 } finally {

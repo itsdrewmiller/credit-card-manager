@@ -66,9 +66,9 @@ Conventions: money is integer **cents**; point valuation is **cents-per-point**;
   filter (available / upcoming / used / expired) and inline "used" toggle. ✅
 - [x] **P4 — Velocity & referrals:** 5/24 view per person (computed from open dates); referrals
   between people; rejected applications surfaced. ✅
-- [x] **P5 — Credit-report importer (Experian PDF):** parse tradelines, fuzzy-match to the catalog
-  issuer, create a card for **every** tradeline (stub if low confidence), then route gaps to the
-  Needs-info inbox. Verified against the real 22-account sample. ✅
+- [x] **P5 — Credit-report importer (Equifax PDF):** parse tradelines (incl. last-4), fuzzy-match to
+  the catalog issuer, create a card for **every** tradeline (stub if low confidence), then route gaps
+  to the Needs-info inbox. Verified against the real 21-account sample. ✅
 - [x] **P6 — Export & backup:** **CSV per table** plus a **full JSON snapshot** that doubles as a
   portable, restorable backup, and **restore-from-JSON**. Round-trip verified (369 rows). Follow-on:
   multi-sheet Excel (`.xlsx`) workbook export. ✅
@@ -93,12 +93,13 @@ than store a stale "complete" flag, the app **derives** each card's missing-info
 against the fields that matter for churning (catalog match, owner, annual fee, open date,
 statement/payment days, "has a bonus?"). That list powers the **Needs-info inbox**.
 
-## Credit-report import notes (Experian)
+## Credit-report import notes (Equifax)
 
-The Experian PDF has a clean text layer. The Accounts section uses consistent labels we parse directly:
-`Account Name` (→ fuzzy-match input), `Account Type` ("Credit card" filters loans), `Responsibility`
-("Authorized user"/"Individual"), `Date Opened`, `Status`, `Credit Limit`. Account numbers are
-prefix-masked (`490970XXXX…`), so **last-4 is not available from the report** — it stays a manual field.
-Report names are usually **issuer-level**, so matching is strongest at the issuer; the exact product is
-often a Needs-info field. (Equifax/TransUnion samples are website prints with broken pagination — not
-parser targets.)
+The Equifax PDF has a clean text layer. Each account in the "Credit Accounts" section is a run of
+`Label:` / value pairs anchored by `Date Reported:`, with the creditor name on the line just above the
+address. Parsed fields: creditor (→ fuzzy-match input), `Loan/Account Type` ("Credit Card"/"Charge"
+filters loans), `Owner` ("Authorized User"/"Individual"), `Date Opened`, `Date Closed`, `Status`,
+`Credit Limit`, and `Account Number` — which shows the **last 4** (e.g. `*6720`), so we capture it
+(unlike Experian, which masks the suffix). Creditor names are issuer-level, so matching is strongest at
+the issuer; the exact product is often a Needs-info field. Follow-up: the starter catalog matches ~9/21
+of this sample — adding more issuers (Synchrony, Comenity, TD, credit unions) raises the match rate.

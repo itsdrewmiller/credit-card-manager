@@ -47,7 +47,7 @@ export function Import(): React.ReactElement {
   const [include, setInclude] = useState<Record<number, boolean>>({})
   const [productOverride, setProductOverride] = useState<Record<number, string>>({})
 
-  const parse = trpc.importer.parseExperian.useMutation({
+  const parse = trpc.importer.parseEquifax.useMutation({
     onSuccess: (data) => {
       setPreview(data)
       const init: Record<number, boolean> = {}
@@ -102,6 +102,7 @@ export function Import(): React.ReactElement {
           creditorName: t.creditorName,
           accountType: t.accountType,
           accountNumberMask: t.accountNumberMask,
+          last4: t.last4,
           cardProductId: pid ? Number(pid) : null,
           network: chosen?.network ?? null,
           openedDate: t.openedDate,
@@ -114,16 +115,16 @@ export function Import(): React.ReactElement {
 
   return (
     <>
-      <PageHeader title="Import credit report" badge="Experian" />
+      <PageHeader title="Import credit report" badge="Equifax" />
       <Text c="dimmed" mb="md">
-        Upload an Experian PDF to bootstrap your cards. Every tradeline becomes a card (a stub if it
+        Upload an Equifax PDF to bootstrap your cards. Every tradeline becomes a card (a stub if it
         can&apos;t be matched); finish the details afterward under “Needs info”.
       </Text>
 
       <Card withBorder radius="md" padding="lg" mb="lg">
         <SimpleGrid cols={{ base: 1, sm: 2 }}>
           <FileInput
-            label="Experian PDF"
+            label="Equifax PDF"
             placeholder="Choose file…"
             accept="application/pdf"
             leftSection={<IconFileTypePdf size={18} />}
@@ -183,7 +184,14 @@ export function Import(): React.ReactElement {
                     />
                   </Table.Td>
                   <Table.Td>
-                    <Text fw={500}>{t.creditorName}</Text>
+                    <Group gap={6}>
+                      <Text fw={500}>{t.creditorName}</Text>
+                      {t.last4 && (
+                        <Text size="xs" c="dimmed">
+                          ····{t.last4}
+                        </Text>
+                      )}
+                    </Group>
                     <Group gap={6}>
                       {t.responsibility === 'authorized_user' && (
                         <Badge size="xs" variant="light" color="grape">
@@ -234,7 +242,7 @@ export function Import(): React.ReactElement {
                 Import {selectedCount} card{selectedCount === 1 ? '' : 's'}
               </Button>
               <Text size="xs" c="dimmed">
-                Account numbers are masked by Experian — last-4 stays blank for now.
+                Last 4 digits are captured from the report where shown.
               </Text>
             </Stack>
           </Group>

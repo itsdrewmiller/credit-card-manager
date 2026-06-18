@@ -4,7 +4,7 @@ import { router, publicProcedure } from '../trpc'
 import type { DB } from '../../db'
 import { card, cardProduct, cardProductAlias, issuer } from '../../db/schema'
 import { extractTextItems } from '../../import/pdf'
-import { parseExperianAccounts } from '../../import/experian'
+import { parseEquifaxAccounts } from '../../import/equifax'
 import { buildIssuerMatcher, type AliasRow } from '../../import/match'
 
 function aliasCorpus(db: DB): AliasRow[] {
@@ -24,6 +24,7 @@ const commitRow = z.object({
   creditorName: z.string(),
   accountType: z.string().nullish(),
   accountNumberMask: z.string().nullish(),
+  last4: z.string().nullish(),
   issuerId: z.number().int().nullish(),
   cardProductId: z.number().int().nullish(),
   ownerPersonId: z.number().int().nullish(),
@@ -35,15 +36,15 @@ const commitRow = z.object({
 
 export const importerRouter = router({
   /**
-   * Parse an Experian PDF (base64) and return tradelines annotated with a
+   * Parse an Equifax PDF (base64) and return tradelines annotated with a
    * suggested issuer match. No DB writes — this is a preview.
    */
-  parseExperian: publicProcedure
+  parseEquifax: publicProcedure
     .input(z.object({ base64: z.string() }))
     .mutation(async ({ ctx, input }) => {
       const data = new Uint8Array(Buffer.from(input.base64, 'base64'))
       const items = await extractTextItems(data)
-      const tradelines = parseExperianAccounts(items)
+      const tradelines = parseEquifaxAccounts(items)
       const matcher = buildIssuerMatcher(aliasCorpus(ctx.db))
 
       const matched = tradelines.map((t) => {
@@ -77,7 +78,7 @@ export const importerRouter = router({
               ownerPersonId: r.ownerPersonId ?? input.ownerPersonId ?? null,
               rawCreditorName: r.creditorName,
               rawAccountLabel: r.accountType ?? null,
-              last4: null, // Experian masks the number; not available
+              last4: r.last4 ?? null, // Equifax exposes the last 4
               network: r.network ?? null,
               status: r.status,
               responsibility: r.responsibility ?? null,

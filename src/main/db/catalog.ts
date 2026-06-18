@@ -1,10 +1,10 @@
 /**
  * Seed catalog: issuers + a starter set of popular churning card products.
  *
- * `aliases` are how the issuer/product tends to appear in the "Account Name"
- * field of a credit report. Experian usually reports issuer-level names
- * (e.g. "CHASE CARD"), so aliases skew issuer-level; the importer matches what
- * it can and leaves the exact product as a "needs info" field.
+ * `aliases` are how the issuer/product tends to appear as the creditor name on
+ * a credit report. Reports use issuer-level names (e.g. "CHASE CARD",
+ * "Elan Fin Svcs/Fidelity"), so aliases skew issuer-level; the importer matches
+ * what it can and leaves the exact product as a "needs info" field.
  *
  * Networks: Visa | Mastercard | Amex | Discover. AF in cents.
  */
