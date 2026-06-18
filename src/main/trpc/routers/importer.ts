@@ -5,7 +5,20 @@ import type { DB } from '../../db'
 import { card, cardProduct, cardProductAlias, issuer } from '../../db/schema'
 import { extractTextItems } from '../../import/pdf'
 import { parseEquifaxAccounts } from '../../import/equifax'
-import { buildIssuerMatcher, type AliasRow } from '../../import/match'
+import { buildIssuerMatcher, type AliasRow, type IssuerMatch } from '../../import/match'
+import { findDuplicate, type DedupCard } from '../../import/dedup'
+
+/** Existing cards reduced to what dedup needs, with their issuer resolved. */
+function existingDedupCards(db: DB, matcher: { match: (n: string) => IssuerMatch | null }): DedupCard[] {
+  const rows = db.query.card.findMany({ with: { product: true } }).sync()
+  return rows.map((c) => ({
+    id: c.id,
+    openedDate: c.openedDate,
+    issuerId:
+      c.issuerId ?? c.product?.issuerId ?? matcher.match(c.rawCreditorName ?? '')?.issuerId ?? null,
+    name: c.rawCreditorName ?? c.product?.name ?? ''
+  }))
+}
 
 function aliasCorpus(db: DB): AliasRow[] {
   return db
@@ -47,14 +60,21 @@ export const importerRouter = router({
       const items = await extractTextItems(data)
       const tradelines = parseEquifaxAccounts(items)
       const matcher = buildIssuerMatcher(aliasCorpus(ctx.db))
+      const existing = existingDedupCards(ctx.db, matcher)
 
       const matched = tradelines.map((t) => {
         const m = t.creditorName ? matcher.match(t.creditorName) : null
+        const issuerId = m?.issuerId ?? null
+        const duplicateOfCardId = findDuplicate(
+          { creditorName: t.creditorName, openedDate: t.openedDate, issuerId },
+          existing
+        )
         return {
           ...t,
-          suggestedIssuerId: m?.issuerId ?? null,
+          suggestedIssuerId: issuerId,
           suggestedIssuerName: m?.issuerName ?? null,
-          confidence: m?.confidence ?? null
+          confidence: m?.confidence ?? null,
+          duplicate: duplicateOfCardId != null
         }
       })
 
@@ -62,6 +82,7 @@ export const importerRouter = router({
         total: tradelines.length,
         creditCards: matched.filter((t) => t.isCreditCard).length,
         matched: matched.filter((t) => t.suggestedIssuerId != null).length,
+        duplicates: matched.filter((t) => t.duplicate).length,
         tradelines: matched
       }
     }),
@@ -76,6 +97,7 @@ export const importerRouter = router({
           tx.insert(card)
             .values({
               cardProductId: r.cardProductId ?? null,
+              issuerId: r.issuerId ?? null,
               ownerPersonId: r.ownerPersonId ?? input.ownerPersonId ?? null,
               rawCreditorName: r.creditorName,
               rawAccountLabel: r.accountType ?? null,

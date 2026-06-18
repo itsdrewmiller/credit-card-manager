@@ -59,7 +59,8 @@ export function Import(): React.ReactElement {
     onSuccess: (data) => {
       setPreview(data)
       const init: Record<number, boolean> = {}
-      data.tradelines.forEach((t, i) => (init[i] = t.isCreditCard))
+      // Default-select credit cards that aren't already in your cards.
+      data.tradelines.forEach((t, i) => (init[i] = t.isCreditCard && !t.duplicate))
       setInclude(init)
       setProductOverride({})
     },
@@ -112,6 +113,7 @@ export function Import(): React.ReactElement {
           accountNumberMask: t.accountNumberMask,
           last4: t.last4,
           cardProductId: pid ? Number(pid) : null,
+          issuerId: chosen?.issuerId ?? t.suggestedIssuerId ?? null,
           network: chosen?.network ?? null,
           openedDate: t.openedDate,
           closedDate: t.closedDate,
@@ -186,7 +188,14 @@ export function Import(): React.ReactElement {
         <>
           <Alert color="blue" icon={<IconInfoCircle />} mb="md" variant="light">
             Parsed <strong>{preview.total}</strong> tradelines · {preview.creditCards} look like
-            credit cards · {preview.matched} matched a catalog issuer. Review and adjust below.
+            credit cards · {preview.matched} matched a catalog issuer
+            {preview.duplicates > 0 && (
+              <>
+                {' '}
+                · <strong>{preview.duplicates}</strong> already in your cards (unchecked)
+              </>
+            )}
+            . Review and adjust below.
           </Alert>
 
           <Table withTableBorder verticalSpacing="sm" mb="md">
@@ -221,6 +230,11 @@ export function Import(): React.ReactElement {
                       )}
                     </Group>
                     <Group gap={6}>
+                      {t.duplicate && (
+                        <Badge size="xs" variant="light" color="yellow">
+                          Already imported
+                        </Badge>
+                      )}
                       {t.responsibility === 'authorized_user' && (
                         <Badge size="xs" variant="light" color="grape">
                           Authorized user
@@ -228,7 +242,7 @@ export function Import(): React.ReactElement {
                       )}
                       {t.status === 'closed' && (
                         <Badge size="xs" variant="light" color="gray">
-                          Closed
+                          Closed{t.closedDate ? ` ${t.closedDate}` : ''}
                         </Badge>
                       )}
                     </Group>

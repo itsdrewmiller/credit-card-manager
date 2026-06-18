@@ -1,12 +1,14 @@
 import { z } from 'zod'
 import { eq, desc } from 'drizzle-orm'
 import { router, publicProcedure } from '../trpc'
-import { card } from '../../db/schema'
+import type { DB } from '../../db'
+import { card, cardProduct } from '../../db/schema'
 import { CARD_STATUSES } from '@shared/constants'
 import { cardMissingFields } from '../../domain/needsInfo'
 
 const upsert = z.object({
   cardProductId: z.number().int().nullish(),
+  issuerId: z.number().int().nullish(),
   ownerPersonId: z.number().int().nullish(),
   businessId: z.number().int().nullish(),
   rawCreditorName: z.string().nullish(),
@@ -40,6 +42,22 @@ function enrich<T extends { status: string | null } & Record<string, unknown>>(
   return { ...c, missingFields: cardMissingFields(c) }
 }
 
+/** Default the card's bank from its product's issuer when not set explicitly. */
+function withIssuerFromProduct<T extends { cardProductId?: number | null; issuerId?: number | null }>(
+  db: DB,
+  input: T
+): T {
+  if (input.issuerId == null && input.cardProductId != null) {
+    const prod = db
+      .select({ issuerId: cardProduct.issuerId })
+      .from(cardProduct)
+      .where(eq(cardProduct.id, input.cardProductId))
+      .get()
+    if (prod) return { ...input, issuerId: prod.issuerId }
+  }
+  return input
+}
+
 export const cardsRouter = router({
   list: publicProcedure.query(({ ctx }) => {
     const rows = ctx.db.query.card
@@ -62,13 +80,13 @@ export const cardsRouter = router({
   }),
 
   create: publicProcedure.input(upsert).mutation(({ ctx, input }) =>
-    ctx.db.insert(card).values(input).returning().get()
+    ctx.db.insert(card).values(withIssuerFromProduct(ctx.db, input)).returning().get()
   ),
 
   update: publicProcedure
     .input(upsert.partial().extend({ id: z.number().int() }))
     .mutation(({ ctx, input }) => {
-      const { id, ...rest } = input
+      const { id, ...rest } = withIssuerFromProduct(ctx.db, input)
       return ctx.db
         .update(card)
         .set({ ...rest, updatedAt: Date.now() })

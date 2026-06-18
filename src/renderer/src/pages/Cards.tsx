@@ -85,7 +85,14 @@ export function Cards(): React.ReactElement {
                   </Badge>
                 </Table.Td>
                 <Table.Td>{formatCents(c.annualFeeCents)}</Table.Td>
-                <Table.Td>{formatDate(c.openedDate)}</Table.Td>
+                <Table.Td>
+                  <Text size="sm">{formatDate(c.openedDate)}</Text>
+                  {c.closedDate && (
+                    <Text size="xs" c="dimmed">
+                      closed {formatDate(c.closedDate)}
+                    </Text>
+                  )}
+                </Table.Td>
                 <Table.Td>
                   {c.missingFields.length === 0 ? (
                     <Badge color="green" variant="light">

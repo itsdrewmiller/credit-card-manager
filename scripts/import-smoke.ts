@@ -13,6 +13,7 @@ import { buildIssuerMatcher, type AliasRow } from '../src/main/import/match'
 import { openDatabase, runMigrations } from '../src/main/db/index'
 import { seedCatalog } from '../src/main/db/seed'
 import { cardProduct, cardProductAlias, issuer, card } from '../src/main/db/schema'
+import { appRouter } from '../src/main/trpc/router'
 
 function assert(cond: unknown, msg: string): void {
   if (!cond) {
@@ -116,6 +117,48 @@ try {
   assert(n === tradelines.length, `commit created a card for every tradeline (${n})`)
   const withStoredLast4 = db.select({ n: sql<number>`count(*)` }).from(card).where(sql`last4 is not null`).get()?.n ?? 0
   assert(withStoredLast4 > 0, `cards stored with last-4 (${withStoredLast4})`)
+
+  // --- Full router path: parse -> commit -> read (closedDate, issuerId, dedup) ---
+  const { db: db2 } = openDatabase(join(dir, 'router.db'))
+  runMigrations(db2, join(process.cwd(), 'drizzle'))
+  seedCatalog(db2)
+  const caller = appRouter.createCaller({ db: db2 })
+  const b64 = readFileSync(PDF).toString('base64')
+
+  const preview = await caller.importer.parseEquifax({ base64: b64 })
+  assert(preview.duplicates === 0, 'first import flags no duplicates')
+
+  const rows = preview.tradelines
+    .filter((t) => t.isCreditCard && !t.duplicate)
+    .map((t) => ({
+      creditorName: t.creditorName,
+      accountType: t.accountType,
+      last4: t.last4,
+      issuerId: t.suggestedIssuerId,
+      openedDate: t.openedDate,
+      closedDate: t.closedDate,
+      status: t.status,
+      responsibility: t.responsibility
+    }))
+  const res = await caller.importer.commit({ ownerPersonId: null, rows })
+  assert(res.created === rows.length, `committed ${res.created} cards via the router`)
+
+  const stored = await caller.cards.list()
+  const closedStored = stored.filter((c) => c.status === 'closed' && c.closedDate)
+  console.log(`• stored ${closedStored.length} closed cards with a closed date`)
+  assert(closedStored.length > 0, 'closed cards are stored WITH their closed date')
+  assert(
+    stored.filter((c) => c.issuerId != null).length > 0,
+    'cards are stored with their bank (issuerId)'
+  )
+
+  // Re-importing the same report should flag every committed card as a duplicate.
+  const preview2 = await caller.importer.parseEquifax({ base64: b64 })
+  const dupCreditCards = preview2.tradelines.filter((t) => t.isCreditCard && t.duplicate).length
+  assert(
+    dupCreditCards === rows.length,
+    `re-import flags all ${rows.length} committed cards as duplicates (got ${dupCreditCards})`
+  )
 
   console.log('\n✅ Importer smoke checks passed.')
 } finally {

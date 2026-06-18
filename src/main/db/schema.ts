@@ -94,6 +94,9 @@ export const card = sqliteTable(
     cardProductId: integer('card_product_id').references(() => cardProduct.id, {
       onDelete: 'set null'
     }),
+    // The bank/issuer this card belongs to. Set even when the exact product is
+    // unknown (e.g. from a credit-report match) — used to dedupe imports.
+    issuerId: integer('issuer_id').references(() => issuer.id, { onDelete: 'set null' }),
     ownerPersonId: integer('owner_person_id').references(() => person.id, {
       onDelete: 'set null'
     }),
@@ -257,6 +260,7 @@ export const cardProductAliasRelations = relations(cardProductAlias, ({ one }) =
 
 export const cardRelations = relations(card, ({ one, many }) => ({
   product: one(cardProduct, { fields: [card.cardProductId], references: [cardProduct.id] }),
+  issuer: one(issuer, { fields: [card.issuerId], references: [issuer.id] }),
   owner: one(person, { fields: [card.ownerPersonId], references: [person.id] }),
   business: one(business, { fields: [card.businessId], references: [business.id] }),
   bonuses: many(signupBonus),

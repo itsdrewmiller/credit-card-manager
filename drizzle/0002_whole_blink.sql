@@ -1,0 +1,1 @@
+ALTER TABLE `card` ADD `issuer_id` integer REFERENCES issuer(id);
