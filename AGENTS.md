@@ -130,14 +130,43 @@ The tag push triggers the workflow; the Release appears with both installers
 attached and auto-generated notes. `workflow_dispatch` (the "Run workflow"
 button) builds artifacts for testing without publishing.
 
-Notes / follow-ons:
-- macOS runners are Apple Silicon, so the `.dmg` is **arm64 only**. Add an Intel
-  or universal build (`--mac --universal`, or an x64 matrix entry) if family on
-  Intel Macs need it.
-- Signing/notarization isn't wired up — add an Apple Developer ID + secrets to
-  drop the Gatekeeper warning, and Windows code-signing similarly.
-- The release uses the default `GITHUB_TOKEN` (`permissions: contents: write`);
-  no extra secrets required.
+macOS runners are Apple Silicon, so the `.dmg` is **arm64 only**. Add an Intel or
+universal build (`--mac --universal`, or an x64 matrix entry) if anyone on an
+Intel Mac needs it. The release itself uses the default `GITHUB_TOKEN`
+(`permissions: contents: write`) — no extra secrets required for publishing.
+
+## Code signing
+
+Signing config lives in `electron-builder.config.cjs` and is **driven entirely by
+environment variables**, so it activates automatically once the secrets are set —
+no code changes needed. Until then, macOS builds fall back to an ad-hoc signature
+(`build/afterPack.cjs`) so they aren't reported as "damaged"; Windows builds are
+unsigned (SmartScreen will warn).
+
+**macOS — Developer ID + notarization** (needs an Apple Developer Program
+membership, ~$99/yr). Notarization is what removes *all* Gatekeeper warnings.
+1. Create a **Developer ID Application** certificate; export it as a `.p12` with a password.
+2. Create an **app-specific password** at appleid.apple.com (for notarytool).
+3. Add repo **Settings → Secrets and variables → Actions**:
+   - `MAC_CSC_LINK` — base64 of the `.p12` (`base64 -i cert.p12 | pbcopy`)
+   - `MAC_CSC_KEY_PASSWORD` — the `.p12` password
+   - `APPLE_ID` — your Apple ID email
+   - `APPLE_APP_SPECIFIC_PASSWORD` — the app-specific password
+   - `APPLE_TEAM_ID` — your 10-char Team ID
+   The config enables signing when `CSC_LINK` is present and notarization when the
+   three `APPLE_*` values are present. (Electron's default entitlements cover the
+   app; add a custom entitlements plist only if notarization complains.)
+
+**Windows — code-signing certificate** (~$100–400/yr from a CA). Standard (OV)
+certs now require a hardware token, which doesn't suit CI; the CI-friendly routes
+are cloud signing (**Azure Trusted Signing**, **SSL.com eSigner**). For a simple
+file-based cert:
+   - `WIN_CSC_LINK` — base64 of the `.pfx`
+   - `WIN_CSC_KEY_PASSWORD` — the `.pfx` password
+   EV certs clear SmartScreen immediately; OV builds reputation over downloads.
+
+The workflow already wires these secret names into the macOS/Windows package
+steps — set them and the next tagged release is signed.
 
 ## Data files (never commit)
 

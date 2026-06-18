@@ -35,10 +35,26 @@ jobs:
         run: npm run build
 
       # electron-builder rebuilds better-sqlite3 for Electron and produces the
-      # installer for the host OS (.dmg on macOS, .exe on Windows). --publish
-      # never: the dedicated release job below does the publishing.
-      - name: Package installer (electron-builder)
-        run: npx electron-builder --publish never
+      # installer for the host OS. Signing + notarization activate automatically
+      # when the secrets below are set; otherwise macOS falls back to an ad-hoc
+      # signature (see electron-builder.config.cjs + build/afterPack.cjs).
+      # --publish never: the dedicated release job below does the publishing.
+      - name: Package macOS installer
+        if: matrix.os == 'macos-latest'
+        env:
+          CSC_LINK: ${{ secrets.MAC_CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.MAC_CSC_KEY_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: npx electron-builder --mac --publish never
+
+      - name: Package Windows installer
+        if: matrix.os == 'windows-latest'
+        env:
+          CSC_LINK: ${{ secrets.WIN_CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.WIN_CSC_KEY_PASSWORD }}
+        run: npx electron-builder --win --publish never
 
       - name: Upload installer artifact
         uses: actions/upload-artifact@v4

@@ -15,6 +15,9 @@ const path = require('node:path')
 
 exports.default = async function afterPack(context) {
   if (context.electronPlatformName !== 'darwin') return
+  // A real Developer ID cert is configured — electron-builder will sign (and
+  // notarize) properly, so don't ad-hoc sign over it.
+  if (process.env.CSC_LINK) return
   const appName = context.packager.appInfo.productFilename
   const appPath = path.join(context.appOutDir, `${appName}.app`)
   console.log(`[afterPack] ad-hoc signing ${appPath}`)
