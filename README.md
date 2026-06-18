@@ -42,7 +42,9 @@ referrals between them.
 
 ## Installing
 
-Download the installer for your platform and open it — it runs like any other
+Grab the installer for your platform from the
+[**Releases**](https://github.com/itsdrewmiller/credit-card-manager/releases)
+page — `.dmg` for macOS, `.exe` for Windows — and open it. It runs like any other
 desktop app, no technical setup required. Your data is created on first launch
 and stays on your computer.
 

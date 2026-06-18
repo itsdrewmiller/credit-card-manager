@@ -106,6 +106,39 @@ ships `drizzle/` as `extraResources`. macOS builds are unsigned (`mac.identity: 
 distributing without "unidentified developer" warnings needs an Apple Developer
 ID + notarization.
 
+## Releases (CI)
+
+`.github/workflows/release.yml` builds and publishes installers via GitHub
+Releases — **not** committed binaries (which would bloat git history). Compiled
+apps don't belong in the repo tree; the Releases tab is the durable home.
+
+How it works:
+- A **build matrix** on `macos-latest` (`.dmg`) and `windows-latest` (`.exe`)
+  runs `npm run build` + `npx electron-builder --publish never` and uploads each
+  installer as a workflow artifact.
+- A separate **release** job downloads both artifacts and publishes a single
+  GitHub Release via `softprops/action-gh-release` (one writer avoids a
+  two-runner race on the same release).
+
+Cut a release:
+```bash
+# bump the version in package.json first if needed, then:
+git tag v0.1.0
+git push origin v0.1.0
+```
+The tag push triggers the workflow; the Release appears with both installers
+attached and auto-generated notes. `workflow_dispatch` (the "Run workflow"
+button) builds artifacts for testing without publishing.
+
+Notes / follow-ons:
+- macOS runners are Apple Silicon, so the `.dmg` is **arm64 only**. Add an Intel
+  or universal build (`--mac --universal`, or an x64 matrix entry) if family on
+  Intel Macs need it.
+- Signing/notarization isn't wired up — add an Apple Developer ID + secrets to
+  drop the Gatekeeper warning, and Windows code-signing similarly.
+- The release uses the default `GITHUB_TOKEN` (`permissions: contents: write`);
+  no extra secrets required.
+
 ## Data files (never commit)
 
 The credit-report PDFs and the legacy spreadsheet are **gitignored**. Drop
