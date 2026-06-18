@@ -1,0 +1,31 @@
+import { router } from './trpc'
+import { systemRouter } from './routers/system'
+import { peopleRouter } from './routers/people'
+import { businessesRouter } from './routers/businesses'
+import { issuersRouter, productsRouter } from './routers/catalog'
+import { cardsRouter } from './routers/cards'
+import { pointsRouter } from './routers/points'
+import { bonusesRouter } from './routers/bonuses'
+import { benefitsRouter } from './routers/benefits'
+import { velocityRouter } from './routers/velocity'
+import { referralsRouter } from './routers/referrals'
+import { importerRouter } from './routers/importer'
+import { exporterRouter } from './routers/exporter'
+
+export const appRouter = router({
+  system: systemRouter,
+  people: peopleRouter,
+  businesses: businessesRouter,
+  issuers: issuersRouter,
+  products: productsRouter,
+  cards: cardsRouter,
+  points: pointsRouter,
+  bonuses: bonusesRouter,
+  benefits: benefitsRouter,
+  velocity: velocityRouter,
+  referrals: referralsRouter,
+  importer: importerRouter,
+  exporter: exporterRouter
+})
+
+export type AppRouter = typeof appRouter

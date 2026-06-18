@@ -1,0 +1,29 @@
+# --- Personal data: never commit (reference/sample files only) ---
+*.xlsx
+*.pdf
+Credit Card Optimization.xlsx
+Equifax Report.pdf
+Experian Report.pdf
+Transunion Report.pdf
+# local SQLite DBs if any get copied into the repo
+*.db
+*.sqlite
+*.sqlite3
+
+# --- Node / build ---
+node_modules/
+dist/
+out/
+.vite/
+*.tsbuildinfo
+
+# --- Logs / env ---
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.env
+.env.local
+.DS_Store
+
+# --- electron-builder output ---
+release/
