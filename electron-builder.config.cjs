@@ -20,7 +20,7 @@ module.exports = {
   afterPack: 'build/afterPack.cjs',
   files: ['out/**/*'],
   extraResources: [{ from: 'drizzle', to: 'drizzle' }],
-  asarUnpack: ['**/node_modules/better-sqlite3/**'],
+  asarUnpack: ['**/node_modules/better-sqlite3/**', '**/node_modules/pdfjs-dist/**'],
   npmRebuild: true,
   mac: {
     target: 'dmg',
