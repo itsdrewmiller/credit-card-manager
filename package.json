@@ -21,8 +21,8 @@
     "db:smoke": "tsx --tsconfig tsconfig.node.json scripts/db-smoke.ts",
     "import:smoke": "tsx --tsconfig tsconfig.node.json scripts/import-smoke.ts",
     "rebuild": "electron-rebuild -f -w better-sqlite3",
-    "pack": "electron-vite build && electron-builder --dir",
-    "dist": "electron-vite build && electron-builder"
+    "pack": "electron-vite build && electron-builder --dir --config electron-builder.config.cjs",
+    "dist": "electron-vite build && electron-builder --config electron-builder.config.cjs"
   },
   "dependencies": {
     "better-sqlite3": "^11.8.1",
