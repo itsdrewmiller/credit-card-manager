@@ -55,9 +55,17 @@ On the release, open **Assets** and pick the file for your computer:
 
 1. Download the **`.dmg`** file.
 2. Open it and drag **Credit Card Manager** into your Applications folder.
-3. The first time, **right-click the app → Open** (the build is unsigned, so a
-   normal double-click shows an "unidentified developer" warning). After that it
-   opens normally.
+3. The first time, **right-click the app → Open**, then confirm. (The build is
+   ad-hoc signed but not from an identified Apple developer, so a normal
+   double-click is blocked.) On macOS Ventura and later you may instead need to
+   open **System Settings → Privacy & Security**, scroll down, and click **Open
+   Anyway**. After the first time it opens normally.
+
+> **"…is damaged and can't be opened"?** That's macOS quarantine on a downloaded
+> unsigned app. Clear it once in Terminal, then open the app:
+> ```bash
+> xattr -dr com.apple.quarantine "/Applications/Credit Card Manager.app"
+> ```
 
 > The macOS build is currently **Apple Silicon (arm64)** only.
 
