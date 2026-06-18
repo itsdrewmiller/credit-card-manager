@@ -10,7 +10,15 @@ export default defineConfig({
     }
   },
   preload: {
-    plugins: [externalizeDepsPlugin()]
+    plugins: [externalizeDepsPlugin()],
+    // Build the preload as CommonJS (.cjs). An ESM (.mjs) preload exposes
+    // contextBridge globals unreliably, which left window.electronTRPC undefined
+    // in the packaged app (blank renderer).
+    build: {
+      rollupOptions: {
+        output: { format: 'cjs', entryFileNames: '[name].cjs' }
+      }
+    }
   },
   renderer: {
     resolve: {

@@ -1,4 +1,4 @@
-import { app, BrowserWindow, shell, session } from 'electron'
+import { app, BrowserWindow, shell, session, dialog } from 'electron'
 import { join } from 'node:path'
 import { is } from '@electron-toolkit/utils'
 import { createIPCHandler } from 'electron-trpc/main'
@@ -31,7 +31,7 @@ function createWindow(): BrowserWindow {
     show: false,
     title: 'Credit Card Manager',
     webPreferences: {
-      preload: join(__dirname, '../preload/index.mjs'),
+      preload: join(__dirname, '../preload/index.cjs'),
       sandbox: false
     }
   })
@@ -58,9 +58,14 @@ function createWindow(): BrowserWindow {
  * app loads only local content and talks to the backend over IPC, never HTTP.
  */
 function installCsp(): void {
-  const policy = is.dev
-    ? "default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: ws: http://localhost:*"
-    : "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self'"
+  // Only the dev server (http) gets a CSP header. In production the renderer is
+  // loaded from file://, whose opaque origin makes a "script-src 'self'" policy
+  // reject the app's own bundled script — a blank-screen trap. The packaged app
+  // loads only local content and talks to the backend over IPC, so we don't
+  // enforce a header CSP there.
+  if (!is.dev) return
+  const policy =
+    "default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: ws: http://localhost:*"
   session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
     callback({
       responseHeaders: {
@@ -73,7 +78,19 @@ function installCsp(): void {
 
 app.whenReady().then(() => {
   installCsp()
-  initDatabase()
+
+  try {
+    initDatabase()
+  } catch (err) {
+    // Surface a real error instead of silently failing to open a window
+    // (e.g. a native-module ABI mismatch).
+    dialog.showErrorBox(
+      'Credit Card Manager — startup error',
+      `The database failed to open.\n\n${err instanceof Error ? err.stack || err.message : String(err)}`
+    )
+    app.quit()
+    return
+  }
 
   const win = createWindow()
   createIPCHandler({ router: appRouter, windows: [win], createContext: async () => ({ db }) })
