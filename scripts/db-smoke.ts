@@ -15,7 +15,7 @@ import { seedCatalog } from '../src/main/db/seed'
 import { person, pointProgram, card, signupBonus, issuer, cardProduct } from '../src/main/db/schema'
 import { cardMissingFields } from '../src/main/domain/needsInfo'
 import { computeBonus } from '../src/main/domain/bonus'
-import { benefitStatus, benefitEvCents } from '../src/main/domain/benefit'
+import { benefitStatus } from '../src/main/domain/benefit'
 import { personVelocity } from '../src/main/domain/velocity'
 import { appRouter } from '../src/main/trpc/router'
 
@@ -113,10 +113,8 @@ try {
     .get()
   assert(cardMissingFields(stub).length === 4, 'a fresh import stub is missing all 4 required fields')
 
-  // --- Benefit status + EV (Phase 3) ---
+  // --- Benefit status (Phase 3) ---
   const at = new Date('2026-06-18T00:00:00')
-  assert(benefitEvCents({ amountCents: 1000, unitValue: 1 }) === 1000, 'benefit EV = $10 at 1.0x')
-  assert(benefitEvCents({ amountCents: 1000, unitValue: 0.8 }) === 800, 'benefit EV = $8 at 0.8x')
   assert(benefitStatus({ used: true, useBy: '2026-12-31' }, at) === 'used', 'used benefit => used')
   assert(
     benefitStatus({ useBy: '2026-01-01' }, at) === 'expired',
@@ -168,6 +166,33 @@ try {
   db.delete(card).where(eq(card.id, csr.id)).run()
   const orphanBonuses = db.select().from(signupBonus).where(eq(signupBonus.cardId, csr.id)).all()
   assert(orphanBonuses.length === 0, 'deleting a card cascades to its signup bonuses')
+
+  // --- Product benefit templates auto-applied when a card of that type is added ---
+  const caller0 = appRouter.createCaller({ db })
+  const csrProduct = products.find((p) => p.name === 'Sapphire Reserve')!
+  await caller0.productBenefits.create({
+    cardProductId: csrProduct.id,
+    name: 'Annual Travel Credit',
+    amountCents: 30000,
+    period: 'annual'
+  })
+  const newCard = await caller0.cards.create({
+    cardProductId: csrProduct.id,
+    status: 'open',
+    source: 'manual'
+  })
+  const newCardBenefits = await caller0.benefits.listByCard({ cardId: newCard.id })
+  assert(
+    newCardBenefits.some((b) => b.name === 'Annual Travel Credit' && b.amountCents === 30000),
+    'product benefit template auto-applied to a new card of that type'
+  )
+  // Idempotent: a second card-of-product or re-edit doesn't duplicate it.
+  await caller0.cards.update({ id: newCard.id, cardProductId: csrProduct.id })
+  const after = await caller0.benefits.listByCard({ cardId: newCard.id })
+  assert(
+    after.filter((b) => b.name === 'Annual Travel Credit').length === 1,
+    'auto-apply is idempotent (no duplicate benefit)'
+  )
 
   // --- Export / restore round-trip (Phase 6) via the real tRPC router ---
   const caller = appRouter.createCaller({ db })

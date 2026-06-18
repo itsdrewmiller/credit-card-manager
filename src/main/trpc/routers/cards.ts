@@ -2,9 +2,38 @@ import { z } from 'zod'
 import { eq, desc } from 'drizzle-orm'
 import { router, publicProcedure } from '../trpc'
 import type { DB } from '../../db'
-import { card, cardProduct } from '../../db/schema'
+import { card, cardProduct, productBenefit, benefit } from '../../db/schema'
 import { CARD_STATUSES } from '@shared/constants'
 import { cardMissingFields } from '../../domain/needsInfo'
+
+/**
+ * Copy a product's benefit templates onto a card. Idempotent by benefit name,
+ * so it won't duplicate benefits already present on the card.
+ */
+function applyProductBenefits(db: DB, cardId: number, cardProductId: number): void {
+  const templates = db
+    .select()
+    .from(productBenefit)
+    .where(eq(productBenefit.cardProductId, cardProductId))
+    .all()
+  if (templates.length === 0) return
+  const have = new Set(
+    db.select({ name: benefit.name }).from(benefit).where(eq(benefit.cardId, cardId)).all().map((b) => b.name)
+  )
+  for (const t of templates) {
+    if (have.has(t.name)) continue
+    db.insert(benefit)
+      .values({
+        cardId,
+        name: t.name,
+        category: t.category,
+        amountCents: t.amountCents,
+        period: t.period,
+        notes: t.notes
+      })
+      .run()
+  }
+}
 
 const upsert = z.object({
   cardProductId: z.number().int().nullish(),
@@ -79,20 +108,30 @@ export const cardsRouter = router({
     return rows.map(enrich).filter((c) => c.missingFields.length > 0)
   }),
 
-  create: publicProcedure.input(upsert).mutation(({ ctx, input }) =>
-    ctx.db.insert(card).values(withIssuerFromProduct(ctx.db, input)).returning().get()
-  ),
+  create: publicProcedure.input(upsert).mutation(({ ctx, input }) => {
+    const created = ctx.db.insert(card).values(withIssuerFromProduct(ctx.db, input)).returning().get()
+    if (created.cardProductId != null) {
+      applyProductBenefits(ctx.db, created.id, created.cardProductId)
+    }
+    return created
+  }),
 
   update: publicProcedure
     .input(upsert.partial().extend({ id: z.number().int() }))
     .mutation(({ ctx, input }) => {
       const { id, ...rest } = withIssuerFromProduct(ctx.db, input)
-      return ctx.db
+      const before = ctx.db.select({ p: card.cardProductId }).from(card).where(eq(card.id, id)).get()
+      const updated = ctx.db
         .update(card)
         .set({ ...rest, updatedAt: Date.now() })
         .where(eq(card.id, id))
         .returning()
         .get()
+      // When a product is newly assigned, seed its benefit templates.
+      if (updated.cardProductId != null && updated.cardProductId !== before?.p) {
+        applyProductBenefits(ctx.db, id, updated.cardProductId)
+      }
+      return updated
     }),
 
   delete: publicProcedure

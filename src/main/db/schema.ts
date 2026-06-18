@@ -191,8 +191,7 @@ export const benefit = sqliteTable(
       .references(() => card.id, { onDelete: 'cascade' }),
     name: text('name').notNull(),
     category: text('category'), // Groceries, Travel, Dining, ...
-    amountCents: integer('amount_cents'), // face amount of the credit
-    unitValue: real('unit_value').notNull().default(1), // EV multiplier (e.g. 1.0)
+    amountCents: integer('amount_cents'), // value of the credit
     period: text('period'), // monthly | quarterly | semiannual | annual | one_time
     year: integer('year'),
     useAfter: text('use_after'),
@@ -205,6 +204,53 @@ export const benefit = sqliteTable(
   },
   (t) => ({
     cardIdx: index('benefit_card_idx').on(t.cardId)
+  })
+)
+
+// --- Available signup-bonus offers (tied to a card product, not a held card) ---
+
+export const productOffer = sqliteTable(
+  'product_offer',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    cardProductId: integer('card_product_id')
+      .notNull()
+      .references(() => cardProduct.id, { onDelete: 'cascade' }),
+    rewardKind: text('reward_kind'), // points | cash | miles
+    pointProgramId: integer('point_program_id').references(() => pointProgram.id, {
+      onDelete: 'set null'
+    }),
+    pointsAmount: integer('points_amount'),
+    cashAmountCents: integer('cash_amount_cents'),
+    minSpendCents: integer('min_spend_cents'),
+    windowMonths: integer('window_months'), // months to meet the min spend
+    expires: text('expires'), // offer end date, if any
+    notes: text('notes'),
+    ...timestamps
+  },
+  (t) => ({
+    productIdx: index('offer_product_idx').on(t.cardProductId)
+  })
+)
+
+// --- Product benefit templates (copied onto a card when you add that type) ---
+
+export const productBenefit = sqliteTable(
+  'product_benefit',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    cardProductId: integer('card_product_id')
+      .notNull()
+      .references(() => cardProduct.id, { onDelete: 'cascade' }),
+    name: text('name').notNull(),
+    category: text('category'),
+    amountCents: integer('amount_cents'),
+    period: text('period'), // monthly | quarterly | semiannual | annual | one_time
+    notes: text('notes'),
+    ...timestamps
+  },
+  (t) => ({
+    productIdx: index('product_benefit_product_idx').on(t.cardProductId)
   })
 )
 
@@ -284,6 +330,21 @@ export const benefitRelations = relations(benefit, ({ one }) => ({
   card: one(card, { fields: [benefit.cardId], references: [card.id] })
 }))
 
+export const productOfferRelations = relations(productOffer, ({ one }) => ({
+  product: one(cardProduct, { fields: [productOffer.cardProductId], references: [cardProduct.id] }),
+  pointProgram: one(pointProgram, {
+    fields: [productOffer.pointProgramId],
+    references: [pointProgram.id]
+  })
+}))
+
+export const productBenefitRelations = relations(productBenefit, ({ one }) => ({
+  product: one(cardProduct, {
+    fields: [productBenefit.cardProductId],
+    references: [cardProduct.id]
+  })
+}))
+
 export const referralRelations = relations(referral, ({ one }) => ({
   from: one(person, { fields: [referral.fromPersonId], references: [person.id] }),
   to: one(person, { fields: [referral.toPersonId], references: [person.id] }),
@@ -300,6 +361,8 @@ export const schema = {
   pointProgram,
   signupBonus,
   benefit,
+  productOffer,
+  productBenefit,
   referral,
   personRelations,
   businessRelations,
@@ -310,5 +373,7 @@ export const schema = {
   pointProgramRelations,
   signupBonusRelations,
   benefitRelations,
+  productOfferRelations,
+  productBenefitRelations,
   referralRelations
 }

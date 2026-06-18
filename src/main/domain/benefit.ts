@@ -3,17 +3,9 @@ import { daysUntil } from '@shared/format'
 export type BenefitStatus = 'used' | 'available' | 'upcoming' | 'expired'
 
 interface BenefitLike {
-  amountCents?: number | null
-  unitValue?: number | null
   useAfter?: string | null
   useBy?: string | null
   used?: boolean | null
-}
-
-/** Expected value = face amount × unit value (e.g. $10 credit at 1.0 = $10). */
-export function benefitEvCents(b: BenefitLike): number | null {
-  if (b.amountCents == null) return null
-  return Math.round(b.amountCents * (b.unitValue ?? 1))
 }
 
 /**
@@ -32,6 +24,6 @@ export function benefitStatus(b: BenefitLike, today = new Date()): BenefitStatus
   return 'available'
 }
 
-export function computeBenefit(b: BenefitLike): { evCents: number | null; status: BenefitStatus } {
-  return { evCents: benefitEvCents(b), status: benefitStatus(b) }
+export function computeBenefit(b: BenefitLike): { status: BenefitStatus } {
+  return { status: benefitStatus(b) }
 }

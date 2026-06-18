@@ -10,7 +10,6 @@ const upsert = z.object({
   name: z.string().min(1, 'Name is required'),
   category: z.string().nullish(),
   amountCents: z.number().int().nullish(),
-  unitValue: z.number().nonnegative().default(1),
   period: z.enum(BENEFIT_PERIODS).nullish(),
   year: z.number().int().nullish(),
   useAfter: z.string().nullish(),
@@ -26,13 +25,7 @@ const withRelations = {
 } as const
 
 function enrich<
-  T extends {
-    amountCents: number | null
-    unitValue: number
-    useAfter: string | null
-    useBy: string | null
-    used: boolean
-  }
+  T extends { useAfter: string | null; useBy: string | null; used: boolean }
 >(b: T): T & ReturnType<typeof computeBenefit> {
   return { ...b, ...computeBenefit(b) }
 }

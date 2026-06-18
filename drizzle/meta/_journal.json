@@ -22,6 +22,13 @@
       "when": 1781823606731,
       "tag": "0002_whole_blink",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1781826662737,
+      "tag": "0003_demonic_salo",
+      "breakpoints": true
     }
   ]
 }

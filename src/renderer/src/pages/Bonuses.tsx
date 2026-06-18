@@ -9,7 +9,8 @@ import {
   Text,
   Progress,
   Stack,
-  Group
+  Group,
+  Tabs
 } from '@mantine/core'
 import { notifications } from '@mantine/notifications'
 import { IconPlus, IconDots, IconEdit, IconTrash } from '@tabler/icons-react'
@@ -17,6 +18,7 @@ import { trpc } from '../trpc'
 import { PageHeader } from '../components/PageHeader'
 import { EmptyState } from '../components/EmptyState'
 import { BonusForm, type BonusFormValue } from '../components/BonusForm'
+import { AvailableOffers } from './AvailableOffers'
 import { cardLabel } from '../components/useCardEditor'
 import { formatCents, formatPoints, formatDate, daysUntil } from '@shared/format'
 import type { BonusRow } from '../lib/types'
@@ -76,17 +78,32 @@ export function Bonuses(): React.ReactElement {
 
   return (
     <>
-      <PageHeader title="Signup Bonuses">
-        <Button
-          leftSection={<IconPlus size={16} />}
-          onClick={openCreate}
-          disabled={(cards.data ?? []).length === 0}
-        >
-          Add bonus
-        </Button>
-      </PageHeader>
+      <PageHeader title="Signup Bonuses" />
+      <Tabs defaultValue="mine">
+        <Tabs.List mb="md">
+          <Tabs.Tab value="mine">My cards</Tabs.Tab>
+          <Tabs.Tab value="available">Available offers</Tabs.Tab>
+        </Tabs.List>
 
-      {(cards.data ?? []).length === 0 ? (
+        <Tabs.Panel value="available">
+          <AvailableOffers />
+        </Tabs.Panel>
+
+        <Tabs.Panel value="mine">
+          <Group justify="space-between" mb="md">
+            <Text c="dimmed" size="sm">
+              Signup bonuses you&apos;re actively working on your cards.
+            </Text>
+            <Button
+              leftSection={<IconPlus size={16} />}
+              onClick={openCreate}
+              disabled={(cards.data ?? []).length === 0}
+            >
+              Add bonus
+            </Button>
+          </Group>
+
+          {(cards.data ?? []).length === 0 ? (
         <EmptyState title="Add a card first" description="Signup bonuses attach to a card." />
       ) : bonuses.data && bonuses.data.length === 0 ? (
         <EmptyState
@@ -188,7 +205,9 @@ export function Bonuses(): React.ReactElement {
             })}
           </Table.Tbody>
         </Table>
-      )}
+          )}
+        </Tabs.Panel>
+      </Tabs>
 
       <Drawer
         opened={opened}

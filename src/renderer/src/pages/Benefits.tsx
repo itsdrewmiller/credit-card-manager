@@ -9,7 +9,8 @@ import {
   Text,
   Checkbox,
   SegmentedControl,
-  Group
+  Group,
+  Tabs
 } from '@mantine/core'
 import { notifications } from '@mantine/notifications'
 import { IconPlus, IconDots, IconEdit, IconTrash } from '@tabler/icons-react'
@@ -17,6 +18,7 @@ import { trpc } from '../trpc'
 import { PageHeader } from '../components/PageHeader'
 import { EmptyState } from '../components/EmptyState'
 import { BenefitForm, type BenefitFormValue } from '../components/BenefitForm'
+import { CardBenefits } from './CardBenefits'
 import { cardLabel } from '../components/useCardEditor'
 import { formatCents, formatDate, daysUntil } from '@shared/format'
 import type { BenefitRow } from '../lib/types'
@@ -78,32 +80,41 @@ export function Benefits(): React.ReactElement {
 
   return (
     <>
-      <PageHeader title="Benefits">
-        <Button
-          leftSection={<IconPlus size={16} />}
-          onClick={openCreate}
-          disabled={(cards.data ?? []).length === 0}
-        >
-          Add benefit
-        </Button>
-      </PageHeader>
+      <PageHeader title="Benefits" />
+      <Tabs defaultValue="mine">
+        <Tabs.List mb="md">
+          <Tabs.Tab value="mine">My benefits</Tabs.Tab>
+          <Tabs.Tab value="card">Card benefits</Tabs.Tab>
+        </Tabs.List>
 
-      <Group mb="md">
-        <SegmentedControl
+        <Tabs.Panel value="card">
+          <CardBenefits />
+        </Tabs.Panel>
+
+        <Tabs.Panel value="mine">
+          <Group justify="space-between" mb="md">
+            <SegmentedControl
           value={filter}
           onChange={(v) => setFilter(v as StatusFilter)}
           data={[
             { label: 'All', value: 'all' },
             { label: 'Available', value: 'available' },
             { label: 'Upcoming', value: 'upcoming' },
-            { label: 'Used', value: 'used' },
-            { label: 'Expired', value: 'expired' }
-          ]}
-        />
-      </Group>
+              { label: 'Used', value: 'used' },
+              { label: 'Expired', value: 'expired' }
+            ]}
+            />
+            <Button
+              leftSection={<IconPlus size={16} />}
+              onClick={openCreate}
+              disabled={(cards.data ?? []).length === 0}
+            >
+              Add benefit
+            </Button>
+          </Group>
 
-      {(cards.data ?? []).length === 0 ? (
-        <EmptyState title="Add a card first" description="Benefits attach to a card." />
+          {(cards.data ?? []).length === 0 ? (
+            <EmptyState title="Add a card first" description="Benefits attach to a card." />
       ) : filtered.length === 0 ? (
         <EmptyState
           title={benefits.data?.length ? 'Nothing in this view' : 'No benefits tracked'}
@@ -120,7 +131,7 @@ export function Benefits(): React.ReactElement {
               <Table.Th w={40}>Used</Table.Th>
               <Table.Th>Benefit</Table.Th>
               <Table.Th>Card</Table.Th>
-              <Table.Th>EV</Table.Th>
+              <Table.Th>Value</Table.Th>
               <Table.Th>Use by</Table.Th>
               <Table.Th>Status</Table.Th>
               <Table.Th w={48} />
@@ -153,7 +164,7 @@ export function Benefits(): React.ReactElement {
                     </Group>
                   </Table.Td>
                   <Table.Td>{b.card ? cardLabel(b.card) : '—'}</Table.Td>
-                  <Table.Td>{formatCents(b.evCents)}</Table.Td>
+                  <Table.Td>{formatCents(b.amountCents)}</Table.Td>
                   <Table.Td>
                     <Text size="sm">{formatDate(b.useBy)}</Text>
                     {days != null && b.status === 'available' && days <= 30 && (
@@ -195,7 +206,9 @@ export function Benefits(): React.ReactElement {
             })}
           </Table.Tbody>
         </Table>
-      )}
+          )}
+        </Tabs.Panel>
+      </Tabs>
 
       <Drawer
         opened={opened}

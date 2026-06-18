@@ -6,7 +6,9 @@ import { issuersRouter, productsRouter } from './routers/catalog'
 import { cardsRouter } from './routers/cards'
 import { pointsRouter } from './routers/points'
 import { bonusesRouter } from './routers/bonuses'
+import { offersRouter } from './routers/offers'
 import { benefitsRouter } from './routers/benefits'
+import { productBenefitsRouter } from './routers/productBenefits'
 import { velocityRouter } from './routers/velocity'
 import { referralsRouter } from './routers/referrals'
 import { importerRouter } from './routers/importer'
@@ -21,7 +23,9 @@ export const appRouter = router({
   cards: cardsRouter,
   points: pointsRouter,
   bonuses: bonusesRouter,
+  offers: offersRouter,
   benefits: benefitsRouter,
+  productBenefits: productBenefitsRouter,
   velocity: velocityRouter,
   referrals: referralsRouter,
   importer: importerRouter,
