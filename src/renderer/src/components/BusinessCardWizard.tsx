@@ -1,18 +1,16 @@
-import React, { useState } from 'react'
+import React from 'react'
 import {
   Modal,
-  Stepper,
   Group,
   Button,
   Select,
   TextInput,
   NumberInput,
   Switch,
-  Stack,
-  Text,
-  Alert,
+  SimpleGrid,
   Divider,
-  List
+  Alert,
+  Text
 } from '@mantine/core'
 import { DateInput } from '@mantine/dates'
 import { useForm } from '@mantine/form'
@@ -20,10 +18,10 @@ import { notifications } from '@mantine/notifications'
 import { IconAlertCircle, IconBuildingStore, IconCheck } from '@tabler/icons-react'
 import { trpc } from '../trpc'
 import { NETWORKS, REWARD_KINDS, type RewardKind } from '@shared/constants'
-import { parseCents, formatCents, bonusValueCents } from '@shared/format'
+import { centsToDollars, parseCents, formatCents, bonusValueCents } from '@shared/format'
 import { dateToIso } from '../lib/dates'
 
-interface WizardValues {
+interface FormValues {
   businessId: string
   ownerPersonId: string
   cardProductId: string
@@ -38,9 +36,10 @@ interface WizardValues {
   cashDollars: number | ''
   targetSpendDollars: number | ''
   deadline: Date | null
+  windowMonths: number | ''
 }
 
-const initialValues: WizardValues = {
+const initialValues: FormValues = {
   businessId: '',
   ownerPersonId: '',
   cardProductId: '',
@@ -54,7 +53,15 @@ const initialValues: WizardValues = {
   pointsAmount: '',
   cashDollars: '',
   targetSpendDollars: '',
-  deadline: null
+  deadline: null,
+  windowMonths: ''
+}
+
+function addMonths(d: Date | null, months: number | null): Date | null {
+  if (!d || months == null) return null
+  const r = new Date(d)
+  r.setMonth(r.getMonth() + months)
+  return r
 }
 
 export function BusinessCardWizard({
@@ -69,72 +76,84 @@ export function BusinessCardWizard({
   const people = trpc.people.list.useQuery()
   const products = trpc.products.listForSelect.useQuery()
   const programs = trpc.points.listForSelect.useQuery()
+  const offers = trpc.offers.list.useQuery()
 
-  const [active, setActive] = useState(0)
-  const form = useForm<WizardValues>({ initialValues })
+  const form = useForm<FormValues>({
+    initialValues,
+    validate: { businessId: (v) => (v ? null : 'Pick a business') }
+  })
 
   const createBonus = trpc.bonuses.create.useMutation()
   const createCard = trpc.cards.create.useMutation()
 
-  const reset = (): void => {
-    form.setValues(initialValues)
-    setActive(0)
-  }
   const close = (): void => {
-    reset()
+    form.setValues(initialValues)
     onClose()
   }
 
   const noBusinesses = (businesses.data ?? []).length === 0
-
   const businessOptions = (businesses.data ?? []).map((b) => ({
     value: String(b.id),
     label: b.owner ? `${b.name} (${b.owner.name})` : b.name
   }))
   const peopleOptions = (people.data ?? []).map((p) => ({ value: String(p.id), label: p.name }))
-  // Business cards -> only show business products in the catalog picker.
   const productOptions = (products.data ?? [])
     .filter((p) => p.isBusiness)
     .map((p) => ({ value: String(p.id), label: p.label }))
-  const programOptions = (programs.data ?? []).map((p) => ({
-    value: String(p.id),
-    label: p.label
-  }))
+  const programOptions = (programs.data ?? []).map((p) => ({ value: String(p.id), label: p.label }))
 
-  // Default the owner to the business's owner when a business is chosen.
+  // Default the owner to the business owner.
   const onBusinessChange = (value: string | null): void => {
     form.setFieldValue('businessId', value ?? '')
     const biz = businesses.data?.find((b) => String(b.id) === value)
-    if (biz && !form.values.ownerPersonId) {
-      form.setFieldValue('ownerPersonId', String(biz.ownerPersonId))
+    if (biz && !form.values.ownerPersonId) form.setFieldValue('ownerPersonId', String(biz.ownerPersonId))
+  }
+
+  // Prefill network, annual fee, and the signup bonus from the chosen product.
+  const onProductChange = (value: string | null): void => {
+    form.setFieldValue('cardProductId', value ?? '')
+    const p = products.data?.find((x) => String(x.id) === value)
+    if (p) {
+      form.setFieldValue('network', p.network ?? '')
+      form.setFieldValue('annualFeeDollars', centsToDollars(p.defaultAnnualFeeCents))
+    }
+    const offer = offers.data?.find((o) => String(o.cardProductId) === value)
+    if (offer) {
+      form.setFieldValue('hasBonus', true)
+      form.setFieldValue('rewardKind', (offer.rewardKind ?? 'points') as RewardKind)
+      form.setFieldValue('pointProgramId', offer.pointProgramId ? String(offer.pointProgramId) : '')
+      form.setFieldValue('pointsAmount', offer.pointsAmount ?? '')
+      form.setFieldValue('cashDollars', centsToDollars(offer.cashAmountCents))
+      form.setFieldValue('targetSpendDollars', centsToDollars(offer.minSpendCents))
+      form.setFieldValue('windowMonths', offer.windowMonths ?? '')
+      form.setFieldValue('deadline', addMonths(form.values.openedDate, offer.windowMonths ?? null))
     }
   }
 
-  const next = (): void => {
-    if (active === 0 && !form.values.businessId) {
-      form.setFieldError('businessId', 'Pick a business')
-      return
-    }
-    setActive((s) => Math.min(s + 1, 3))
+  // Opened date drives the min-spend deadline (open + the offer's window).
+  const onOpenedChange = (date: Date | null): void => {
+    form.setFieldValue('openedDate', date)
+    const months = form.values.windowMonths
+    if (months !== '') form.setFieldValue('deadline', addMonths(date, Number(months)))
   }
-  const back = (): void => setActive((s) => Math.max(s - 1, 0))
 
-  const chosenProduct = products.data?.find((p) => String(p.id) === form.values.cardProductId)
-  const chosenProgram = programs.data?.find((p) => String(p.id) === form.values.pointProgramId)
+  const isCash = form.values.rewardKind === 'cash'
+  const selectedProgram = programs.data?.find((p) => String(p.id) === form.values.pointProgramId)
   const bonusPreview = bonusValueCents({
-    cashAmountCents: form.values.rewardKind === 'cash' ? parseCents(form.values.cashDollars) : null,
+    cashAmountCents: isCash ? parseCents(form.values.cashDollars) : null,
     pointsAmount: form.values.pointsAmount === '' ? null : Number(form.values.pointsAmount),
-    valuationCpp: chosenProgram?.valuationCpp ?? null
+    valuationCpp: selectedProgram?.valuationCpp ?? null
   })
 
-  const submit = (): void => {
-    const v = form.values
+  const submitting = createCard.isPending || createBonus.isPending
+
+  const submit = form.onSubmit((v) => {
     createCard.mutate(
       {
         businessId: Number(v.businessId),
         ownerPersonId: v.ownerPersonId ? Number(v.ownerPersonId) : null,
         cardProductId: v.cardProductId ? Number(v.cardProductId) : null,
-        network: v.network || chosenProduct?.network || null,
+        network: v.network || null,
         last4: v.last4 || null,
         annualFeeCents: parseCents(v.annualFeeDollars),
         openedDate: dateToIso(v.openedDate),
@@ -147,6 +166,7 @@ export function BusinessCardWizard({
             void utils.cards.list.invalidate()
             void utils.cards.needsInfo.invalidate()
             void utils.bonuses.list.invalidate()
+            void utils.benefits.list.invalidate()
             void utils.system.health.invalidate()
             notifications.show({
               color: 'green',
@@ -160,11 +180,9 @@ export function BusinessCardWizard({
               {
                 cardId: card.id,
                 rewardKind: v.rewardKind,
-                pointProgramId:
-                  v.rewardKind !== 'cash' && v.pointProgramId ? Number(v.pointProgramId) : null,
-                pointsAmount:
-                  v.rewardKind !== 'cash' && v.pointsAmount !== '' ? Number(v.pointsAmount) : null,
-                cashAmountCents: v.rewardKind === 'cash' ? parseCents(v.cashDollars) : null,
+                pointProgramId: !isCash && v.pointProgramId ? Number(v.pointProgramId) : null,
+                pointsAmount: !isCash && v.pointsAmount !== '' ? Number(v.pointsAmount) : null,
+                cashAmountCents: isCash ? parseCents(v.cashDollars) : null,
                 targetSpendCents: parseCents(v.targetSpendDollars),
                 deadline: dateToIso(v.deadline),
                 spendSoFarCents: 0,
@@ -179,178 +197,153 @@ export function BusinessCardWizard({
         onError: (e) => notifications.show({ color: 'red', message: e.message })
       }
     )
-  }
-
-  const submitting = createCard.isPending || createBonus.isPending
-  const bizLabel = businessOptions.find((b) => b.value === form.values.businessId)?.label
+  })
 
   return (
-    <Modal opened={opened} onClose={close} title="Add a business card" size="xl">
+    <Modal opened={opened} onClose={close} title="Add a business card" size="lg">
       {noBusinesses ? (
         <Alert color="orange" icon={<IconAlertCircle size={18} />}>
           You need a business first. Add one under <strong>People &amp; Businesses</strong>, then come
           back.
         </Alert>
       ) : (
-        <>
-          <Stepper active={active} onStepClick={setActive} size="sm">
-            <Stepper.Step label="Business" description="Whose card">
-              <Stack mt="md">
-                <Select
-                  label="Business"
-                  description="Business cards don't show up on your credit report, so add them here."
-                  withAsterisk
-                  data={businessOptions}
-                  searchable
-                  leftSection={<IconBuildingStore size={16} />}
-                  value={form.values.businessId}
-                  error={form.errors.businessId}
-                  onChange={onBusinessChange}
-                />
-                <Select
-                  label="Card owner"
-                  description="The person who applied (defaults to the business owner)."
-                  data={peopleOptions}
-                  searchable
-                  clearable
-                  {...form.getInputProps('ownerPersonId')}
-                />
-              </Stack>
-            </Stepper.Step>
+        <form onSubmit={submit}>
+          <Text size="sm" c="dimmed" mb="md">
+            Business cards don&apos;t show up on your credit report, so add them here. Picking a product
+            fills in the network, annual fee, and any known signup-bonus offer.
+          </Text>
 
-            <Stepper.Step label="Card" description="Product & details">
-              <Stack mt="md">
+          <SimpleGrid cols={2} mb="sm">
+            <Select
+              label="Business"
+              withAsterisk
+              data={businessOptions}
+              searchable
+              leftSection={<IconBuildingStore size={16} />}
+              value={form.values.businessId}
+              error={form.errors.businessId}
+              onChange={onBusinessChange}
+            />
+            <Select
+              label="Card owner"
+              data={peopleOptions}
+              searchable
+              clearable
+              {...form.getInputProps('ownerPersonId')}
+            />
+          </SimpleGrid>
+
+          <Select
+            label="Product"
+            placeholder="Pick a business card"
+            data={productOptions}
+            searchable
+            clearable
+            value={form.values.cardProductId}
+            onChange={onProductChange}
+            mb="sm"
+          />
+
+          <SimpleGrid cols={4} mb="sm">
+            <Select
+              label="Network"
+              data={NETWORKS as unknown as string[]}
+              clearable
+              {...form.getInputProps('network')}
+            />
+            <TextInput label="Last 4" maxLength={4} {...form.getInputProps('last4')} />
+            <NumberInput
+              label="Annual fee ($)"
+              min={0}
+              decimalScale={2}
+              thousandSeparator=","
+              {...form.getInputProps('annualFeeDollars')}
+            />
+            <DateInput
+              label="Opened"
+              valueFormat="YYYY-MM-DD"
+              clearable
+              value={form.values.openedDate}
+              onChange={onOpenedChange}
+            />
+          </SimpleGrid>
+
+          <Divider
+            my="sm"
+            label={
+              <Switch
+                label="Signup bonus"
+                {...form.getInputProps('hasBonus', { type: 'checkbox' })}
+              />
+            }
+          />
+
+          {form.values.hasBonus && (
+            <>
+              <SimpleGrid cols={2} mb="sm">
                 <Select
-                  label="Product"
-                  description="Pick a known business card, or leave blank and fill in later."
-                  data={productOptions}
-                  searchable
-                  clearable
-                  {...form.getInputProps('cardProductId')}
+                  label="Reward kind"
+                  data={REWARD_KINDS as unknown as string[]}
+                  {...form.getInputProps('rewardKind')}
                 />
-                <Group grow>
-                  <Select
-                    label="Network"
-                    data={NETWORKS as unknown as string[]}
-                    clearable
-                    {...form.getInputProps('network')}
-                  />
-                  <TextInput label="Last 4" maxLength={4} {...form.getInputProps('last4')} />
-                </Group>
-                <Group grow>
+                {isCash ? (
                   <NumberInput
-                    label="Annual fee ($)"
+                    label="Cash bonus ($)"
                     min={0}
                     decimalScale={2}
                     thousandSeparator=","
-                    {...form.getInputProps('annualFeeDollars')}
+                    {...form.getInputProps('cashDollars')}
                   />
-                  <DateInput
-                    label="Opened"
-                    valueFormat="YYYY-MM-DD"
-                    clearable
-                    {...form.getInputProps('openedDate')}
+                ) : (
+                  <NumberInput
+                    label="Points / miles"
+                    min={0}
+                    thousandSeparator=","
+                    {...form.getInputProps('pointsAmount')}
                   />
-                </Group>
-              </Stack>
-            </Stepper.Step>
-
-            <Stepper.Step label="Bonus" description="Optional">
-              <Stack mt="md">
-                <Switch
-                  label="This card has a signup bonus"
-                  {...form.getInputProps('hasBonus', { type: 'checkbox' })}
-                />
-                {form.values.hasBonus && (
-                  <>
-                    <Select
-                      label="Reward kind"
-                      data={REWARD_KINDS as unknown as string[]}
-                      {...form.getInputProps('rewardKind')}
-                    />
-                    {form.values.rewardKind === 'cash' ? (
-                      <NumberInput
-                        label="Cash bonus ($)"
-                        min={0}
-                        decimalScale={2}
-                        thousandSeparator=","
-                        {...form.getInputProps('cashDollars')}
-                      />
-                    ) : (
-                      <Group grow>
-                        <Select
-                          label="Point program"
-                          data={programOptions}
-                          searchable
-                          clearable
-                          {...form.getInputProps('pointProgramId')}
-                        />
-                        <NumberInput
-                          label="Points / miles"
-                          min={0}
-                          thousandSeparator=","
-                          {...form.getInputProps('pointsAmount')}
-                        />
-                      </Group>
-                    )}
-                    <Group grow>
-                      <NumberInput
-                        label="Spend target ($)"
-                        min={0}
-                        decimalScale={2}
-                        thousandSeparator=","
-                        {...form.getInputProps('targetSpendDollars')}
-                      />
-                      <DateInput
-                        label="Deadline"
-                        valueFormat="YYYY-MM-DD"
-                        clearable
-                        {...form.getInputProps('deadline')}
-                      />
-                    </Group>
-                    <Text size="sm" c="dimmed">
-                      Estimated value: <strong>{formatCents(bonusPreview)}</strong>
-                    </Text>
-                  </>
                 )}
-              </Stack>
-            </Stepper.Step>
+              </SimpleGrid>
+              {!isCash && (
+                <Select
+                  label="Point program (for value)"
+                  data={programOptions}
+                  searchable
+                  clearable
+                  {...form.getInputProps('pointProgramId')}
+                  mb="sm"
+                />
+              )}
+              <SimpleGrid cols={2} mb="sm">
+                <NumberInput
+                  label="Spend target ($)"
+                  min={0}
+                  decimalScale={2}
+                  thousandSeparator=","
+                  {...form.getInputProps('targetSpendDollars')}
+                />
+                <DateInput
+                  label="Spend deadline"
+                  description="Auto-set from open date + offer window"
+                  valueFormat="YYYY-MM-DD"
+                  clearable
+                  {...form.getInputProps('deadline')}
+                />
+              </SimpleGrid>
+              <Text size="sm" c="dimmed" mb="sm">
+                Estimated bonus value: <strong>{formatCents(bonusPreview)}</strong>
+              </Text>
+            </>
+          )}
 
-            <Stepper.Completed>
-              <Stack mt="md">
-                <Text fw={600}>Review</Text>
-                <List size="sm" spacing={4}>
-                  <List.Item>Business: {bizLabel ?? '—'}</List.Item>
-                  <List.Item>
-                    Product: {chosenProduct?.label ?? 'unmatched (fill in later)'}
-                  </List.Item>
-                  <List.Item>Annual fee: {formatCents(parseCents(form.values.annualFeeDollars))}</List.Item>
-                  <List.Item>
-                    Opened: {form.values.openedDate ? dateToIso(form.values.openedDate) : '—'}
-                  </List.Item>
-                  <List.Item>
-                    Signup bonus:{' '}
-                    {form.values.hasBonus ? `${formatCents(bonusPreview)} value` : 'none'}
-                  </List.Item>
-                </List>
-              </Stack>
-            </Stepper.Completed>
-          </Stepper>
-
-          <Divider my="md" />
-          <Group justify="space-between">
-            <Button variant="default" onClick={active === 0 ? close : back}>
-              {active === 0 ? 'Cancel' : 'Back'}
+          <Group justify="flex-end" mt="md">
+            <Button variant="default" onClick={close}>
+              Cancel
             </Button>
-            {active < 3 ? (
-              <Button onClick={next}>Next</Button>
-            ) : (
-              <Button onClick={submit} loading={submitting} leftSection={<IconCheck size={16} />}>
-                Create card
-              </Button>
-            )}
+            <Button type="submit" loading={submitting} leftSection={<IconCheck size={16} />}>
+              Create card
+            </Button>
           </Group>
-        </>
+        </form>
       )}
     </Modal>
   )
