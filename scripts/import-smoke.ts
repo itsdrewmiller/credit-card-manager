@@ -75,10 +75,6 @@ try {
     closedWithDate.every((t) => /^\d{4}-\d{2}-\d{2}$/.test(t.closedDate!)),
     'closed dates normalized to ISO'
   )
-  assert(
-    tradelines.every((t) => t.responsibility === 'individual' || t.responsibility === 'authorized_user'),
-    'responsibility normalized to enum'
-  )
 
   // Build matcher from the seeded catalog.
   const { db } = openDatabase(join(dir, 'test.db'))
@@ -104,7 +100,6 @@ try {
           rawAccountLabel: t.accountType,
           last4: t.last4,
           status: t.status,
-          responsibility: t.responsibility,
           openedDate: t.openedDate,
           closedDate: t.closedDate,
           source: 'imported'
@@ -136,8 +131,7 @@ try {
       issuerId: t.suggestedIssuerId,
       openedDate: t.openedDate,
       closedDate: t.closedDate,
-      status: t.status,
-      responsibility: t.responsibility
+      status: t.status
     }))
   const res = await caller.importer.commit({ ownerPersonId: null, rows })
   assert(res.created === rows.length, `committed ${res.created} cards via the router`)

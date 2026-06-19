@@ -11,14 +11,7 @@ import {
 } from '@mantine/core'
 import { DateInput } from '@mantine/dates'
 import { useForm } from '@mantine/form'
-import {
-  CARD_STATUSES,
-  CARD_STATUS_LABELS,
-  NETWORKS,
-  RESPONSIBILITIES,
-  RESPONSIBILITY_LABELS,
-  type CardStatus
-} from '@shared/constants'
+import { CARD_STATUSES, CARD_STATUS_LABELS, NETWORKS, type CardStatus } from '@shared/constants'
 import { centsToDollars, parseCents } from '@shared/format'
 import { isoToDate, dateToIso } from '../lib/dates'
 
@@ -30,7 +23,6 @@ export interface CardFormValue {
   last4: string | null
   annualFeeCents: number | null
   status: CardStatus
-  responsibility: string | null
   appliedDate: string | null
   openedDate: string | null
   closedDate: string | null
@@ -69,7 +61,6 @@ export function CardForm({
       last4: initial?.last4 ?? '',
       annualFeeDollars: centsToDollars(initial?.annualFeeCents),
       status: initial?.status ?? 'open',
-      responsibility: initial?.responsibility ?? '',
       appliedDate: isoToDate(initial?.appliedDate),
       openedDate: isoToDate(initial?.openedDate),
       closedDate: isoToDate(initial?.closedDate),
@@ -86,7 +77,6 @@ export function CardForm({
       last4: v.last4 || null,
       annualFeeCents: parseCents(v.annualFeeDollars),
       status: v.status as CardStatus,
-      responsibility: v.responsibility || null,
       appliedDate: dateToIso(v.appliedDate),
       openedDate: dateToIso(v.openedDate),
       closedDate: dateToIso(v.closedDate),
@@ -124,19 +114,12 @@ export function CardForm({
           {...form.getInputProps('businessId')}
         />
       </SimpleGrid>
-      <SimpleGrid cols={2} mb="sm">
-        <Select
-          label="Status"
-          data={CARD_STATUSES.map((s) => ({ value: s, label: CARD_STATUS_LABELS[s] }))}
-          {...form.getInputProps('status')}
-        />
-        <Select
-          label="Responsibility"
-          data={RESPONSIBILITIES.map((r) => ({ value: r, label: RESPONSIBILITY_LABELS[r] }))}
-          clearable
-          {...form.getInputProps('responsibility')}
-        />
-      </SimpleGrid>
+      <Select
+        label="Status"
+        data={CARD_STATUSES.map((s) => ({ value: s, label: CARD_STATUS_LABELS[s] }))}
+        {...form.getInputProps('status')}
+        mb="sm"
+      />
       <SimpleGrid cols={3} mb="sm">
         <Select
           label="Network"

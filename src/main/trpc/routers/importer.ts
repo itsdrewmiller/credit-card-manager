@@ -44,8 +44,7 @@ const commitRow = z.object({
   network: z.string().nullish(),
   openedDate: z.string().nullish(),
   closedDate: z.string().nullish(),
-  status: z.enum(['open', 'closed']).default('open'),
-  responsibility: z.string().nullish()
+  status: z.enum(['open', 'closed']).default('open')
 })
 
 export const importerRouter = router({
@@ -110,7 +109,6 @@ export const importerRouter = router({
               rawAccountLabel: r.accountType ?? null,
               last4: r.last4 ?? null, // Equifax exposes the last 4
               status: r.status,
-              responsibility: r.responsibility ?? null,
               openedDate: r.openedDate ?? null,
               closedDate: r.closedDate ?? null,
               source: 'imported'

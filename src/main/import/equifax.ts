@@ -11,9 +11,6 @@
 export interface ParsedTradeline {
   creditorName: string
   accountType: string | null
-  responsibilityRaw: string | null
-  /** Normalized to our enum. */
-  responsibility: 'authorized_user' | 'individual'
   openedDate: string | null // ISO
   closedDate: string | null // ISO, when the report shows a Date Closed
   statusRaw: string | null
@@ -81,11 +78,6 @@ function lastFour(mask: string | undefined): string | null {
   return digits.length >= 4 ? digits.slice(-4) : digits || null
 }
 
-function normResponsibility(raw: string | null): 'authorized_user' | 'individual' {
-  if (raw && /authorized/i.test(raw)) return 'authorized_user'
-  return 'individual'
-}
-
 /** Build the Label -> value map for one account block (up to Payment History). */
 function parseBlock(block: string[]): Map<string, string> {
   const fields = new Map<string, string>()
@@ -129,15 +121,12 @@ export function parseEquifaxAccounts(items: string[]): ParsedTradeline[] {
 
     const accountType = fields.get('Loan/Account Type:') ?? null
     const statusRaw = fields.get('Status:') ?? null
-    const responsibilityRaw = fields.get('Owner:') ?? null
     const dateClosed = parseUsDate(fields.get('Date Closed:'))
     const mask = fields.get('Account Number:') ?? null
 
     tradelines.push({
       creditorName: findCreditor(items, start),
       accountType,
-      responsibilityRaw,
-      responsibility: normResponsibility(responsibilityRaw),
       openedDate: parseUsDate(fields.get('Date Opened:')),
       closedDate: dateClosed,
       statusRaw,

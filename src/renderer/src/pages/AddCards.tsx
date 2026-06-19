@@ -121,8 +121,7 @@ export function AddCards(): React.ReactElement {
           network: chosen?.network ?? null,
           openedDate: t.openedDate,
           closedDate: t.closedDate,
-          status: t.status,
-          responsibility: t.responsibility
+          status: t.status
         }
       })
     commit.mutate({ ownerPersonId: ownerPersonId ? Number(ownerPersonId) : null, rows })
@@ -240,11 +239,6 @@ export function AddCards(): React.ReactElement {
                       {t.duplicate && (
                         <Badge size="xs" variant="light" color="yellow">
                           Already imported
-                        </Badge>
-                      )}
-                      {t.responsibility === 'authorized_user' && (
-                        <Badge size="xs" variant="light" color="grape">
-                          Authorized user
                         </Badge>
                       )}
                       {t.status === 'closed' && (

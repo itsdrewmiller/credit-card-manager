@@ -38,6 +38,19 @@ interface Option {
   label: string
 }
 
+function addDays(date: Date, days: number): Date {
+  const r = new Date(date)
+  r.setDate(r.getDate() + days)
+  return r
+}
+
+/** Whole days between two dates (deadline − start), or '' if either is missing. */
+function daysBetween(start: Date | null, deadline: Date | null): number | '' {
+  if (!start || !deadline) return ''
+  const d = Math.round((deadline.getTime() - start.getTime()) / 86_400_000)
+  return d >= 0 ? d : ''
+}
+
 export function BonusForm({
   initial,
   cardOptions,
@@ -64,12 +77,33 @@ export function BonusForm({
       spendSoFarDollars: centsToDollars(initial?.spendSoFarCents) || 0,
       startDate: isoToDate(initial?.startDate),
       deadline: isoToDate(initial?.deadline),
+      windowDays: daysBetween(isoToDate(initial?.startDate), isoToDate(initial?.deadline)),
       received: initial?.received ?? false,
       referralBonus: initial?.referralBonus ?? '',
       notes: initial?.notes ?? ''
     },
     validate: { cardId: (v) => (v ? null : 'Card is required') }
   })
+
+  // The spend window (in days) drives the deadline: deadline = (start || today) + window.
+  const applyWindow = (start: Date | null, days: number | ''): void => {
+    if (days === '') return
+    form.setFieldValue('deadline', addDays(start ?? new Date(), Number(days)))
+  }
+  const onWindowChange = (value: number | string): void => {
+    const days = value === '' ? '' : Number(value)
+    form.setFieldValue('windowDays', days)
+    applyWindow(form.values.startDate, days)
+  }
+  const onStartChange = (date: Date | null): void => {
+    form.setFieldValue('startDate', date)
+    applyWindow(date, form.values.windowDays)
+  }
+  // Editing the deadline by hand keeps the window field in sync.
+  const onDeadlineChange = (date: Date | null): void => {
+    form.setFieldValue('deadline', date)
+    form.setFieldValue('windowDays', daysBetween(form.values.startDate, date))
+  }
 
   const isCash = form.values.rewardKind === 'cash'
   const selectedProgram = programOptions.find((p) => p.value === form.values.pointProgramId)
@@ -170,18 +204,27 @@ export function BonusForm({
           {...form.getInputProps('spendSoFarDollars')}
         />
       </SimpleGrid>
-      <SimpleGrid cols={2} mb="sm">
+      <SimpleGrid cols={3} mb="sm">
         <DateInput
           label="Start"
           valueFormat="YYYY-MM-DD"
           clearable
-          {...form.getInputProps('startDate')}
+          value={form.values.startDate}
+          onChange={onStartChange}
+        />
+        <NumberInput
+          label="Window (days)"
+          description="Sets the deadline"
+          min={0}
+          value={form.values.windowDays}
+          onChange={onWindowChange}
         />
         <DateInput
           label="Deadline"
           valueFormat="YYYY-MM-DD"
           clearable
-          {...form.getInputProps('deadline')}
+          value={form.values.deadline}
+          onChange={onDeadlineChange}
         />
       </SimpleGrid>
 

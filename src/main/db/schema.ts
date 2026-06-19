@@ -112,8 +112,6 @@ export const card = sqliteTable(
     annualFeeCents: integer('annual_fee_cents'),
 
     status: text('status').notNull().default('open'), // CARD_STATUS
-    // Responsibility from the report: 'individual' | 'authorized_user'
-    responsibility: text('responsibility'),
 
     appliedDate: text('applied_date'),
     openedDate: text('opened_date'),

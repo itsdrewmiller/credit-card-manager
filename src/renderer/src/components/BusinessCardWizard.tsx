@@ -36,7 +36,7 @@ interface FormValues {
   cashDollars: number | ''
   targetSpendDollars: number | ''
   deadline: Date | null
-  windowMonths: number | ''
+  windowDays: number | ''
 }
 
 const initialValues: FormValues = {
@@ -54,13 +54,13 @@ const initialValues: FormValues = {
   cashDollars: '',
   targetSpendDollars: '',
   deadline: null,
-  windowMonths: ''
+  windowDays: ''
 }
 
-function addMonths(d: Date | null, months: number | null): Date | null {
-  if (!d || months == null) return null
+function addDays(d: Date | null, days: number | null): Date | null {
+  if (!d || days == null) return null
   const r = new Date(d)
-  r.setMonth(r.getMonth() + months)
+  r.setDate(r.getDate() + days)
   return r
 }
 
@@ -125,16 +125,25 @@ export function BusinessCardWizard({
       form.setFieldValue('pointsAmount', offer.pointsAmount ?? '')
       form.setFieldValue('cashDollars', centsToDollars(offer.cashAmountCents))
       form.setFieldValue('targetSpendDollars', centsToDollars(offer.minSpendCents))
-      form.setFieldValue('windowMonths', offer.windowMonths ?? '')
-      form.setFieldValue('deadline', addMonths(form.values.openedDate, offer.windowMonths ?? null))
+      // Offers store the window in months; the bonus deadline is tracked in days.
+      const days = offer.windowMonths != null ? offer.windowMonths * 30 : null
+      form.setFieldValue('windowDays', days ?? '')
+      form.setFieldValue('deadline', addDays(form.values.openedDate, days))
     }
   }
 
   // Opened date drives the min-spend deadline (open + the offer's window).
   const onOpenedChange = (date: Date | null): void => {
     form.setFieldValue('openedDate', date)
-    const months = form.values.windowMonths
-    if (months !== '') form.setFieldValue('deadline', addMonths(date, Number(months)))
+    const days = form.values.windowDays
+    if (days !== '') form.setFieldValue('deadline', addDays(date, Number(days)))
+  }
+
+  // Let the user type a window in days; it sets the deadline from the open date.
+  const onWindowChange = (value: number | string): void => {
+    const days = value === '' ? '' : Number(value)
+    form.setFieldValue('windowDays', days)
+    if (days !== '') form.setFieldValue('deadline', addDays(form.values.openedDate, Number(days)))
   }
 
   const isCash = form.values.rewardKind === 'cash'
@@ -314,7 +323,7 @@ export function BusinessCardWizard({
                   mb="sm"
                 />
               )}
-              <SimpleGrid cols={2} mb="sm">
+              <SimpleGrid cols={3} mb="sm">
                 <NumberInput
                   label="Spend target ($)"
                   min={0}
@@ -322,9 +331,16 @@ export function BusinessCardWizard({
                   thousandSeparator=","
                   {...form.getInputProps('targetSpendDollars')}
                 />
+                <NumberInput
+                  label="Window (days)"
+                  description="Sets the deadline"
+                  min={0}
+                  value={form.values.windowDays}
+                  onChange={onWindowChange}
+                />
                 <DateInput
                   label="Spend deadline"
-                  description="Auto-set from open date + offer window"
+                  description="From open date + window"
                   valueFormat="YYYY-MM-DD"
                   clearable
                   {...form.getInputProps('deadline')}

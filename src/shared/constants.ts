@@ -15,13 +15,6 @@ export const CARD_STATUS_LABELS: Record<CardStatus, string> = {
 export const NETWORKS = ['Visa', 'Mastercard', 'Amex', 'Discover'] as const
 export type Network = (typeof NETWORKS)[number]
 
-export const RESPONSIBILITIES = ['individual', 'authorized_user'] as const
-export type Responsibility = (typeof RESPONSIBILITIES)[number]
-export const RESPONSIBILITY_LABELS: Record<Responsibility, string> = {
-  individual: 'Individual',
-  authorized_user: 'Authorized user'
-}
-
 export const BUSINESS_TYPES = [
   'LLC',
   'Sole Proprietor',

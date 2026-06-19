@@ -47,7 +47,6 @@ const upsert = z.object({
   last4: z.string().nullish(),
   annualFeeCents: z.number().int().nullish(),
   status: z.enum(CARD_STATUSES).default('open'),
-  responsibility: z.string().nullish(),
   appliedDate: z.string().nullish(),
   openedDate: z.string().nullish(),
   closedDate: z.string().nullish(),
