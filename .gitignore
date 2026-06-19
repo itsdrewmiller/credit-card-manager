@@ -27,3 +27,7 @@ yarn-error.log*
 
 # --- electron-builder output ---
 release/
+
+# Root working CSVs (canonical/bundled copy is data/signup_bonuses.csv)
+/signup_bonuses.csv
+/credit_card_signup_bonuses_*.csv
