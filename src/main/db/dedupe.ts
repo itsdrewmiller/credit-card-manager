@@ -1,7 +1,7 @@
 import { eq } from 'drizzle-orm'
 import type { DB } from './index'
 import { cardProduct, issuer, card, referral, productOffer, productBenefit } from './schema'
-import { stripIssuerPrefix, cleanCardName } from '../import/naming'
+import { stripIssuerPrefix, cleanCardName, canonicalProductName } from '../import/naming'
 
 /** Repoint everything from a duplicate product onto the keeper, then delete it. */
 function mergeProduct(db: DB, dupId: number, keeperId: number): void {
@@ -66,16 +66,16 @@ export function dedupeCatalog(db: DB): { renamed: number; merged: number } {
 
     const keeper = new Map<string, number>() // `${issuerId}|${name}` -> keeper id
     for (const p of rows) {
-      const stripped = stripIssuerPrefix(cleanCardName(p.name), p.issuerName)
-      const key = `${p.issuerId}|${stripped.toLowerCase()}`
+      const canonical = canonicalProductName(stripIssuerPrefix(cleanCardName(p.name), p.issuerName))
+      const key = `${p.issuerId}|${canonical.toLowerCase()}`
       const existing = keeper.get(key)
       if (existing != null && existing !== p.id) {
         mergeProduct(tx, p.id, existing)
         merged++
       } else {
         keeper.set(key, p.id)
-        if (stripped !== p.name) {
-          tx.update(cardProduct).set({ name: stripped }).where(eq(cardProduct.id, p.id)).run()
+        if (canonical !== p.name) {
+          tx.update(cardProduct).set({ name: canonical }).where(eq(cardProduct.id, p.id)).run()
           renamed++
         }
       }

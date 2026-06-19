@@ -166,6 +166,7 @@ export function CardForm({
           label="Opened"
           valueFormat="YYYY-MM-DD"
           clearable
+          defaultDate={new Date()}
           {...form.getInputProps('openedDate')}
         />
         <DateInput

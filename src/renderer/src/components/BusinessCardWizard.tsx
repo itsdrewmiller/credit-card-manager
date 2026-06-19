@@ -263,6 +263,7 @@ export function BusinessCardWizard({
               label="Opened"
               valueFormat="YYYY-MM-DD"
               clearable
+              defaultDate={new Date()}
               value={form.values.openedDate}
               onChange={onOpenedChange}
             />

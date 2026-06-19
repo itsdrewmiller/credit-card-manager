@@ -2,7 +2,7 @@ import { eq, and, sql } from 'drizzle-orm'
 import type { DB } from '../db'
 import { productOffer, cardProduct, issuer, pointProgram } from '../db/schema'
 import { parseCsv } from './csv'
-import { stripIssuerPrefix, cleanCardName } from './naming'
+import { stripIssuerPrefix, cleanCardName, canonicalProductName } from './naming'
 
 /** The only networks unambiguously inferable from issuer (Visa/MC vary). */
 function inferNetwork(issuerName: string): string | null {
@@ -111,7 +111,7 @@ export function importOffersCsv(db: DB, text: string): OfferImportResult {
       // Use the CSV's network if given, else infer (Amex/Discover only).
       const network = normalizeNetwork(r.network) ?? inferNetwork(issuerName)
       const issuerId = findOrCreateIssuer(h, issuerName)
-      const productName = stripIssuerPrefix(cleanCardName(name), issuerName)
+      const productName = canonicalProductName(stripIssuerPrefix(cleanCardName(name), issuerName))
       const productId = findOrCreateProduct(h, issuerId, productName, isBusiness, feeCents, network)
 
       const currency = r.bonus_currency?.trim() || null

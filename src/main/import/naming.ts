@@ -26,6 +26,17 @@ export function cleanCardName(name: string): string {
   return s || name.trim()
 }
 
+/**
+ * Canonicalize known same-card name variants so they don't duplicate.
+ * Chase Ink cards are all business cards, so "Ink Business X" === "Ink X".
+ */
+export function canonicalProductName(name: string): string {
+  return name
+    .replace(/\bInk Business\b/gi, 'Ink')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
 export function stripIssuerPrefix(name: string, issuerName: string): string {
   const candidates = [issuerName, ...(ISSUER_PREFIXES[issuerName] ?? [])]
   for (const p of candidates) {

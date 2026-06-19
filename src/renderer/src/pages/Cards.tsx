@@ -1,7 +1,24 @@
-import React from 'react'
-import { Table, Button, Group, ActionIcon, Menu, Badge, Text, Tooltip } from '@mantine/core'
+import React, { useState, useMemo } from 'react'
+import {
+  Table,
+  Button,
+  Group,
+  ActionIcon,
+  Menu,
+  Badge,
+  Text,
+  Tooltip,
+  SegmentedControl
+} from '@mantine/core'
 import { notifications } from '@mantine/notifications'
-import { IconPlus, IconDots, IconEdit, IconTrash } from '@tabler/icons-react'
+import {
+  IconPlus,
+  IconDots,
+  IconEdit,
+  IconTrash,
+  IconChevronUp,
+  IconChevronDown
+} from '@tabler/icons-react'
 import { useNavigate } from 'react-router-dom'
 import { trpc } from '../trpc'
 import { PageHeader } from '../components/PageHeader'
@@ -19,11 +36,45 @@ const STATUS_COLOR: Record<CardStatus, string> = {
   rejected: 'red'
 }
 
+type SortField = 'card' | 'owner' | 'business' | 'status' | 'fee' | 'opened'
+interface Sort {
+  field: SortField
+  dir: 'asc' | 'desc'
+}
+
+function value(c: CardRow, field: SortField): string | number | null {
+  switch (field) {
+    case 'card':
+      return cardLabel(c).toLowerCase()
+    case 'owner':
+      return c.owner?.name?.toLowerCase() ?? null
+    case 'business':
+      return c.business?.name?.toLowerCase() ?? null
+    case 'status':
+      return c.status
+    case 'fee':
+      return c.annualFeeCents ?? null
+    case 'opened':
+      return c.openedDate ?? null
+  }
+}
+
+function compare(a: string | number | null, b: string | number | null, dir: 'asc' | 'desc'): number {
+  if (a == null && b == null) return 0
+  if (a == null) return 1 // nulls last regardless of direction
+  if (b == null) return -1
+  const r = typeof a === 'number' && typeof b === 'number' ? a - b : String(a).localeCompare(String(b))
+  return dir === 'asc' ? r : -r
+}
+
 export function Cards(): React.ReactElement {
   const utils = trpc.useUtils()
   const navigate = useNavigate()
   const cards = trpc.cards.list.useQuery()
   const editor = useCardEditor()
+
+  const [status, setStatus] = useState<string>('open')
+  const [sort, setSort] = useState<Sort>({ field: 'opened', dir: 'desc' })
 
   const remove = trpc.cards.delete.useMutation({
     onSuccess: () => {
@@ -33,6 +84,25 @@ export function Cards(): React.ReactElement {
     },
     onError: (e) => notifications.show({ color: 'red', message: e.message })
   })
+
+  const rows = useMemo(() => {
+    const all = cards.data ?? []
+    const filtered = status === 'all' ? all : all.filter((c) => c.status === status)
+    return [...filtered].sort((a, b) => compare(value(a, sort.field), value(b, sort.field), sort.dir))
+  }, [cards.data, status, sort])
+
+  const toggleSort = (field: SortField): void =>
+    setSort((s) => ({ field, dir: s.field === field && s.dir === 'asc' ? 'desc' : 'asc' }))
+
+  const Th = ({ field, label }: { field: SortField; label: string }): React.ReactElement => (
+    <Table.Th style={{ cursor: 'pointer' }} onClick={() => toggleSort(field)}>
+      <Group gap={4} wrap="nowrap">
+        {label}
+        {sort.field === field &&
+          (sort.dir === 'asc' ? <IconChevronUp size={14} /> : <IconChevronDown size={14} />)}
+      </Group>
+    </Table.Th>
+  )
 
   return (
     <>
@@ -45,36 +115,59 @@ export function Cards(): React.ReactElement {
         </Button>
       </PageHeader>
 
+      <Group mb="md">
+        <SegmentedControl
+          value={status}
+          onChange={setStatus}
+          data={[
+            { label: 'Open', value: 'open' },
+            { label: 'Closed', value: 'closed' },
+            { label: 'Applied', value: 'applied' },
+            { label: 'Rejected', value: 'rejected' },
+            { label: 'All', value: 'all' }
+          ]}
+        />
+        <Text size="sm" c="dimmed">
+          {rows.length} card{rows.length === 1 ? '' : 's'}
+        </Text>
+      </Group>
+
       {cards.data && cards.data.length === 0 ? (
         <EmptyState
           title="No cards yet"
-          description="Add cards manually, or import a credit report later to bootstrap them."
+          description="Add cards manually, or import a credit report to bootstrap them."
         />
+      ) : rows.length === 0 ? (
+        <EmptyState title="No cards in this view" description="Try a different status filter." />
       ) : (
         <Table highlightOnHover withTableBorder>
           <Table.Thead>
             <Table.Tr>
-              <Table.Th>Card</Table.Th>
-              <Table.Th>Owner</Table.Th>
-              <Table.Th>Status</Table.Th>
-              <Table.Th>Annual fee</Table.Th>
-              <Table.Th>Opened</Table.Th>
+              <Th field="card" label="Card" />
+              <Th field="owner" label="Owner" />
+              <Th field="business" label="Business" />
+              <Th field="status" label="Status" />
+              <Th field="fee" label="Annual fee" />
+              <Th field="opened" label="Opened" />
               <Table.Th>Needs info</Table.Th>
               <Table.Th w={48} />
             </Table.Tr>
           </Table.Thead>
           <Table.Tbody>
-            {cards.data?.map((c: CardRow) => (
+            {rows.map((c: CardRow) => (
               <Table.Tr key={c.id}>
                 <Table.Td>
                   <Text fw={500}>{cardLabel(c)}</Text>
-                  {c.business && (
+                  {c.last4 && (
                     <Text size="xs" c="dimmed">
-                      {c.business.name}
+                      ····{c.last4}
                     </Text>
                   )}
                 </Table.Td>
                 <Table.Td>{c.owner?.name ?? <Text c="dimmed">—</Text>}</Table.Td>
+                <Table.Td>
+                  {c.business ? c.business.name : <Text c="dimmed">Personal</Text>}
+                </Table.Td>
                 <Table.Td>
                   <Badge color={STATUS_COLOR[c.status as CardStatus] ?? 'gray'} variant="light">
                     {CARD_STATUS_LABELS[c.status as CardStatus] ?? c.status}
