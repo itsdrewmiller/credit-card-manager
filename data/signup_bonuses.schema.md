@@ -9,6 +9,7 @@ the live file (e.g. `signup_bonuses.csv`) so git history is the change-log.
 | `card_name` | string | Product name, e.g. `Chase Ink Preferred` |
 | `issuer` | string | Bank, e.g. `Chase`, `American Express`, `Capital One` |
 | `is_business` | bool | `true` / `false` |
+| `network` | enum-ish | `Visa`, `Mastercard`, `Amex`, `Discover`. Optional — blank falls back to inferring Amex/Discover from the issuer (Visa/Mastercard can't be inferred). |
 | `bonus_amount` | number | The headline number — points, miles, dollars, or nights |
 | `bonus_currency` | enum-ish | Unit of `bonus_amount`: `Amex MR`, `Chase UR`, `Capital One miles`, `United miles`, `Citi TY`, `USD` (cash), `hotel nights`, … |
 | `point_value_cpp` | number | Assumed cents-per-point. Blank for `USD` and `hotel nights` |

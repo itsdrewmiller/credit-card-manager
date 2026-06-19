@@ -11,6 +11,17 @@ function inferNetwork(issuerName: string): string | null {
   return null
 }
 
+/** Normalize a CSV network value to a canonical name; blank -> null. */
+function normalizeNetwork(s: string | undefined): string | null {
+  const v = (s ?? '').trim()
+  if (!v) return null
+  if (/^mc$|master/i.test(v)) return 'Mastercard'
+  if (/visa/i.test(v)) return 'Visa'
+  if (/amex|american express/i.test(v)) return 'Amex'
+  if (/discover/i.test(v)) return 'Discover'
+  return v
+}
+
 function findOrCreateIssuer(db: DB, name: string): number {
   const existing = db
     .select({ id: issuer.id })
@@ -97,7 +108,8 @@ export function importOffersCsv(db: DB, text: string): OfferImportResult {
       const issuerName = r.issuer?.trim() || name.split(' ')[0]
       const isBusiness = r.is_business?.toLowerCase() === 'true'
       const feeCents = centsOrNull(r.annual_fee_usd)
-      const network = inferNetwork(issuerName)
+      // Use the CSV's network if given, else infer (Amex/Discover only).
+      const network = normalizeNetwork(r.network) ?? inferNetwork(issuerName)
       const issuerId = findOrCreateIssuer(h, issuerName)
       const productName = stripIssuerPrefix(name, issuerName)
       const productId = findOrCreateProduct(h, issuerId, productName, isBusiness, feeCents, network)
