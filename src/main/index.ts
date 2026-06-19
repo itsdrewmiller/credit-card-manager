@@ -1,8 +1,12 @@
 import { app, BrowserWindow, shell, session, dialog, ipcMain } from 'electron'
 import { join } from 'node:path'
+import { existsSync, readFileSync } from 'node:fs'
 import { is } from '@electron-toolkit/utils'
+import { sql } from 'drizzle-orm'
 import { openDatabase, runMigrations, type DB } from './db'
-import { seedCatalog } from './db/seed'
+import { seedCatalog, seedPointPrograms } from './db/seed'
+import { productOffer } from './db/schema'
+import { importOffersCsv } from './import/offers'
 import { appRouter } from './trpc/router'
 import { createCallerFactory } from './trpc/trpc'
 import type { TrpcRequest } from '../preload'
@@ -25,17 +29,33 @@ function registerTrpcIpc(): void {
   })
 }
 
-function migrationsFolder(): string {
+function resourcePath(rel: string): string {
   // Bundled via electron-builder extraResources in production; project root in dev.
-  return app.isPackaged ? join(process.resourcesPath, 'drizzle') : join(app.getAppPath(), 'drizzle')
+  return app.isPackaged ? join(process.resourcesPath, rel) : join(app.getAppPath(), rel)
+}
+
+/** On first run (no offers yet), seed the bundled signup-bonus offers snapshot. */
+function seedOffersIfEmpty(): void {
+  const count = db.select({ n: sql<number>`count(*)` }).from(productOffer).get()?.n ?? 0
+  if (count > 0) return
+  const csvPath = resourcePath(join('data', 'signup_bonuses.csv'))
+  if (!existsSync(csvPath)) return
+  try {
+    const res = importOffersCsv(db, readFileSync(csvPath, 'utf8'))
+    console.log(`[db] seeded ${res.total} available offers from bundled CSV`)
+  } catch (err) {
+    console.warn('[db] could not seed offers:', err)
+  }
 }
 
 function initDatabase(): void {
   const dbPath = join(app.getPath('userData'), 'cardmanager.db')
   const handle = openDatabase(dbPath)
   db = handle.db
-  runMigrations(db, migrationsFolder())
+  runMigrations(db, resourcePath('drizzle'))
   const seeded = seedCatalog(db)
+  seedPointPrograms(db)
+  seedOffersIfEmpty()
   console.log(`[db] ready at ${dbPath}`, seeded.issuers ? `(seeded ${seeded.products} products)` : '')
 }
 

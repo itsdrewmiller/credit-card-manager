@@ -19,7 +19,10 @@ module.exports = {
   directories: { output: 'release', buildResources: 'build' },
   afterPack: 'build/afterPack.cjs',
   files: ['out/**/*'],
-  extraResources: [{ from: 'drizzle', to: 'drizzle' }],
+  extraResources: [
+    { from: 'drizzle', to: 'drizzle' },
+    { from: 'data/signup_bonuses.csv', to: 'data/signup_bonuses.csv' }
+  ],
   asarUnpack: ['**/node_modules/better-sqlite3/**', '**/node_modules/pdfjs-dist/**'],
   npmRebuild: true,
   mac: {
