@@ -6,6 +6,7 @@ import { sql } from 'drizzle-orm'
 import { openDatabase, runMigrations, type DB } from './db'
 import { seedIssuers } from './db/issuers'
 import { seedPointPrograms } from './db/points'
+import { seedExtraProducts } from './db/products'
 import { dedupeCatalog } from './db/dedupe'
 import { productOffer } from './db/schema'
 import { importOffersCsv } from './import/offers'
@@ -58,6 +59,7 @@ function initDatabase(): void {
   const seeded = seedIssuers(db)
   seedPointPrograms(db)
   seedOffersIfEmpty()
+  seedExtraProducts(db)
   const cleaned = dedupeCatalog(db)
   if (cleaned.renamed || cleaned.merged) {
     console.log(`[db] catalog cleanup: ${cleaned.renamed} renamed, ${cleaned.merged} merged`)

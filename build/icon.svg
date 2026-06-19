@@ -1,0 +1,56 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1a2150"/>
+      <stop offset="1" stop-color="#0c1030"/>
+    </linearGradient>
+    <linearGradient id="c1" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffb25e"/>
+      <stop offset="1" stop-color="#f87a3c"/>
+    </linearGradient>
+    <linearGradient id="c2" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#3ad7e6"/>
+      <stop offset="1" stop-color="#1593c9"/>
+    </linearGradient>
+    <linearGradient id="c3" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#8a7bff"/>
+      <stop offset="1" stop-color="#5b3fd6"/>
+    </linearGradient>
+    <linearGradient id="chip" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffe6a8"/>
+      <stop offset="1" stop-color="#e0a93c"/>
+    </linearGradient>
+    <filter id="sh" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="14" stdDeviation="22" flood-color="#000" flood-opacity="0.35"/>
+    </filter>
+  </defs>
+
+  <rect x="80" y="80" width="864" height="864" rx="200" fill="url(#bg)"/>
+
+  <!-- a card: centered at origin, rounded rect + chip + number stripes -->
+  <!-- back card -->
+  <g transform="translate(512 480) rotate(-17)" filter="url(#sh)">
+    <rect x="-250" y="-160" width="500" height="320" rx="34" fill="url(#c1)"/>
+    <rect x="-205" y="-92" width="78" height="60" rx="12" fill="url(#chip)"/>
+    <rect x="-205" y="60" width="300" height="20" rx="10" fill="#ffffff" opacity="0.55"/>
+    <rect x="-205" y="98" width="190" height="18" rx="9" fill="#ffffff" opacity="0.4"/>
+  </g>
+
+  <!-- middle card -->
+  <g transform="translate(512 522) rotate(-3)" filter="url(#sh)">
+    <rect x="-250" y="-160" width="500" height="320" rx="34" fill="url(#c2)"/>
+    <rect x="-205" y="-92" width="78" height="60" rx="12" fill="url(#chip)"/>
+    <rect x="-205" y="60" width="300" height="20" rx="10" fill="#ffffff" opacity="0.6"/>
+    <rect x="-205" y="98" width="190" height="18" rx="9" fill="#ffffff" opacity="0.45"/>
+  </g>
+
+  <!-- front card -->
+  <g transform="translate(512 566) rotate(12)" filter="url(#sh)">
+    <rect x="-250" y="-160" width="500" height="320" rx="34" fill="url(#c3)"/>
+    <rect x="-205" y="-92" width="78" height="60" rx="12" fill="url(#chip)"/>
+    <circle cx="170" cy="-58" r="34" fill="#ffffff" opacity="0.85"/>
+    <circle cx="128" cy="-58" r="34" fill="#ffffff" opacity="0.5"/>
+    <rect x="-205" y="60" width="300" height="22" rx="11" fill="#ffffff" opacity="0.75"/>
+    <rect x="-205" y="100" width="190" height="20" rx="10" fill="#ffffff" opacity="0.55"/>
+  </g>
+</svg>
