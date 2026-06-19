@@ -11,6 +11,21 @@ const ISSUER_PREFIXES: Record<string, string[]> = {
   'Wells Fargo': ['Wells Fargo', 'WF']
 }
 
+/**
+ * Strip offer/region cruft that source data sometimes appends to a card name,
+ * so the product name is just the card (no "$200", "Bonus", region notes, or a
+ * trailing points figure). Conservative: only removes clearly-offer trailing text.
+ */
+export function cleanCardName(name: string): string {
+  let s = name.trim()
+  s = s.replace(/\s*\([^)]*\)\s*$/, '').trim() // trailing "(Many States)", "($300)"
+  s = s.replace(/\s+[–—-]\s+.*$/, '').trim() // trailing " – NY & CT"
+  s = s.replace(/\s*\$\d.*$/, '').trim() // from a "$200…" amount to the end
+  s = s.replace(/\s+bonus$/i, '').trim() // trailing "Bonus"
+  s = s.replace(/\s+\d[\d,]*k?(\s+offer)?$/i, '').trim() // trailing "30,000" / "100k Offer"
+  return s || name.trim()
+}
+
 export function stripIssuerPrefix(name: string, issuerName: string): string {
   const candidates = [issuerName, ...(ISSUER_PREFIXES[issuerName] ?? [])]
   for (const p of candidates) {

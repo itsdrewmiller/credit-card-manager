@@ -1,7 +1,7 @@
 import { eq } from 'drizzle-orm'
 import type { DB } from './index'
 import { cardProduct, issuer, card, referral, productOffer, productBenefit } from './schema'
-import { stripIssuerPrefix } from '../import/naming'
+import { stripIssuerPrefix, cleanCardName } from '../import/naming'
 
 /** Repoint everything from a duplicate product onto the keeper, then delete it. */
 function mergeProduct(db: DB, dupId: number, keeperId: number): void {
@@ -66,7 +66,7 @@ export function dedupeCatalog(db: DB): { renamed: number; merged: number } {
 
     const keeper = new Map<string, number>() // `${issuerId}|${name}` -> keeper id
     for (const p of rows) {
-      const stripped = stripIssuerPrefix(p.name, p.issuerName)
+      const stripped = stripIssuerPrefix(cleanCardName(p.name), p.issuerName)
       const key = `${p.issuerId}|${stripped.toLowerCase()}`
       const existing = keeper.get(key)
       if (existing != null && existing !== p.id) {
