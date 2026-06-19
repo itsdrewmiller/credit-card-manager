@@ -11,7 +11,7 @@ import { join } from 'node:path'
 import { mkdtempSync, rmSync } from 'node:fs'
 import { eq } from 'drizzle-orm'
 import { openDatabase, runMigrations } from '../src/main/db/index'
-import { seedCatalog } from '../src/main/db/seed'
+import { seedIssuers } from '../src/main/db/issuers'
 import { person, pointProgram, card, signupBonus, issuer, cardProduct } from '../src/main/db/schema'
 import { cardMissingFields } from '../src/main/domain/needsInfo'
 import { computeBonus } from '../src/main/domain/bonus'
@@ -35,18 +35,22 @@ try {
   runMigrations(db, join(process.cwd(), 'drizzle'))
   console.log('• migrations applied')
 
-  const seeded = seedCatalog(db)
-  assert(seeded.issuers > 0 && seeded.products > 0, `catalog seeded (${seeded.products} products)`)
+  const seeded = seedIssuers(db)
+  assert(seeded.issuers > 0 && seeded.aliases > 0, `issuers seeded (${seeded.issuers} + ${seeded.aliases} aliases)`)
 
   // idempotency
-  const seededAgain = seedCatalog(db)
-  assert(seededAgain.products === 0, 'second seed is a no-op (idempotent)')
+  const seededAgain = seedIssuers(db)
+  assert(seededAgain.issuers === 0 && seededAgain.aliases === 0, 'second seed is a no-op (idempotent)')
 
-  // issuers / products present
   const issuers = db.select().from(issuer).all()
-  const products = db.select().from(cardProduct).all()
-  assert(issuers.some((i) => i.name === 'Chase'), 'Chase issuer exists')
-  assert(products.some((p) => p.name === 'Sapphire Reserve'), 'Sapphire Reserve product exists')
+  const chase = issuers.find((i) => i.name === 'Chase')!
+  assert(!!chase, 'Chase issuer exists')
+  // Products come from imports now; create the one these tests use.
+  const csrProduct = db
+    .insert(cardProduct)
+    .values({ issuerId: chase.id, name: 'Sapphire Reserve', network: 'Visa', defaultAnnualFeeCents: 55000 })
+    .returning()
+    .get()
 
   // create a person + point program (1.5 cpp) + card + signup bonus
   const drew = db.insert(person).values({ name: 'Drew' }).returning().get()
@@ -56,11 +60,10 @@ try {
     .returning()
     .get()
 
-  const chaseProduct = products.find((p) => p.name === 'Sapphire Reserve')!
   const csr = db
     .insert(card)
     .values({
-      cardProductId: chaseProduct.id,
+      cardProductId: csrProduct.id,
       ownerPersonId: drew.id,
       status: 'open',
       openedDate: '2026-01-15',
@@ -169,7 +172,6 @@ try {
 
   // --- Product benefit templates auto-applied when a card of that type is added ---
   const caller0 = appRouter.createCaller({ db })
-  const csrProduct = products.find((p) => p.name === 'Sapphire Reserve')!
   await caller0.productBenefits.create({
     cardProductId: csrProduct.id,
     name: 'Annual Travel Credit',

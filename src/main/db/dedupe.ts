@@ -1,24 +1,12 @@
 import { eq } from 'drizzle-orm'
 import type { DB } from './index'
-import {
-  cardProduct,
-  issuer,
-  card,
-  referral,
-  productOffer,
-  productBenefit,
-  cardProductAlias
-} from './schema'
+import { cardProduct, issuer, card, referral, productOffer, productBenefit } from './schema'
 import { stripIssuerPrefix } from '../import/naming'
 
 /** Repoint everything from a duplicate product onto the keeper, then delete it. */
 function mergeProduct(db: DB, dupId: number, keeperId: number): void {
   db.update(card).set({ cardProductId: keeperId }).where(eq(card.cardProductId, dupId)).run()
   db.update(referral).set({ cardProductId: keeperId }).where(eq(referral.cardProductId, dupId)).run()
-  db.update(cardProductAlias)
-    .set({ cardProductId: keeperId })
-    .where(eq(cardProductAlias.cardProductId, dupId))
-    .run()
   db.update(productBenefit)
     .set({ cardProductId: keeperId })
     .where(eq(productBenefit.cardProductId, dupId))

@@ -67,18 +67,18 @@ export const cardProduct = sqliteTable(
   })
 )
 
-/** Name variants as they appear on bureau reports; the fuzzy-match corpus. */
-export const cardProductAlias = sqliteTable(
-  'card_product_alias',
+/** Issuer name variants as they appear on bureau reports; the matcher corpus. */
+export const issuerAlias = sqliteTable(
+  'issuer_alias',
   {
     id: integer('id').primaryKey({ autoIncrement: true }),
-    cardProductId: integer('card_product_id')
+    issuerId: integer('issuer_id')
       .notNull()
-      .references(() => cardProduct.id, { onDelete: 'cascade' }),
+      .references(() => issuer.id, { onDelete: 'cascade' }),
     aliasText: text('alias_text').notNull()
   },
   (t) => ({
-    productIdx: index('alias_product_idx').on(t.cardProductId)
+    issuerIdx: index('issuer_alias_issuer_idx').on(t.issuerId)
   })
 )
 
@@ -292,20 +292,17 @@ export const businessRelations = relations(business, ({ one, many }) => ({
 }))
 
 export const issuerRelations = relations(issuer, ({ many }) => ({
-  products: many(cardProduct)
+  products: many(cardProduct),
+  aliases: many(issuerAlias)
 }))
 
 export const cardProductRelations = relations(cardProduct, ({ one, many }) => ({
   issuer: one(issuer, { fields: [cardProduct.issuerId], references: [issuer.id] }),
-  aliases: many(cardProductAlias),
   cards: many(card)
 }))
 
-export const cardProductAliasRelations = relations(cardProductAlias, ({ one }) => ({
-  product: one(cardProduct, {
-    fields: [cardProductAlias.cardProductId],
-    references: [cardProduct.id]
-  })
+export const issuerAliasRelations = relations(issuerAlias, ({ one }) => ({
+  issuer: one(issuer, { fields: [issuerAlias.issuerId], references: [issuer.id] })
 }))
 
 export const cardRelations = relations(card, ({ one, many }) => ({
@@ -360,7 +357,7 @@ export const schema = {
   business,
   issuer,
   cardProduct,
-  cardProductAlias,
+  issuerAlias,
   card,
   pointProgram,
   signupBonus,
@@ -371,8 +368,8 @@ export const schema = {
   personRelations,
   businessRelations,
   issuerRelations,
+  issuerAliasRelations,
   cardProductRelations,
-  cardProductAliasRelations,
   cardRelations,
   pointProgramRelations,
   signupBonusRelations,

@@ -11,8 +11,8 @@ import { extractTextItems } from '../src/main/import/pdf'
 import { parseEquifaxAccounts } from '../src/main/import/equifax'
 import { buildIssuerMatcher, type AliasRow } from '../src/main/import/match'
 import { openDatabase, runMigrations } from '../src/main/db/index'
-import { seedCatalog } from '../src/main/db/seed'
-import { cardProduct, cardProductAlias, issuer, card } from '../src/main/db/schema'
+import { seedIssuers } from '../src/main/db/issuers'
+import { issuer, issuerAlias, card } from '../src/main/db/schema'
 import { appRouter } from '../src/main/trpc/router'
 
 function assert(cond: unknown, msg: string): void {
@@ -83,12 +83,11 @@ try {
   // Build matcher from the seeded catalog.
   const { db } = openDatabase(join(dir, 'test.db'))
   runMigrations(db, join(process.cwd(), 'drizzle'))
-  seedCatalog(db)
+  seedIssuers(db)
   const corpus: AliasRow[] = db
-    .select({ issuerId: issuer.id, issuerName: issuer.name, aliasText: cardProductAlias.aliasText })
-    .from(cardProductAlias)
-    .innerJoin(cardProduct, eq(cardProductAlias.cardProductId, cardProduct.id))
-    .innerJoin(issuer, eq(cardProduct.issuerId, issuer.id))
+    .select({ issuerId: issuer.id, issuerName: issuer.name, aliasText: issuerAlias.aliasText })
+    .from(issuerAlias)
+    .innerJoin(issuer, eq(issuerAlias.issuerId, issuer.id))
     .all()
   const matcher = buildIssuerMatcher(corpus)
 
@@ -121,7 +120,7 @@ try {
   // --- Full router path: parse -> commit -> read (closedDate, issuerId, dedup) ---
   const { db: db2 } = openDatabase(join(dir, 'router.db'))
   runMigrations(db2, join(process.cwd(), 'drizzle'))
-  seedCatalog(db2)
+  seedIssuers(db2)
   const caller = appRouter.createCaller({ db: db2 })
   const b64 = readFileSync(PDF).toString('base64')
 

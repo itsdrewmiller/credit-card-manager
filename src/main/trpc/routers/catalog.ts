@@ -1,7 +1,7 @@
 import { z } from 'zod'
 import { eq, asc } from 'drizzle-orm'
 import { router, publicProcedure } from '../trpc'
-import { issuer, cardProduct, cardProductAlias } from '../../db/schema'
+import { issuer, cardProduct } from '../../db/schema'
 
 const productInput = z.object({
   issuerId: z.number().int(),
@@ -26,7 +26,7 @@ export const issuersRouter = router({
 export const productsRouter = router({
   list: publicProcedure.query(({ ctx }) =>
     ctx.db.query.cardProduct.findMany({
-      with: { issuer: true, aliases: true },
+      with: { issuer: true },
       orderBy: asc(cardProduct.name)
     }).sync()
   ),
@@ -67,15 +67,5 @@ export const productsRouter = router({
     .mutation(({ ctx, input }) => {
       ctx.db.delete(cardProduct).where(eq(cardProduct.id, input.id)).run()
       return { id: input.id }
-    }),
-
-  addAlias: publicProcedure
-    .input(z.object({ cardProductId: z.number().int(), aliasText: z.string().min(1) }))
-    .mutation(({ ctx, input }) =>
-      ctx.db
-        .insert(cardProductAlias)
-        .values({ cardProductId: input.cardProductId, aliasText: input.aliasText.toUpperCase() })
-        .returning()
-        .get()
-    )
+    })
 })

@@ -4,7 +4,8 @@ import { existsSync, readFileSync } from 'node:fs'
 import { is } from '@electron-toolkit/utils'
 import { sql } from 'drizzle-orm'
 import { openDatabase, runMigrations, type DB } from './db'
-import { seedCatalog, seedPointPrograms } from './db/seed'
+import { seedIssuers } from './db/issuers'
+import { seedPointPrograms } from './db/points'
 import { dedupeCatalog } from './db/dedupe'
 import { productOffer } from './db/schema'
 import { importOffersCsv } from './import/offers'
@@ -54,14 +55,14 @@ function initDatabase(): void {
   const handle = openDatabase(dbPath)
   db = handle.db
   runMigrations(db, resourcePath('drizzle'))
-  const seeded = seedCatalog(db)
+  const seeded = seedIssuers(db)
   seedPointPrograms(db)
   seedOffersIfEmpty()
   const cleaned = dedupeCatalog(db)
   if (cleaned.renamed || cleaned.merged) {
     console.log(`[db] catalog cleanup: ${cleaned.renamed} renamed, ${cleaned.merged} merged`)
   }
-  console.log(`[db] ready at ${dbPath}`, seeded.issuers ? `(seeded ${seeded.products} products)` : '')
+  console.log(`[db] ready at ${dbPath}`, seeded.issuers ? `(seeded ${seeded.issuers} issuers)` : '')
 }
 
 function createWindow(): BrowserWindow {

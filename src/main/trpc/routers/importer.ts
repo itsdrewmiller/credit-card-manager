@@ -2,7 +2,7 @@ import { z } from 'zod'
 import { eq } from 'drizzle-orm'
 import { router, publicProcedure } from '../trpc'
 import type { DB } from '../../db'
-import { card, cardProduct, cardProductAlias, issuer } from '../../db/schema'
+import { card, issuer, issuerAlias } from '../../db/schema'
 import { extractTextItems } from '../../import/pdf'
 import { parseEquifaxAccounts } from '../../import/equifax'
 import { buildIssuerMatcher, type AliasRow, type IssuerMatch } from '../../import/match'
@@ -26,11 +26,10 @@ function aliasCorpus(db: DB): AliasRow[] {
     .select({
       issuerId: issuer.id,
       issuerName: issuer.name,
-      aliasText: cardProductAlias.aliasText
+      aliasText: issuerAlias.aliasText
     })
-    .from(cardProductAlias)
-    .innerJoin(cardProduct, eq(cardProductAlias.cardProductId, cardProduct.id))
-    .innerJoin(issuer, eq(cardProduct.issuerId, issuer.id))
+    .from(issuerAlias)
+    .innerJoin(issuer, eq(issuerAlias.issuerId, issuer.id))
     .all()
 }
 
