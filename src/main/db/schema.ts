@@ -217,11 +217,15 @@ export const productOffer = sqliteTable(
       .notNull()
       .references(() => cardProduct.id, { onDelete: 'cascade' }),
     rewardKind: text('reward_kind'), // points | cash | miles
+    currency: text('currency'), // e.g. "Amex MR", "United miles", "USD"
     pointProgramId: integer('point_program_id').references(() => pointProgram.id, {
       onDelete: 'set null'
     }),
     pointsAmount: integer('points_amount'),
     cashAmountCents: integer('cash_amount_cents'),
+    // The offer's own assumed valuation (cents/point) so its value is
+    // self-contained, independent of which point programs the user tracks.
+    pointValueCpp: real('point_value_cpp'),
     minSpendCents: integer('min_spend_cents'),
     windowMonths: integer('window_months'), // months to meet the min spend
     expires: text('expires'), // offer end date, if any
