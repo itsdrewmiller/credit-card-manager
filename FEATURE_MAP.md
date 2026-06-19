@@ -85,6 +85,10 @@ Conventions: money is integer **cents**; point valuation is **cents-per-point**;
 
 - Bank-account bonuses, cashback apps (Rakuten/TopCashback), point transfer partners, travel credits,
   payment planning, custom multi-person velocity buckets, multi-bureau import.
+- **Product changes (PCs):** track when a card is converted to a different product (e.g. Sapphire
+  Reserve → Freedom) — keep the history (date, from-product → to-product) on the card rather than
+  losing the prior identity. The `product_changed` card status and the `card_product` catalog are
+  already in place to build on.
 
 ## Completeness model (why there's no "complete?" flag)
 
