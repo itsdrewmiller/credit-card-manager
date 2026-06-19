@@ -24,8 +24,9 @@ import { Bonuses } from './pages/Bonuses'
 import { Benefits } from './pages/Benefits'
 import { Velocity } from './pages/Velocity'
 import { Referrals } from './pages/Referrals'
-import { Import } from './pages/Import'
+import { AddCards } from './pages/AddCards'
 import { Export } from './pages/Export'
+import { FirstRunSetup } from './components/FirstRunSetup'
 
 interface NavItem {
   to: string
@@ -44,7 +45,7 @@ const NAV: NavItem[] = [
   { to: '/benefits', label: 'Benefits', icon: <IconTicket size={18} /> },
   { to: '/velocity', label: 'Velocity (5/24)', icon: <IconChartBar size={18} /> },
   { to: '/referrals', label: 'Referrals', icon: <IconShare size={18} /> },
-  { to: '/import', label: 'Import Equifax Report', icon: <IconFileImport size={18} /> },
+  { to: '/add-cards', label: 'Add Cards', icon: <IconFileImport size={18} /> },
   { to: '/export', label: 'Export & Backup', icon: <IconDownload size={18} /> }
 ]
 
@@ -64,6 +65,7 @@ export function App(): React.ReactElement {
 
   return (
     <AppShell navbar={{ width: 240, breakpoint: 'sm' }} padding="md">
+      <FirstRunSetup />
       <AppShell.Navbar p="sm">
         <Group gap="xs" mb="md" px="xs">
           <IconCreditCard size={22} />
@@ -102,7 +104,7 @@ export function App(): React.ReactElement {
           <Route path="/benefits" element={<Benefits />} />
           <Route path="/velocity" element={<Velocity />} />
           <Route path="/referrals" element={<Referrals />} />
-          <Route path="/import" element={<Import />} />
+          <Route path="/add-cards" element={<AddCards />} />
           <Route path="/export" element={<Export />} />
         </Routes>
       </AppShell.Main>

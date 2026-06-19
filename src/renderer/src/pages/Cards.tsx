@@ -1,12 +1,12 @@
-import React, { useState } from 'react'
+import React from 'react'
 import { Table, Button, Group, ActionIcon, Menu, Badge, Text, Tooltip } from '@mantine/core'
 import { notifications } from '@mantine/notifications'
-import { IconPlus, IconDots, IconEdit, IconTrash, IconBuildingStore } from '@tabler/icons-react'
+import { IconPlus, IconDots, IconEdit, IconTrash } from '@tabler/icons-react'
+import { useNavigate } from 'react-router-dom'
 import { trpc } from '../trpc'
 import { PageHeader } from '../components/PageHeader'
 import { EmptyState } from '../components/EmptyState'
 import { useCardEditor, cardLabel } from '../components/useCardEditor'
-import { BusinessCardWizard } from '../components/BusinessCardWizard'
 import { CARD_STATUS_LABELS, CARD_FIELD_LABELS, type CardStatus } from '@shared/constants'
 import { formatCents, formatDate } from '@shared/format'
 import type { CardRow } from '../lib/types'
@@ -21,9 +21,9 @@ const STATUS_COLOR: Record<CardStatus, string> = {
 
 export function Cards(): React.ReactElement {
   const utils = trpc.useUtils()
+  const navigate = useNavigate()
   const cards = trpc.cards.list.useQuery()
   const editor = useCardEditor()
-  const [wizardOpen, setWizardOpen] = useState(false)
 
   const remove = trpc.cards.delete.useMutation({
     onSuccess: () => {
@@ -37,12 +37,8 @@ export function Cards(): React.ReactElement {
   return (
     <>
       <PageHeader title="Cards">
-        <Button
-          variant="default"
-          leftSection={<IconBuildingStore size={16} />}
-          onClick={() => setWizardOpen(true)}
-        >
-          Add business card
+        <Button variant="default" onClick={() => navigate('/add-cards')}>
+          Add cards…
         </Button>
         <Button leftSection={<IconPlus size={16} />} onClick={editor.openCreate}>
           Add card
@@ -142,7 +138,6 @@ export function Cards(): React.ReactElement {
       )}
 
       {editor.element}
-      <BusinessCardWizard opened={wizardOpen} onClose={() => setWizardOpen(false)} />
     </>
   )
 }

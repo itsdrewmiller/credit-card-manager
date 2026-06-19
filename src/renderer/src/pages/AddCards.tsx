@@ -8,6 +8,7 @@ import {
   Checkbox,
   Badge,
   Text,
+  Title,
   Card,
   SimpleGrid,
   Alert,
@@ -19,11 +20,13 @@ import {
   IconUpload,
   IconInfoCircle,
   IconCheck,
-  IconBuildingStore
+  IconBuildingStore,
+  IconPlus
 } from '@tabler/icons-react'
 import { trpc } from '../trpc'
 import { PageHeader } from '../components/PageHeader'
 import { BusinessCardWizard } from '../components/BusinessCardWizard'
+import { useCardEditor } from '../components/useCardEditor'
 import { formatDate } from '@shared/format'
 import type { ImportPreview, TradelineRow } from '../lib/types'
 
@@ -43,10 +46,11 @@ function ConfidenceBadge({ t }: { t: TradelineRow }): React.ReactElement {
   )
 }
 
-export function Import(): React.ReactElement {
+export function AddCards(): React.ReactElement {
   const utils = trpc.useUtils()
   const people = trpc.people.list.useQuery()
   const products = trpc.products.listForSelect.useQuery()
+  const editor = useCardEditor()
 
   const [file, setFile] = useState<File | null>(null)
   const [ownerPersonId, setOwnerPersonId] = useState<string>('')
@@ -126,10 +130,29 @@ export function Import(): React.ReactElement {
 
   return (
     <>
-      <PageHeader title="Import credit report" badge="Equifax" />
-      <Text c="dimmed" mb="md">
-        Upload an Equifax PDF to bootstrap your cards. Every tradeline becomes a card (a stub if it
-        can&apos;t be matched); finish the details afterward under “Needs info”.
+      <PageHeader title="Add cards">
+        <Button
+          variant="default"
+          leftSection={<IconBuildingStore size={16} />}
+          onClick={() => setWizardOpen(true)}
+        >
+          Add business card
+        </Button>
+        <Button leftSection={<IconPlus size={16} />} onClick={editor.openCreate}>
+          Add a card
+        </Button>
+      </PageHeader>
+      <Text c="dimmed" mb="lg">
+        Enter a card by hand, or import them from an Equifax credit report below. Business cards
+        aren&apos;t on a personal credit report, so add those with the guided wizard.
+      </Text>
+
+      <Title order={4} mb={4}>
+        Import from a credit report
+      </Title>
+      <Text c="dimmed" size="sm" mb="md">
+        Upload an Equifax PDF to bootstrap your personal cards. Every tradeline becomes a card (a stub
+        if it can&apos;t be matched); finish the details afterward under “Needs info”.
       </Text>
 
       <Card withBorder radius="md" padding="lg" mb="lg">
@@ -165,24 +188,8 @@ export function Import(): React.ReactElement {
         </Group>
       </Card>
 
-      <Alert color="gray" icon={<IconBuildingStore size={18} />} mb="lg" variant="light">
-        <Group justify="space-between" wrap="nowrap">
-          <Text size="sm">
-            Business cards don&apos;t appear on your personal credit report — add those by hand with
-            the guided wizard.
-          </Text>
-          <Button
-            variant="default"
-            size="xs"
-            leftSection={<IconBuildingStore size={14} />}
-            onClick={() => setWizardOpen(true)}
-          >
-            Add business card
-          </Button>
-        </Group>
-      </Alert>
-
       <BusinessCardWizard opened={wizardOpen} onClose={() => setWizardOpen(false)} />
+      {editor.element}
 
       {preview && (
         <>
