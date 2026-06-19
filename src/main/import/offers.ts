@@ -2,6 +2,7 @@ import { eq, and, sql } from 'drizzle-orm'
 import type { DB } from '../db'
 import { productOffer, cardProduct, issuer, pointProgram } from '../db/schema'
 import { parseCsv } from './csv'
+import { stripIssuerPrefix } from './naming'
 
 /** The only networks unambiguously inferable from issuer (Visa/MC vary). */
 function inferNetwork(issuerName: string): string | null {
@@ -98,7 +99,8 @@ export function importOffersCsv(db: DB, text: string): OfferImportResult {
       const feeCents = centsOrNull(r.annual_fee_usd)
       const network = inferNetwork(issuerName)
       const issuerId = findOrCreateIssuer(h, issuerName)
-      const productId = findOrCreateProduct(h, issuerId, name, isBusiness, feeCents, network)
+      const productName = stripIssuerPrefix(name, issuerName)
+      const productId = findOrCreateProduct(h, issuerId, productName, isBusiness, feeCents, network)
 
       const currency = r.bonus_currency?.trim() || null
       const isCash = currency === 'USD'

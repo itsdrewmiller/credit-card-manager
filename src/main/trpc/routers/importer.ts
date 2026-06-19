@@ -7,6 +7,7 @@ import { extractTextItems } from '../../import/pdf'
 import { parseEquifaxAccounts } from '../../import/equifax'
 import { buildIssuerMatcher, type AliasRow, type IssuerMatch } from '../../import/match'
 import { findDuplicate, type DedupCard } from '../../import/dedup'
+import { applyProductDefaults } from '../../domain/product'
 
 /** Existing cards reduced to what dedup needs, with their issuer resolved. */
 function existingDedupCards(db: DB, matcher: { match: (n: string) => IssuerMatch | null }): DedupCard[] {
@@ -93,16 +94,22 @@ export const importerRouter = router({
     .mutation(({ ctx, input }) => {
       let created = 0
       ctx.db.transaction((tx) => {
+        const h = tx as unknown as DB
         for (const r of input.rows) {
+          // When a product is matched, inherit its annual fee / network / issuer.
+          const values = applyProductDefaults(h, {
+            cardProductId: r.cardProductId ?? null,
+            issuerId: r.issuerId ?? null,
+            network: r.network ?? null,
+            annualFeeCents: null
+          })
           tx.insert(card)
             .values({
-              cardProductId: r.cardProductId ?? null,
-              issuerId: r.issuerId ?? null,
+              ...values,
               ownerPersonId: r.ownerPersonId ?? input.ownerPersonId ?? null,
               rawCreditorName: r.creditorName,
               rawAccountLabel: r.accountType ?? null,
               last4: r.last4 ?? null, // Equifax exposes the last 4
-              network: r.network ?? null,
               status: r.status,
               responsibility: r.responsibility ?? null,
               openedDate: r.openedDate ?? null,

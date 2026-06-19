@@ -5,6 +5,7 @@ import { is } from '@electron-toolkit/utils'
 import { sql } from 'drizzle-orm'
 import { openDatabase, runMigrations, type DB } from './db'
 import { seedCatalog, seedPointPrograms } from './db/seed'
+import { dedupeCatalog } from './db/dedupe'
 import { productOffer } from './db/schema'
 import { importOffersCsv } from './import/offers'
 import { appRouter } from './trpc/router'
@@ -56,6 +57,10 @@ function initDatabase(): void {
   const seeded = seedCatalog(db)
   seedPointPrograms(db)
   seedOffersIfEmpty()
+  const cleaned = dedupeCatalog(db)
+  if (cleaned.renamed || cleaned.merged) {
+    console.log(`[db] catalog cleanup: ${cleaned.renamed} renamed, ${cleaned.merged} merged`)
+  }
   console.log(`[db] ready at ${dbPath}`, seeded.issuers ? `(seeded ${seeded.products} products)` : '')
 }
 
