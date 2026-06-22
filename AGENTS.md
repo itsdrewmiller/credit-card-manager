@@ -138,25 +138,46 @@ Intel Mac needs it. The release itself uses the default `GITHUB_TOKEN`
 
 ## Code signing
 
-Signing config lives in `electron-builder.config.cjs` and is **driven entirely by
-environment variables**, so it activates automatically once the secrets are set —
-no code changes needed. Until then, macOS builds fall back to an ad-hoc signature
-(`build/afterPack.cjs`) so they aren't reported as "damaged"; Windows builds are
-unsigned (SmartScreen will warn).
+Signing config lives in `electron-builder.config.cjs` and activates automatically
+once credentials are present — no code changes needed. macOS signing turns on when
+either a `.p12` is in `CSC_LINK` (CI) **or** a *Developer ID Application* cert is in
+the local keychain (detected by `security find-identity`). Notarization is handled
+by two hooks — `build/notarize.cjs` (afterSign → the `.app`) and
+`build/notarizeDmg.cjs` (afterAllArtifactBuild → the `.dmg`) — and runs when a
+`NOTARY_PROFILE` or the `APPLE_*` env vars are set. Without any of this, macOS falls
+back to an ad-hoc signature (`build/afterPack.cjs`) so builds aren't "damaged";
+Windows builds are unsigned (SmartScreen will warn).
 
-**macOS — Developer ID + notarization** (needs an Apple Developer Program
-membership, ~$99/yr). Notarization is what removes *all* Gatekeeper warnings.
-1. Create a **Developer ID Application** certificate; export it as a `.p12` with a password.
-2. Create an **app-specific password** at appleid.apple.com (for notarytool).
-3. Add repo **Settings → Secrets and variables → Actions**:
+Both the app **and** the DMG get their own notarization ticket stapled — the app so
+it launches offline once copied to /Applications, the DMG so the downloaded
+container clears Gatekeeper at mount time.
+
+**macOS — build signed + notarized locally** (needs an Apple Developer Program
+membership, ~$99/yr):
+1. In Xcode → Settings → Accounts → Manage Certificates → **+ → Developer ID
+   Application**. This installs the cert + private key into the login keychain.
+2. Create an **app-specific password** at appleid.apple.com.
+3. Store notary credentials once (password goes into the keychain, not the shell):
+   ```
+   xcrun notarytool store-credentials "ccm-notary" \
+     --apple-id you@example.com --team-id ABCDE12345 --password xxxx-xxxx-xxxx-xxxx
+   ```
+4. Build: `NOTARY_PROFILE=ccm-notary npx electron-builder --config electron-builder.config.cjs --mac dmg`
+   The cert is auto-detected (signs + hardened runtime); the hooks notarize/staple
+   the app and dmg. First notarization on a new account can take 30–60 min; later
+   ones are usually a few minutes. Verify with `spctl -a -t exec "<app>"` (app) and
+   `gktool scan "<dmg>"` (dmg). `gktool` is authoritative for notarized DMGs;
+   `spctl -t open` reports "no usable signature" on an unsigned-but-notarized DMG,
+   which is expected and fine.
+
+**macOS — in CI** (GitHub Actions): export the cert as a `.p12` and add repo
+**Settings → Secrets and variables → Actions**:
    - `MAC_CSC_LINK` — base64 of the `.p12` (`base64 -i cert.p12 | pbcopy`)
    - `MAC_CSC_KEY_PASSWORD` — the `.p12` password
-   - `APPLE_ID` — your Apple ID email
-   - `APPLE_APP_SPECIFIC_PASSWORD` — the app-specific password
-   - `APPLE_TEAM_ID` — your 10-char Team ID
-   The config enables signing when `CSC_LINK` is present and notarization when the
-   three `APPLE_*` values are present. (Electron's default entitlements cover the
-   app; add a custom entitlements plist only if notarization complains.)
+   - `APPLE_ID` / `APPLE_APP_SPECIFIC_PASSWORD` / `APPLE_TEAM_ID`
+   The hooks use the `APPLE_*` vars (no keychain profile) when `NOTARY_PROFILE` is
+   unset. (Electron's default entitlements cover the app; add a custom entitlements
+   plist only if notarization complains.)
 
 **Windows — code-signing certificate** (~$100–400/yr from a CA). Standard (OV)
 certs now require a hardware token, which doesn't suit CI; the CI-friendly routes

@@ -31,3 +31,6 @@ release/
 # Root working CSVs (canonical/bundled copy is data/signup_bonuses.csv)
 /signup_bonuses.csv
 /credit_card_signup_bonuses_*.csv
+
+# Root icon source drops (canonical copies live in build/icon.*)
+/credit-card-stack-mac-icon.*

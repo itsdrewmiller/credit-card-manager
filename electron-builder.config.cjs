@@ -1,16 +1,31 @@
 // electron-builder configuration.
 //
 // Signing and notarization activate automatically when the relevant credentials
-// are present in the environment (set as GitHub Actions secrets — see AGENTS.md).
-// Without them, the macOS app falls back to an ad-hoc signature (build/afterPack.cjs)
-// so it still opens via the normal Gatekeeper flow instead of being "damaged".
+// are present:
+//   - CI: a Developer ID .p12 in CSC_LINK (set as a GitHub Actions secret — see
+//     AGENTS.md).
+//   - Local: a "Developer ID Application" certificate installed in the login
+//     keychain (detected below) — no env var needed.
+// Without either, the macOS app falls back to an ad-hoc signature
+// (build/afterPack.cjs) so it still opens via the normal Gatekeeper flow instead
+// of being reported as "damaged".
 
-const hasMacCert = !!process.env.CSC_LINK
-const canNotarize = !!(
-  process.env.APPLE_ID &&
-  process.env.APPLE_APP_SPECIFIC_PASSWORD &&
-  process.env.APPLE_TEAM_ID
-)
+const { execFileSync } = require('node:child_process')
+
+/** True if a Developer ID Application identity is in the local keychain. */
+function hasLocalDeveloperId() {
+  if (process.platform !== 'darwin') return false
+  try {
+    const out = execFileSync('security', ['find-identity', '-v', '-p', 'codesigning'], {
+      encoding: 'utf8'
+    })
+    return /Developer ID Application/.test(out)
+  } catch {
+    return false
+  }
+}
+
+const hasMacCert = !!process.env.CSC_LINK || hasLocalDeveloperId()
 
 /** @type {import('electron-builder').Configuration} */
 module.exports = {
@@ -18,6 +33,11 @@ module.exports = {
   productName: 'Credit Card Manager',
   directories: { output: 'release', buildResources: 'build' },
   afterPack: 'build/afterPack.cjs',
+  // Notarization is handled in these hooks (keychain-profile or env credentials),
+  // not electron-builder's built-in notarize, so mac.notarize stays false below.
+  // afterSign notarizes/staples the .app; afterAllArtifactBuild does the DMG.
+  afterSign: 'build/notarize.cjs',
+  afterAllArtifactBuild: 'build/notarizeDmg.cjs',
   files: ['out/**/*'],
   extraResources: [
     { from: 'drizzle', to: 'drizzle' },
@@ -32,7 +52,7 @@ module.exports = {
     // Without one, skip its signing (the afterPack hook ad-hoc signs instead).
     identity: hasMacCert ? undefined : null,
     hardenedRuntime: hasMacCert,
-    notarize: canNotarize ? { teamId: process.env.APPLE_TEAM_ID } : false
+    notarize: false // handled by the afterSign hook (build/notarize.cjs)
   },
   win: {
     target: 'nsis'
