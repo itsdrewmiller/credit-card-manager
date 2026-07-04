@@ -16,6 +16,7 @@ import { useForm } from '@mantine/form'
 import { BENEFIT_PERIODS, type BenefitPeriod } from '@shared/constants'
 import { centsToDollars, parseCents } from '@shared/format'
 import { isoToDate, dateToIso } from '../lib/dates'
+import type { BenefitRow } from '../lib/types'
 
 export interface BenefitFormValue {
   cardId: number
@@ -44,7 +45,8 @@ export function BenefitForm({
   onSubmit,
   onCancel
 }: {
-  initial?: Partial<BenefitFormValue>
+  /** Row being edited (or a partial stub carrying a preselected cardId). */
+  initial?: Partial<BenefitRow>
   cardOptions: Option[]
   submitting: boolean
   onSubmit: (value: BenefitFormValue) => void
@@ -56,7 +58,7 @@ export function BenefitForm({
       name: initial?.name ?? '',
       category: initial?.category ?? '',
       amountDollars: centsToDollars(initial?.amountCents),
-      period: initial?.period ?? '',
+      period: (initial?.period as BenefitPeriod | null) ?? '',
       year: initial?.year ?? ('' as number | ''),
       useAfter: isoToDate(initial?.useAfter),
       useBy: isoToDate(initial?.useBy),

@@ -1,8 +1,8 @@
-import React, { useState } from 'react'
-import { Drawer } from '@mantine/core'
+import React from 'react'
 import { trpc } from '../trpc'
 import { CardForm, type CardFormValue } from './CardForm'
-import { useInvalidateCards, showSuccess } from '../lib/mutations'
+import { useEntityEditor } from './useEntityEditor'
+import { useInvalidateCards } from '../lib/mutations'
 import type { CardRow } from '../lib/types'
 
 export function cardLabel(c: { product?: { issuer?: { name: string } | null; name: string } | null; rawCreditorName?: string | null }): string {
@@ -20,9 +20,6 @@ export function useCardEditor(): {
   const people = trpc.people.list.useQuery()
   const businesses = trpc.businesses.list.useQuery()
 
-  const [opened, setOpened] = useState(false)
-  const [editing, setEditing] = useState<CardRow | null>(null)
-
   const invalidate = useInvalidateCards()
 
   const create = trpc.cards.create.useMutation({ onSuccess: invalidate })
@@ -32,48 +29,26 @@ export function useCardEditor(): {
   const peopleOptions = (people.data ?? []).map((p) => ({ value: String(p.id), label: p.name }))
   const businessOptions = (businesses.data ?? []).map((b) => ({ value: String(b.id), label: b.name }))
 
-  const submit = (value: CardFormValue): void => {
-    const opts = {
-      onSuccess: () => {
-        setOpened(false)
-        showSuccess(editing ? 'Card updated' : 'Card added')
-      }
-    }
-    if (editing) update.mutate({ id: editing.id, ...value }, opts)
-    else create.mutate({ ...value, source: 'manual' }, opts)
-  }
-
-  const element = (
-    <Drawer
-      opened={opened}
-      onClose={() => setOpened(false)}
-      position="right"
-      size="lg"
-      title={editing ? `Edit ${cardLabel(editing)}` : 'Add card'}
-    >
-      {opened && (
-        <CardForm
-          initial={editing ? (editing as unknown as Partial<CardFormValue>) : undefined}
-          productOptions={productOptions}
-          peopleOptions={peopleOptions}
-          businessOptions={businessOptions}
-          submitting={create.isPending || update.isPending}
-          onSubmit={submit}
-          onCancel={() => setOpened(false)}
-        />
-      )}
-    </Drawer>
-  )
-
-  return {
-    openCreate: () => {
-      setEditing(null)
-      setOpened(true)
+  return useEntityEditor<CardRow, CardFormValue>({
+    entityLabel: 'card',
+    container: 'drawer',
+    titles: { edit: (c) => `Edit ${cardLabel(c)}` },
+    // Manual entry always tags the source; imports go through the importer.
+    create: {
+      mutate: (v, o) => create.mutate({ ...v, source: 'manual' }, o),
+      isPending: create.isPending
     },
-    openEdit: (c) => {
-      setEditing(c)
-      setOpened(true)
-    },
-    element
-  }
+    update,
+    form: ({ initial, submitting, onSubmit, onCancel }) => (
+      <CardForm
+        initial={initial ?? undefined}
+        productOptions={productOptions}
+        peopleOptions={peopleOptions}
+        businessOptions={businessOptions}
+        submitting={submitting}
+        onSubmit={onSubmit}
+        onCancel={onCancel}
+      />
+    )
+  })
 }

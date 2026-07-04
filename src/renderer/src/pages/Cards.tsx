@@ -3,28 +3,19 @@ import {
   Table,
   Button,
   Group,
-  ActionIcon,
-  Menu,
   Badge,
   Text,
   Tooltip,
   SegmentedControl,
   FileButton
 } from '@mantine/core'
-import {
-  IconPlus,
-  IconDots,
-  IconEdit,
-  IconTrash,
-  IconChevronUp,
-  IconChevronDown,
-  IconUpload
-} from '@tabler/icons-react'
+import { IconPlus, IconChevronUp, IconChevronDown, IconUpload } from '@tabler/icons-react'
 import { useNavigate } from 'react-router-dom'
 import { trpc } from '../trpc'
 import { PageHeader } from '../components/PageHeader'
 import { EmptyState } from '../components/EmptyState'
 import { QueryGate } from '../components/QueryGate'
+import { RowActionsMenu } from '../components/RowActionsMenu'
 import { useCardEditor, cardLabel } from '../components/useCardEditor'
 import { useInvalidateCards, showSuccess } from '../lib/mutations'
 import { CARD_STATUS_LABELS, CARD_FIELD_LABELS, type CardStatus } from '@shared/constants'
@@ -221,30 +212,11 @@ export function Cards(): React.ReactElement {
                   )}
                 </Table.Td>
                 <Table.Td>
-                  <Menu position="bottom-end" withinPortal>
-                    <Menu.Target>
-                      <ActionIcon variant="subtle" color="gray">
-                        <IconDots size={18} />
-                      </ActionIcon>
-                    </Menu.Target>
-                    <Menu.Dropdown>
-                      <Menu.Item
-                        leftSection={<IconEdit size={16} />}
-                        onClick={() => editor.openEdit(c)}
-                      >
-                        Edit
-                      </Menu.Item>
-                      <Menu.Item
-                        color="red"
-                        leftSection={<IconTrash size={16} />}
-                        onClick={() => {
-                          if (window.confirm(`Delete ${cardLabel(c)}?`)) remove.mutate({ id: c.id })
-                        }}
-                      >
-                        Delete
-                      </Menu.Item>
-                    </Menu.Dropdown>
-                  </Menu>
+                  <RowActionsMenu
+                    onEdit={() => editor.openEdit(c)}
+                    onDelete={() => remove.mutate({ id: c.id })}
+                    deleteLabel={`Delete ${cardLabel(c)}?`}
+                  />
                 </Table.Td>
               </Table.Tr>
             ))}

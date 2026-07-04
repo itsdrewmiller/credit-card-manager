@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import ReactDOM from 'react-dom/client'
 import { MantineProvider } from '@mantine/core'
+import { ModalsProvider } from '@mantine/modals'
 import { Notifications, notifications } from '@mantine/notifications'
 import { QueryClient, QueryClientProvider, QueryCache, MutationCache } from '@tanstack/react-query'
 import { HashRouter } from 'react-router-dom'
@@ -45,10 +46,12 @@ function Root(): React.ReactElement {
     <trpc.Provider client={trpcClient} queryClient={queryClient}>
       <QueryClientProvider client={queryClient}>
         <MantineProvider defaultColorScheme="auto">
-          <Notifications position="top-right" />
-          <HashRouter>
-            <App />
-          </HashRouter>
+          <ModalsProvider>
+            <Notifications position="top-right" />
+            <HashRouter>
+              <App />
+            </HashRouter>
+          </ModalsProvider>
         </MantineProvider>
       </QueryClientProvider>
     </trpc.Provider>

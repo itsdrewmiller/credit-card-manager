@@ -24,6 +24,7 @@ import {
   daysBetween
 } from '@shared/format'
 import { isoToDate, dateToIso } from '../lib/dates'
+import type { BonusRow } from '../lib/types'
 
 export interface BonusFormValue {
   cardId: number
@@ -53,7 +54,8 @@ export function BonusForm({
   onSubmit,
   onCancel
 }: {
-  initial?: Partial<BonusFormValue> & { cardId?: number }
+  /** Row being edited (or a partial stub carrying a preselected cardId). */
+  initial?: Partial<BonusRow>
   cardOptions: Option[]
   programOptions: { value: string; label: string; valuationCpp: number | null }[]
   submitting: boolean
@@ -63,7 +65,7 @@ export function BonusForm({
   const form = useForm({
     initialValues: {
       cardId: initial?.cardId != null ? String(initial.cardId) : '',
-      rewardKind: initial?.rewardKind ?? 'points',
+      rewardKind: (initial?.rewardKind as RewardKind | null) ?? 'points',
       pointProgramId: initial?.pointProgramId != null ? String(initial.pointProgramId) : '',
       pointsAmount: initial?.pointsAmount ?? ('' as number | ''),
       cashAmountDollars: centsToDollars(initial?.cashAmountCents),

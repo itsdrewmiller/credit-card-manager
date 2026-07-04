@@ -11,6 +11,7 @@ import {
   FileInput,
   Alert
 } from '@mantine/core'
+import { modals } from '@mantine/modals'
 import { notifications } from '@mantine/notifications'
 import {
   IconDownload,
@@ -63,14 +64,24 @@ export function Export(): React.ReactElement {
     })
   }
 
-  const runRestore = async (): Promise<void> => {
+  const runRestore = (): void => {
     if (!restoreFile) return
-    if (
-      !window.confirm(
-        'Restoring will REPLACE all current data with the contents of this backup. Continue?'
-      )
-    )
-      return
+    modals.openConfirmModal({
+      title: 'Restore from backup',
+      children: (
+        <Text size="sm">
+          Restoring will <strong>replace all current data</strong> with the contents of this
+          backup. Continue?
+        </Text>
+      ),
+      labels: { confirm: 'Restore', cancel: 'Cancel' },
+      confirmProps: { color: 'red' },
+      onConfirm: () => void doRestore()
+    })
+  }
+
+  const doRestore = async (): Promise<void> => {
+    if (!restoreFile) return
     try {
       const text = await readTextFile(restoreFile)
       const snap = JSON.parse(text)
