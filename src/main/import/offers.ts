@@ -1,63 +1,21 @@
-import { eq, and, sql } from 'drizzle-orm'
+import { eq, sql } from 'drizzle-orm'
 import type { DB } from '../db'
-import { productOffer, cardProduct, issuer, pointProgram } from '../db/schema'
+import { productOffer, pointProgram } from '../db/schema'
 import { parseCsv } from './csv'
 import { stripIssuerPrefix, cleanCardName, canonicalProductName } from './naming'
+import {
+  numOrNull,
+  centsOrNull,
+  normalizeNetwork,
+  findOrCreateIssuer,
+  findOrCreateProduct
+} from './shared'
 
 /** The only networks unambiguously inferable from issuer (Visa/MC vary). */
 function inferNetwork(issuerName: string): string | null {
   if (/american express|amex/i.test(issuerName)) return 'Amex'
   if (/discover/i.test(issuerName)) return 'Discover'
   return null
-}
-
-/** Normalize a CSV network value to a canonical name; blank -> null. */
-function normalizeNetwork(s: string | undefined): string | null {
-  const v = (s ?? '').trim()
-  if (!v) return null
-  if (/^mc$|master/i.test(v)) return 'Mastercard'
-  if (/visa/i.test(v)) return 'Visa'
-  if (/amex|american express/i.test(v)) return 'Amex'
-  if (/discover/i.test(v)) return 'Discover'
-  return v
-}
-
-function findOrCreateIssuer(db: DB, name: string): number {
-  const existing = db
-    .select({ id: issuer.id })
-    .from(issuer)
-    .where(sql`lower(${issuer.name}) = ${name.toLowerCase()}`)
-    .get()
-  if (existing) return existing.id
-  return db.insert(issuer).values({ name }).returning({ id: issuer.id }).get().id
-}
-
-function findOrCreateProduct(
-  db: DB,
-  issuerId: number,
-  name: string,
-  isBusiness: boolean,
-  annualFeeCents: number | null,
-  network: string | null
-): number {
-  const existing = db
-    .select({ id: cardProduct.id, network: cardProduct.network })
-    .from(cardProduct)
-    .where(
-      and(eq(cardProduct.issuerId, issuerId), sql`lower(${cardProduct.name}) = ${name.toLowerCase()}`)
-    )
-    .get()
-  if (existing) {
-    if (existing.network == null && network != null) {
-      db.update(cardProduct).set({ network }).where(eq(cardProduct.id, existing.id)).run()
-    }
-    return existing.id
-  }
-  return db
-    .insert(cardProduct)
-    .values({ issuerId, name, isBusiness, defaultAnnualFeeCents: annualFeeCents, network })
-    .returning({ id: cardProduct.id })
-    .get().id
 }
 
 /** Match a currency name (e.g. "Amex MR") to a seeded point program. */
@@ -69,16 +27,6 @@ function programIdForCurrency(db: DB, currency: string | null): number | null {
     .where(sql`lower(${pointProgram.name}) = ${currency.toLowerCase()}`)
     .get()
   return p?.id ?? null
-}
-
-const numOrNull = (s: string | undefined): number | null => {
-  if (s == null || s.trim() === '') return null
-  const n = Number(s)
-  return Number.isFinite(n) ? n : null
-}
-const centsOrNull = (s: string | undefined): number | null => {
-  const n = numOrNull(s)
-  return n == null ? null : Math.round(n * 100)
 }
 
 export interface OfferImportResult {

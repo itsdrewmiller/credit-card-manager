@@ -6,6 +6,7 @@ import { card, productBenefit, benefit } from '../../db/schema'
 import { CARD_STATUSES } from '@shared/constants'
 import { cardMissingFields } from '../../domain/needsInfo'
 import { applyProductDefaults } from '../../domain/product'
+import { importCardsCsv } from '../../import/cards'
 
 /**
  * Copy a product's benefit templates onto a card. Idempotent by benefit name,
@@ -123,5 +124,13 @@ export const cardsRouter = router({
     .mutation(({ ctx, input }) => {
       ctx.db.delete(card).where(eq(card.id, input.id)).run()
       return { id: input.id }
-    })
+    }),
+
+  /**
+   * Import held cards from a CSV. Find-or-creates the issuer, card product,
+   * owner, and business per row, then upserts one card per row.
+   */
+  importCsv: publicProcedure
+    .input(z.object({ text: z.string() }))
+    .mutation(({ ctx, input }) => importCardsCsv(ctx.db, input.text))
 })

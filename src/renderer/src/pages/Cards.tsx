@@ -8,7 +8,8 @@ import {
   Badge,
   Text,
   Tooltip,
-  SegmentedControl
+  SegmentedControl,
+  FileButton
 } from '@mantine/core'
 import { notifications } from '@mantine/notifications'
 import {
@@ -17,7 +18,8 @@ import {
   IconEdit,
   IconTrash,
   IconChevronUp,
-  IconChevronDown
+  IconChevronDown,
+  IconUpload
 } from '@tabler/icons-react'
 import { useNavigate } from 'react-router-dom'
 import { trpc } from '../trpc'
@@ -26,6 +28,7 @@ import { EmptyState } from '../components/EmptyState'
 import { useCardEditor, cardLabel } from '../components/useCardEditor'
 import { CARD_STATUS_LABELS, CARD_FIELD_LABELS, type CardStatus } from '@shared/constants'
 import { formatCents, formatDate } from '@shared/format'
+import { readTextFile } from '../lib/download'
 import type { CardRow } from '../lib/types'
 
 const STATUS_COLOR: Record<CardStatus, string> = {
@@ -76,14 +79,32 @@ export function Cards(): React.ReactElement {
   const [status, setStatus] = useState<string>('open')
   const [sort, setSort] = useState<Sort>({ field: 'opened', dir: 'desc' })
 
+  const invalidate = (): void => {
+    void utils.cards.list.invalidate()
+    void utils.cards.needsInfo.invalidate()
+    void utils.system.health.invalidate()
+  }
+
   const remove = trpc.cards.delete.useMutation({
-    onSuccess: () => {
-      void utils.cards.list.invalidate()
-      void utils.cards.needsInfo.invalidate()
-      void utils.system.health.invalidate()
+    onSuccess: invalidate,
+    onError: (e) => notifications.show({ color: 'red', message: e.message })
+  })
+
+  const importCsv = trpc.cards.importCsv.useMutation({
+    onSuccess: (res) => {
+      invalidate()
+      notifications.show({
+        color: 'green',
+        message: `Imported ${res.total} cards (${res.created} new, ${res.updated} updated)`
+      })
     },
     onError: (e) => notifications.show({ color: 'red', message: e.message })
   })
+
+  const onPickFile = async (file: File | null): Promise<void> => {
+    if (!file) return
+    importCsv.mutate({ text: await readTextFile(file) })
+  }
 
   const rows = useMemo(() => {
     const all = cards.data ?? []
@@ -107,6 +128,18 @@ export function Cards(): React.ReactElement {
   return (
     <>
       <PageHeader title="Cards">
+        <FileButton onChange={onPickFile} accept="text/csv,.csv">
+          {(props) => (
+            <Button
+              {...props}
+              variant="default"
+              leftSection={<IconUpload size={16} />}
+              loading={importCsv.isPending}
+            >
+              Import CSV
+            </Button>
+          )}
+        </FileButton>
         <Button variant="default" onClick={() => navigate('/add-cards')}>
           Add cards…
         </Button>
