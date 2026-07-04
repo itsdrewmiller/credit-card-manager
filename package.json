@@ -18,8 +18,8 @@
     "typecheck": "npm run typecheck:node && npm run typecheck:web",
     "start": "electron-vite preview",
     "db:generate": "drizzle-kit generate",
-    "db:smoke": "tsx --tsconfig tsconfig.node.json scripts/db-smoke.ts",
-    "import:smoke": "tsx --tsconfig tsconfig.node.json scripts/import-smoke.ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "rebuild": "electron-rebuild -f -w better-sqlite3",
     "pack": "electron-vite build && electron-builder --dir --config electron-builder.config.cjs",
     "dist": "electron-vite build && electron-builder --config electron-builder.config.cjs"
@@ -61,6 +61,7 @@
     "tsx": "^4.19.2",
     "typescript": "^5.7.2",
     "vite": "^5.4.11",
+    "vitest": "^2.1.9",
     "zod": "^3.24.1"
   }
 }

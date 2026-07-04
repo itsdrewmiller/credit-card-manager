@@ -5,7 +5,9 @@
     "src/main/**/*",
     "src/preload/**/*",
     "src/shared/**/*",
-    "scripts/**/*"
+    "scripts/**/*",
+    "tests/**/*",
+    "vitest.config.ts"
   ],
   "compilerOptions": {
     "composite": true,

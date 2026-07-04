@@ -69,3 +69,21 @@ export function toIsoDate(d: Date | null | undefined): string | null {
   if (!d || Number.isNaN(d.getTime())) return null
   return d.toISOString().slice(0, 10)
 }
+
+/** date + n days; null-safe for optional form values. */
+export function addDays(d: Date | null | undefined, days: number | null | undefined): Date | null {
+  if (!d || days == null) return null
+  const r = new Date(d)
+  r.setDate(r.getDate() + days)
+  return r
+}
+
+/** Whole days between start and deadline; null if either is missing or the span is negative. */
+export function daysBetween(
+  start: Date | null | undefined,
+  deadline: Date | null | undefined
+): number | null {
+  if (!start || !deadline) return null
+  const d = Math.round((deadline.getTime() - start.getTime()) / 86_400_000)
+  return d >= 0 ? d : null
+}

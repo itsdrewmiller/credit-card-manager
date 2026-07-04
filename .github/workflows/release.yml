@@ -31,6 +31,11 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # Must run before packaging: electron-builder rebuilds better-sqlite3
+      # in place for the Electron ABI, after which node-run tests would fail.
+      - name: Test
+        run: npm test
+
       - name: Bundle app (electron-vite)
         run: npm run build
 

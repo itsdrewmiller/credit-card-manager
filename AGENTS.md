@@ -29,10 +29,12 @@ run and the card-product catalog seeds automatically.
 `npm install` builds it for your system Node; the app needs the Electron build.
 
 - Before running the app / `npm run pack` / `npm run dist`: `npm run rebuild` (Electron ABI).
-- Before running the headless tests (`db:smoke`, `import:smoke`): `npm rebuild better-sqlite3` (Node ABI).
+- Before running the tests (`npm test`): `npm rebuild better-sqlite3` (Node ABI).
 
 `npm run pack`/`dist` rebuild for Electron automatically, so re-run
-`npm rebuild better-sqlite3` afterward if you want to run the Node tests again.
+`npm rebuild better-sqlite3` afterward if you want to run the tests again.
+If `npm test` fails with `ERR_DLOPEN_FAILED` / `NODE_MODULE_VERSION`, that's
+this — run `npm rebuild better-sqlite3`.
 
 ## Scripts
 
@@ -42,8 +44,8 @@ run and the card-product catalog seeds automatically.
 | `npm run build` | Type-bundle all three processes into `out/` |
 | `npm run typecheck` | Type-check main + renderer |
 | `npm run db:generate` | Regenerate SQL migrations from `src/main/db/schema.ts` |
-| `npm run db:smoke` | Headless data-layer test (no Electron) — migrations, seed, FKs, bonus/velocity/benefit/backup logic |
-| `npm run import:smoke` | Headless importer test against a local `Equifax Report.pdf` |
+| `npm test` | Vitest suite (headless, no Electron) — domain/format unit tests + DB/router/importer integration tests |
+| `npm run test:watch` | Vitest in watch mode |
 | `npm run rebuild` | Rebuild `better-sqlite3` for Electron |
 | `npm run pack` | Build an unpacked app into `release/` (no installer) |
 | `npm run dist` | Build installers (DMG/NSIS/AppImage) via electron-builder into `release/` |
@@ -62,7 +64,7 @@ src/
   renderer/        React app (Mantine UI, pages, tRPC client, shared types)
   shared/          Constants + formatting helpers used by both processes
 drizzle/           Generated SQL migrations (shipped as app resources)
-scripts/           db-smoke.ts, import-smoke.ts and other dev utilities
+tests/             Vitest suite: unit/ (pure domain + format), integration/ (DB, router, importer)
 ```
 
 ## Conventions
@@ -74,7 +76,8 @@ scripts/           db-smoke.ts, import-smoke.ts and other dev utilities
   filled in. Completeness is **derived** at query time (`src/main/domain/needsInfo.ts`),
   not stored, and powers the Needs-info inbox.
 - **Pure domain logic lives in `src/main/domain/`** so it can be unit-tested
-  headlessly without Electron. Add assertions to `scripts/db-smoke.ts`.
+  headlessly without Electron. Add tests under `tests/unit/` (pure functions)
+  or `tests/integration/` (anything touching the DB or router).
 - Renderer types come from the router via `inferRouterOutputs` in
   `src/renderer/src/lib/types.ts` — don't hand-write row shapes.
 - After changing `src/main/db/schema.ts`, run `npm run db:generate` to create a
@@ -96,8 +99,9 @@ account is a run of `Label:` / value pairs anchored by `Date Reported:`; the
 creditor name is the non-noise line just above the address. Creditor names are
 issuer-level, so matching resolves the **issuer** and leaves the exact product
 for the user. Equifax exposes the **last 4** of the account number (e.g.
-`*6720`), which we keep. Validate changes with `npm run import:smoke` against a
-local `Equifax Report.pdf`.
+`*6720`), which we keep. Validate changes with `npm test` — the importer suite
+in `tests/integration/import.test.ts` runs against a local `Equifax Report.pdf`
+(and skips itself when the PDF is absent, e.g. in CI).
 
 ## Packaging
 
