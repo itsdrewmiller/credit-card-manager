@@ -15,7 +15,14 @@ import {
 import { DateInput } from '@mantine/dates'
 import { useForm } from '@mantine/form'
 import { REWARD_KINDS, type RewardKind } from '@shared/constants'
-import { centsToDollars, parseCents, formatCents, bonusValueCents } from '@shared/format'
+import {
+  centsToDollars,
+  parseCents,
+  formatCents,
+  bonusValueCents,
+  addDays,
+  daysBetween
+} from '@shared/format'
 import { isoToDate, dateToIso } from '../lib/dates'
 
 export interface BonusFormValue {
@@ -36,19 +43,6 @@ export interface BonusFormValue {
 interface Option {
   value: string
   label: string
-}
-
-function addDays(date: Date, days: number): Date {
-  const r = new Date(date)
-  r.setDate(r.getDate() + days)
-  return r
-}
-
-/** Whole days between two dates (deadline − start), or '' if either is missing. */
-function daysBetween(start: Date | null, deadline: Date | null): number | '' {
-  if (!start || !deadline) return ''
-  const d = Math.round((deadline.getTime() - start.getTime()) / 86_400_000)
-  return d >= 0 ? d : ''
 }
 
 export function BonusForm({
@@ -77,7 +71,7 @@ export function BonusForm({
       spendSoFarDollars: centsToDollars(initial?.spendSoFarCents) || 0,
       startDate: isoToDate(initial?.startDate),
       deadline: isoToDate(initial?.deadline),
-      windowDays: daysBetween(isoToDate(initial?.startDate), isoToDate(initial?.deadline)),
+      windowDays: daysBetween(isoToDate(initial?.startDate), isoToDate(initial?.deadline)) ?? ('' as number | ''),
       received: initial?.received ?? false,
       referralBonus: initial?.referralBonus ?? '',
       notes: initial?.notes ?? ''
@@ -102,7 +96,7 @@ export function BonusForm({
   // Editing the deadline by hand keeps the window field in sync.
   const onDeadlineChange = (date: Date | null): void => {
     form.setFieldValue('deadline', date)
-    form.setFieldValue('windowDays', daysBetween(form.values.startDate, date))
+    form.setFieldValue('windowDays', daysBetween(form.values.startDate, date) ?? '')
   }
 
   const isCash = form.values.rewardKind === 'cash'

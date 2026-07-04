@@ -1,5 +1,8 @@
 import { sql, relations } from 'drizzle-orm'
 import { sqliteTable, text, integer, real, index } from 'drizzle-orm/sqlite-core'
+// Relative import (not @shared): drizzle-kit loads this file with its own
+// bundler, which doesn't resolve the alias.
+import { CARD_STATUSES } from '../../shared/constants'
 
 /**
  * Conventions
@@ -84,9 +87,6 @@ export const issuerAlias = sqliteTable(
 
 // --- Cards (actual accounts held) ------------------------------------------
 
-export const CARD_STATUS = ['applied', 'open', 'closed', 'product_changed', 'rejected'] as const
-export type CardStatus = (typeof CARD_STATUS)[number]
-
 export const card = sqliteTable(
   'card',
   {
@@ -111,7 +111,7 @@ export const card = sqliteTable(
     last4: text('last4'), // captured from the Equifax report where shown
     annualFeeCents: integer('annual_fee_cents'),
 
-    status: text('status').notNull().default('open'), // CARD_STATUS
+    status: text('status', { enum: CARD_STATUSES }).notNull().default('open'),
 
     appliedDate: text('applied_date'),
     openedDate: text('opened_date'),

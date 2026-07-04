@@ -18,7 +18,7 @@ import { notifications } from '@mantine/notifications'
 import { IconAlertCircle, IconBuildingStore, IconCheck } from '@tabler/icons-react'
 import { trpc } from '../trpc'
 import { NETWORKS, REWARD_KINDS, type RewardKind } from '@shared/constants'
-import { centsToDollars, parseCents, formatCents, bonusValueCents } from '@shared/format'
+import { centsToDollars, parseCents, formatCents, bonusValueCents, addDays } from '@shared/format'
 import { dateToIso } from '../lib/dates'
 
 interface FormValues {
@@ -55,13 +55,6 @@ const initialValues: FormValues = {
   targetSpendDollars: '',
   deadline: null,
   windowDays: ''
-}
-
-function addDays(d: Date | null, days: number | null): Date | null {
-  if (!d || days == null) return null
-  const r = new Date(d)
-  r.setDate(r.getDate() + days)
-  return r
 }
 
 export function BusinessCardWizard({
