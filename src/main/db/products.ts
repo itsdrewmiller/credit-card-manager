@@ -14,7 +14,15 @@ export const EXTRA_PRODUCTS: {
   isBusiness?: boolean
   annualFeeCents?: number
 }[] = [
-  { issuer: 'Wells Fargo', name: 'Signify Business', network: 'Visa', isBusiness: true, annualFeeCents: 0 }
+  { issuer: 'Wells Fargo', name: 'Signify Business', network: 'Mastercard', isBusiness: true, annualFeeCents: 0 },
+  { issuer: 'Bank of America', name: 'Business Advantage Unlimited Cash', network: 'Mastercard', isBusiness: true, annualFeeCents: 0 },
+  // Store card (no network); the Mastercard variant is a separate product.
+  { issuer: 'TD Bank', name: 'Target Circle Card', annualFeeCents: 0 },
+  // Synchrony private-label store card (no network).
+  { issuer: 'Synchrony', name: 'Amazon Store Card', annualFeeCents: 0 },
+  { issuer: 'Goldman Sachs', name: 'Apple Card', network: 'Mastercard', annualFeeCents: 0 },
+  { issuer: 'U.S. Bank', name: 'Smartly', network: 'Visa', annualFeeCents: 0 },
+  { issuer: 'Alliant Credit Union', name: 'Cashback Visa Signature', network: 'Visa', annualFeeCents: 0 }
 ]
 
 /** Idempotently add the supplemental products (find-or-create by issuer + name). */

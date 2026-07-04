@@ -23,7 +23,11 @@ export const ISSUERS: SeedIssuer[] = [
   { name: 'U.S. Bank', aliases: ['US BANK', 'U.S. BANK', 'USBANK', 'US BANK N.A.'] },
   { name: 'Barclays', aliases: ['BARCLAYS', 'BARCLAYS BANK DELAWARE', 'BARCLAY'] },
   { name: 'Discover', aliases: ['DISCOVER', 'DISCOVER BANK', 'DISCOVER FINANCIAL'] },
-  { name: 'Elan', aliases: ['ELAN', 'ELAN FINANCIAL', 'ELAN FINANCIAL SERVICE'] }
+  { name: 'Elan', aliases: ['ELAN', 'ELAN FINANCIAL', 'ELAN FINANCIAL SERVICE'] },
+  { name: 'Synchrony', aliases: ['SYNCHRONY', 'SYNCHRONY BANK', 'SYNCB'] },
+  { name: 'TD Bank', aliases: ['TD BANK', 'TD BANK USA', 'TD BANK USA/TARGET CREDIT'] },
+  { name: 'Goldman Sachs', aliases: ['GOLDMAN SACHS', 'GOLDMAN SACHS BANK', 'GS BANK'] },
+  { name: 'Alliant Credit Union', aliases: ['ALLIANT', 'ALLIANT CREDIT UNION', 'ALLIANT CU'] }
 ]
 
 /**
