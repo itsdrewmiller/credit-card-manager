@@ -14,6 +14,7 @@ import {
 import { trpc } from '../trpc'
 import { PageHeader } from '../components/PageHeader'
 import { EmptyState } from '../components/EmptyState'
+import { QueryGate } from '../components/QueryGate'
 import { cardLabel } from '../components/useCardEditor'
 import { formatDate } from '@shared/format'
 import type { VelocityRow, RejectedRow } from '../lib/types'
@@ -93,6 +94,7 @@ export function Velocity(): React.ReactElement {
         (they don&apos;t report to the personal bureau).
       </Text>
 
+      <QueryGate queries={[byPerson, rejected]}>
       {byPerson.data && byPerson.data.length === 0 ? (
         <EmptyState title="No people yet" description="Add people to track their 5/24 status." />
       ) : (
@@ -136,6 +138,7 @@ export function Velocity(): React.ReactElement {
           </Table>
         </>
       )}
+      </QueryGate>
     </>
   )
 }

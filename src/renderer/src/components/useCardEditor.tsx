@@ -1,8 +1,8 @@
 import React, { useState } from 'react'
 import { Drawer } from '@mantine/core'
-import { notifications } from '@mantine/notifications'
 import { trpc } from '../trpc'
 import { CardForm, type CardFormValue } from './CardForm'
+import { useInvalidateCards, showSuccess } from '../lib/mutations'
 import type { CardRow } from '../lib/types'
 
 export function cardLabel(c: { product?: { issuer?: { name: string } | null; name: string } | null; rawCreditorName?: string | null }): string {
@@ -16,7 +16,6 @@ export function useCardEditor(): {
   openEdit: (c: CardRow) => void
   element: React.ReactElement
 } {
-  const utils = trpc.useUtils()
   const productOpts = trpc.products.listForSelect.useQuery()
   const people = trpc.people.list.useQuery()
   const businesses = trpc.businesses.list.useQuery()
@@ -24,17 +23,10 @@ export function useCardEditor(): {
   const [opened, setOpened] = useState(false)
   const [editing, setEditing] = useState<CardRow | null>(null)
 
-  const invalidate = (): void => {
-    void utils.cards.list.invalidate()
-    void utils.cards.needsInfo.invalidate()
-    void utils.system.health.invalidate()
-  }
-  const onError = (e: { message: string }): void => {
-    notifications.show({ color: 'red', message: e.message })
-  }
+  const invalidate = useInvalidateCards()
 
-  const create = trpc.cards.create.useMutation({ onSuccess: invalidate, onError })
-  const update = trpc.cards.update.useMutation({ onSuccess: invalidate, onError })
+  const create = trpc.cards.create.useMutation({ onSuccess: invalidate })
+  const update = trpc.cards.update.useMutation({ onSuccess: invalidate })
 
   const productOptions = (productOpts.data ?? []).map((p) => ({ value: String(p.id), label: p.label }))
   const peopleOptions = (people.data ?? []).map((p) => ({ value: String(p.id), label: p.name }))
@@ -44,7 +36,7 @@ export function useCardEditor(): {
     const opts = {
       onSuccess: () => {
         setOpened(false)
-        notifications.show({ message: editing ? 'Card updated' : 'Card added' })
+        showSuccess(editing ? 'Card updated' : 'Card added')
       }
     }
     if (editing) update.mutate({ id: editing.id, ...value }, opts)

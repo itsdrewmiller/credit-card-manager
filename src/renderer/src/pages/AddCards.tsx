@@ -27,6 +27,7 @@ import { trpc } from '../trpc'
 import { PageHeader } from '../components/PageHeader'
 import { BusinessCardWizard } from '../components/BusinessCardWizard'
 import { useCardEditor } from '../components/useCardEditor'
+import { useInvalidateCards } from '../lib/mutations'
 import { formatDate } from '@shared/format'
 import type { ImportPreview, TradelineRow } from '../lib/types'
 
@@ -47,7 +48,7 @@ function ConfidenceBadge({ t }: { t: TradelineRow }): React.ReactElement {
 }
 
 export function AddCards(): React.ReactElement {
-  const utils = trpc.useUtils()
+  const invalidate = useInvalidateCards()
   const people = trpc.people.list.useQuery()
   const products = trpc.products.listForSelect.useQuery()
   const editor = useCardEditor()
@@ -67,15 +68,12 @@ export function AddCards(): React.ReactElement {
       data.tradelines.forEach((t, i) => (init[i] = t.isCreditCard && !t.duplicate))
       setInclude(init)
       setProductOverride({})
-    },
-    onError: (e) => notifications.show({ color: 'red', message: e.message })
+    }
   })
 
   const commit = trpc.importer.commit.useMutation({
     onSuccess: (res) => {
-      void utils.cards.list.invalidate()
-      void utils.cards.needsInfo.invalidate()
-      void utils.system.health.invalidate()
+      invalidate()
       notifications.show({
         color: 'green',
         icon: <IconCheck size={16} />,
@@ -83,8 +81,7 @@ export function AddCards(): React.ReactElement {
       })
       setPreview(null)
       setFile(null)
-    },
-    onError: (e) => notifications.show({ color: 'red', message: e.message })
+    }
   })
 
   const runParse = async (): Promise<void> => {

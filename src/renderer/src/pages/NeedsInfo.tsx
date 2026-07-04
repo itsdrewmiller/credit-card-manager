@@ -4,6 +4,7 @@ import { IconEdit } from '@tabler/icons-react'
 import { trpc } from '../trpc'
 import { PageHeader } from '../components/PageHeader'
 import { EmptyState } from '../components/EmptyState'
+import { QueryGate } from '../components/QueryGate'
 import { useCardEditor, cardLabel } from '../components/useCardEditor'
 import { CARD_FIELD_LABELS } from '@shared/constants'
 import type { CardRow } from '../lib/types'
@@ -20,6 +21,7 @@ export function NeedsInfo(): React.ReactElement {
         renewal tracking accurate.
       </Text>
 
+      <QueryGate queries={[needs]}>
       {needs.data && needs.data.length === 0 ? (
         <EmptyState title="All caught up" description="Every open card has the info it needs." />
       ) : (
@@ -61,6 +63,7 @@ export function NeedsInfo(): React.ReactElement {
           </Table.Tbody>
         </Table>
       )}
+      </QueryGate>
 
       {editor.element}
     </>

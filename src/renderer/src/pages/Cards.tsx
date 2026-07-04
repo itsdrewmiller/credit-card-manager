@@ -11,7 +11,6 @@ import {
   SegmentedControl,
   FileButton
 } from '@mantine/core'
-import { notifications } from '@mantine/notifications'
 import {
   IconPlus,
   IconDots,
@@ -25,7 +24,9 @@ import { useNavigate } from 'react-router-dom'
 import { trpc } from '../trpc'
 import { PageHeader } from '../components/PageHeader'
 import { EmptyState } from '../components/EmptyState'
+import { QueryGate } from '../components/QueryGate'
 import { useCardEditor, cardLabel } from '../components/useCardEditor'
+import { useInvalidateCards, showSuccess } from '../lib/mutations'
 import { CARD_STATUS_LABELS, CARD_FIELD_LABELS, type CardStatus } from '@shared/constants'
 import { formatCents, formatDate } from '@shared/format'
 import { readTextFile } from '../lib/download'
@@ -71,34 +72,21 @@ function compare(a: string | number | null, b: string | number | null, dir: 'asc
 }
 
 export function Cards(): React.ReactElement {
-  const utils = trpc.useUtils()
   const navigate = useNavigate()
   const cards = trpc.cards.list.useQuery()
   const editor = useCardEditor()
+  const invalidate = useInvalidateCards()
 
   const [status, setStatus] = useState<string>('open')
   const [sort, setSort] = useState<Sort>({ field: 'opened', dir: 'desc' })
 
-  const invalidate = (): void => {
-    void utils.cards.list.invalidate()
-    void utils.cards.needsInfo.invalidate()
-    void utils.system.health.invalidate()
-  }
-
-  const remove = trpc.cards.delete.useMutation({
-    onSuccess: invalidate,
-    onError: (e) => notifications.show({ color: 'red', message: e.message })
-  })
+  const remove = trpc.cards.delete.useMutation({ onSuccess: invalidate })
 
   const importCsv = trpc.cards.importCsv.useMutation({
     onSuccess: (res) => {
       invalidate()
-      notifications.show({
-        color: 'green',
-        message: `Imported ${res.total} cards (${res.created} new, ${res.updated} updated)`
-      })
-    },
-    onError: (e) => notifications.show({ color: 'red', message: e.message })
+      showSuccess(`Imported ${res.total} cards (${res.created} new, ${res.updated} updated)`)
+    }
   })
 
   const onPickFile = async (file: File | null): Promise<void> => {
@@ -165,6 +153,7 @@ export function Cards(): React.ReactElement {
         </Text>
       </Group>
 
+      <QueryGate queries={[cards]}>
       {cards.data && cards.data.length === 0 ? (
         <EmptyState
           title="No cards yet"
@@ -262,6 +251,7 @@ export function Cards(): React.ReactElement {
           </Table.Tbody>
         </Table>
       )}
+      </QueryGate>
 
       {editor.element}
     </>

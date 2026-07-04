@@ -40,8 +40,7 @@ export function Export(): React.ReactElement {
       void utils.invalidate()
       notifications.show({ color: 'green', message: `Restored ${res.inserted} records.` })
       setRestoreFile(null)
-    },
-    onError: (e) => notifications.show({ color: 'red', message: e.message })
+    }
   })
 
   const exportJson = async (): Promise<void> => {

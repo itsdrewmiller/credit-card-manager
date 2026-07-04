@@ -17,6 +17,7 @@ import { useForm } from '@mantine/form'
 import { notifications } from '@mantine/notifications'
 import { IconAlertCircle, IconBuildingStore, IconCheck } from '@tabler/icons-react'
 import { trpc } from '../trpc'
+import { useInvalidateCards } from '../lib/mutations'
 import { NETWORKS, REWARD_KINDS, type RewardKind } from '@shared/constants'
 import { centsToDollars, parseCents, formatCents, bonusValueCents, addDays } from '@shared/format'
 import { dateToIso } from '../lib/dates'
@@ -65,6 +66,7 @@ export function BusinessCardWizard({
   onClose: () => void
 }): React.ReactElement {
   const utils = trpc.useUtils()
+  const invalidateCards = useInvalidateCards()
   const businesses = trpc.businesses.list.useQuery()
   const people = trpc.people.list.useQuery()
   const products = trpc.products.listForSelect.useQuery()
@@ -165,11 +167,9 @@ export function BusinessCardWizard({
       {
         onSuccess: (card) => {
           const finish = (): void => {
-            void utils.cards.list.invalidate()
-            void utils.cards.needsInfo.invalidate()
+            invalidateCards()
             void utils.bonuses.list.invalidate()
             void utils.benefits.list.invalidate()
-            void utils.system.health.invalidate()
             notifications.show({
               color: 'green',
               icon: <IconCheck size={16} />,
@@ -190,13 +190,12 @@ export function BusinessCardWizard({
                 spendSoFarCents: 0,
                 received: false
               },
-              { onSuccess: finish, onError: (e) => notifications.show({ color: 'red', message: e.message }) }
+              { onSuccess: finish }
             )
           } else {
             finish()
           }
-        },
-        onError: (e) => notifications.show({ color: 'red', message: e.message })
+        }
       }
     )
   })
