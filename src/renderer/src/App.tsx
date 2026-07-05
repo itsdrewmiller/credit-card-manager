@@ -9,7 +9,6 @@ import {
   IconCoins,
   IconTicket,
   IconChartBar,
-  IconReportAnalytics,
   IconRepeat,
   IconShare,
   IconFileImport,
@@ -26,7 +25,6 @@ import { Bonuses } from './pages/Bonuses'
 import { Benefits } from './pages/Benefits'
 import { Velocity } from './pages/Velocity'
 import { Referrals } from './pages/Referrals'
-import { Reports } from './pages/Reports'
 import { Recurring } from './pages/Recurring'
 import { AddCards } from './pages/AddCards'
 import { Export } from './pages/Export'
@@ -49,7 +47,6 @@ const NAV: NavItem[] = [
   { to: '/benefits', label: 'Benefits', icon: <IconTicket size={18} /> },
   { to: '/velocity', label: 'Velocity (5/24)', icon: <IconChartBar size={18} /> },
   { to: '/referrals', label: 'Referrals', icon: <IconShare size={18} /> },
-  { to: '/reports', label: 'Reports', icon: <IconReportAnalytics size={18} /> },
   { to: '/recurring', label: 'Recurring', icon: <IconRepeat size={18} /> },
   { to: '/add-cards', label: 'Add Cards', icon: <IconFileImport size={18} /> },
   { to: '/export', label: 'Export & Backup', icon: <IconDownload size={18} /> }
@@ -110,7 +107,6 @@ export function App(): React.ReactElement {
           <Route path="/benefits" element={<Benefits />} />
           <Route path="/velocity" element={<Velocity />} />
           <Route path="/referrals" element={<Referrals />} />
-          <Route path="/reports" element={<Reports />} />
           <Route path="/recurring" element={<Recurring />} />
           <Route path="/add-cards" element={<AddCards />} />
           <Route path="/export" element={<Export />} />
