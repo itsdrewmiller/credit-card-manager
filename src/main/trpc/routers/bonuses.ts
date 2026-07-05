@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { eq, desc } from 'drizzle-orm'
+import { eq, asc, sql } from 'drizzle-orm'
 import { router, publicProcedure } from '../trpc'
 import { signupBonus } from '../../db/schema'
 import { REWARD_KINDS } from '@shared/constants'
@@ -41,7 +41,11 @@ function enrich<
 export const bonusesRouter = router({
   list: publicProcedure.query(({ ctx }) => {
     const rows = ctx.db.query.signupBonus
-      .findMany({ with: withRelations, orderBy: desc(signupBonus.deadline) })
+      // Soonest deadline first; bonuses without one sink to the bottom.
+      .findMany({
+        with: withRelations,
+        orderBy: [sql`${signupBonus.deadline} is null`, asc(signupBonus.deadline)]
+      })
       .sync()
     return rows.map(enrich)
   }),
