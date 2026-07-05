@@ -12,6 +12,7 @@ import { openDatabase, runMigrations, type DB } from './db'
 import { seedIssuers } from './db/issuers'
 import { seedPointPrograms } from './db/points'
 import { seedExtraProducts } from './db/products'
+import { seedCashbackRates } from './db/cashback'
 import { dedupeCatalog } from './db/dedupe'
 import { productOffer } from './db/schema'
 import { importOffersCsv } from './import/offers'
@@ -69,6 +70,8 @@ function initDatabase(): void {
   if (cleaned.renamed || cleaned.merged) {
     console.log(`[db] catalog cleanup: ${cleaned.renamed} renamed, ${cleaned.merged} merged`)
   }
+  const rated = seedCashbackRates(db)
+  if (rated) console.log(`[db] filled baseline earn rates for ${rated} products`)
   console.log(`[db] ready at ${dbPath}`, seeded.issuers ? `(seeded ${seeded.issuers} issuers)` : '')
 }
 

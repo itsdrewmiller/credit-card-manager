@@ -6,6 +6,7 @@ import { describe, it, expect, beforeAll, afterAll } from 'vitest'
 import { eq } from 'drizzle-orm'
 import { makeTestDb, type TestDb } from '../helpers/db'
 import { seedIssuers } from '../../src/main/db/issuers'
+import { seedCashbackRates } from '../../src/main/db/cashback'
 import { person, pointProgram, card, signupBonus, issuer, cardProduct } from '../../src/main/db/schema'
 import { appRouter } from '../../src/main/trpc/router'
 
@@ -75,6 +76,29 @@ describe('database + router integration', () => {
 
     db.delete(card).where(eq(card.id, csr.id)).run()
     expect(db.select().from(signupBonus).where(eq(signupBonus.cardId, csr.id)).all()).toHaveLength(0)
+  })
+
+  it('seeds baseline earn rates without clobbering user edits', () => {
+    const db = t.db
+    const chase = db.select().from(issuer).all().find((i) => i.name === 'Chase')!
+    // The catalog seeded 'Sapphire Reserve' earlier in this suite.
+    const filled = seedCashbackRates(db)
+    expect(filled).toBeGreaterThan(0)
+    const csr = db
+      .select()
+      .from(cardProduct)
+      .all()
+      .find((p) => p.issuerId === chase.id && p.name === 'Sapphire Reserve')!
+    expect(csr.defaultCashbackPct).toBe(1)
+
+    // A user edit survives re-seeding.
+    db.update(cardProduct)
+      .set({ defaultCashbackPct: 3 })
+      .where(eq(cardProduct.id, csr.id))
+      .run()
+    seedCashbackRates(db)
+    const after = db.select().from(cardProduct).all().find((p) => p.id === csr.id)!
+    expect(after.defaultCashbackPct).toBe(3)
   })
 
   it('records spend deltas as dated ledger entries and reports on them', async () => {
