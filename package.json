@@ -1,6 +1,6 @@
 {
   "name": "credit-card-manager",
-  "version": "0.1.25",
+  "version": "0.1.26",
   "description": "Local-first credit-card churning tracker",
   "type": "module",
   "main": "./out/main/index.js",
@@ -11,13 +11,16 @@
     "url": "git+https://github.com/itsdrewmiller/credit-card-manager.git"
   },
   "scripts": {
+    "predev": "node scripts/ensure-native-abi.mjs electron",
     "dev": "electron-vite dev",
     "build": "electron-vite build",
     "typecheck:node": "tsc --noEmit -p tsconfig.node.json --composite false",
     "typecheck:web": "tsc --noEmit -p tsconfig.web.json --composite false",
     "typecheck": "npm run typecheck:node && npm run typecheck:web",
+    "prestart": "node scripts/ensure-native-abi.mjs electron",
     "start": "electron-vite preview",
     "db:generate": "drizzle-kit generate",
+    "pretest": "node scripts/ensure-native-abi.mjs node",
     "test": "vitest run",
     "test:watch": "vitest",
     "rebuild": "electron-rebuild -f -w better-sqlite3",
@@ -25,7 +28,7 @@
     "dist": "electron-vite build && electron-builder --config electron-builder.config.cjs"
   },
   "dependencies": {
-    "better-sqlite3": "^11.8.1",
+    "better-sqlite3": "^12.11.1",
     "drizzle-orm": "^0.38.4",
     "electron-updater": "^6.8.9",
     "pdfjs-dist": "^4.10.38"
@@ -54,7 +57,7 @@
     "dayjs": "^1.11.13",
     "drizzle-kit": "^0.30.1",
     "drizzle-zod": "^0.6.1",
-    "electron": "^33.3.1",
+    "electron": "^42.6.0",
     "electron-builder": "^25.1.8",
     "electron-vite": "^2.3.0",
     "fuse.js": "^7.0.0",

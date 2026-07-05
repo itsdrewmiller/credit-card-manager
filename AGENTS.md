@@ -15,8 +15,7 @@ fuzzy matching, electron-builder for installers. Bundled with electron-vite
 
 ```bash
 npm install
-npm run rebuild   # rebuild better-sqlite3 against Electron's ABI (needed before `dev`)
-npm run dev       # launch the app with hot reload
+npm run dev       # launch the app with hot reload (native ABI auto-fixed by a predev hook)
 ```
 
 The SQLite database is created at `<userData>/cardmanager.db` on first launch
@@ -25,16 +24,15 @@ run and the card-product catalog seeds automatically.
 
 ## The better-sqlite3 ABI dance
 
-`better-sqlite3` is a native module, and Node and Electron use different ABIs.
-`npm install` builds it for your system Node; the app needs the Electron build.
-
-- Before running the app / `npm run pack` / `npm run dist`: `npm run rebuild` (Electron ABI).
-- Before running the tests (`npm test`): `npm rebuild better-sqlite3` (Node ABI).
-
-`npm run pack`/`dist` rebuild for Electron automatically, so re-run
-`npm rebuild better-sqlite3` afterward if you want to run the tests again.
-If `npm test` fails with `ERR_DLOPEN_FAILED` / `NODE_MODULE_VERSION`, that's
-this — run `npm rebuild better-sqlite3`.
+`better-sqlite3` is a native module; Node (tests) and Electron (the app) have
+different ABIs but share one compiled binary. **This is handled automatically**:
+`pretest`/`predev`/`prestart` hooks run `scripts/ensure-native-abi.mjs`, which
+probes by opening an in-memory database (a bare `require` doesn't dlopen — the
+probe must construct a `Database`) and rebuilds only on mismatch. A matched ABI
+costs ~1s; a flip costs one rebuild (fast when a prebuilt exists for the target
+ABI, a full source compile otherwise). `npm run pack`/`dist` rebuild for
+Electron themselves via electron-builder. Manual escape hatches: `npm run
+rebuild` (Electron ABI) and `npm rebuild better-sqlite3` (Node ABI).
 
 ## Scripts
 
