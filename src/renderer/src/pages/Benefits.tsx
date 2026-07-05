@@ -10,7 +10,7 @@ import { RowActionsMenu } from '../components/RowActionsMenu'
 import { useEntityEditor } from '../components/useEntityEditor'
 import { BenefitForm, type BenefitFormValue } from '../components/BenefitForm'
 import { CardBenefits } from './CardBenefits'
-import { cardLabel } from '../components/useCardEditor'
+import { cardLabel, cardSelectLabel } from '../components/useCardEditor'
 import { formatCents, formatDate, daysUntil } from '@shared/format'
 import type { BenefitRow } from '../lib/types'
 
@@ -36,7 +36,7 @@ export function Benefits(): React.ReactElement {
   const setUsed = trpc.benefits.setUsed.useMutation({ onSuccess: invalidate })
   const remove = trpc.benefits.delete.useMutation({ onSuccess: invalidate })
 
-  const cardOptions = (cards.data ?? []).map((c) => ({ value: String(c.id), label: cardLabel(c) }))
+  const cardOptions = (cards.data ?? []).map((c) => ({ value: String(c.id), label: cardSelectLabel(c) }))
 
   const filtered = useMemo(() => {
     const rows = benefits.data ?? []

@@ -10,6 +10,14 @@ export function cardLabel(c: { product?: { issuer?: { name: string } | null; nam
   return c.rawCreditorName ?? 'Unknown card'
 }
 
+/** Dropdown label: last-4 first (names run long and get truncated), then the card. */
+export function cardSelectLabel(
+  c: Parameters<typeof cardLabel>[0] & { last4?: string | null }
+): string {
+  const label = cardLabel(c)
+  return c.last4 ? `····${c.last4} · ${label}` : label
+}
+
 /** Shared add/edit-card drawer + mutations, reused by Cards and Needs-info. */
 export function useCardEditor(): {
   openCreate: () => void

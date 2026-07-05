@@ -11,7 +11,7 @@ import {
   RecurringPaymentForm,
   type RecurringPaymentFormValue
 } from '../components/RecurringPaymentForm'
-import { cardLabel } from '../components/useCardEditor'
+import { cardLabel, cardSelectLabel } from '../components/useCardEditor'
 import type { RecurringPaymentRow } from '../lib/types'
 
 /** The whole point of the page: flag cards whose spend no longer feeds a bonus. */
@@ -62,7 +62,7 @@ export function Recurring(): React.ReactElement {
 
   const cardOptions = (cards.data ?? [])
     .filter((c) => c.status === 'open')
-    .map((c) => ({ value: String(c.id), label: cardLabel(c) }))
+    .map((c) => ({ value: String(c.id), label: cardSelectLabel(c) }))
 
   const editor = useEntityEditor<RecurringPaymentRow, RecurringPaymentFormValue>({
     entityLabel: 'assignment',

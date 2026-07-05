@@ -10,7 +10,7 @@ import { RowActionsMenu } from '../components/RowActionsMenu'
 import { useEntityEditor } from '../components/useEntityEditor'
 import { BonusForm, type BonusFormValue } from '../components/BonusForm'
 import { AvailableOffers } from './AvailableOffers'
-import { cardLabel } from '../components/useCardEditor'
+import { cardLabel, cardSelectLabel } from '../components/useCardEditor'
 import {
   centsToDollars,
   parseCents,
@@ -174,7 +174,7 @@ export function Bonuses(): React.ReactElement {
   const update = trpc.bonuses.update.useMutation({ onSuccess: invalidate })
   const remove = trpc.bonuses.delete.useMutation({ onSuccess: invalidate })
 
-  const cardOptions = (cards.data ?? []).map((c) => ({ value: String(c.id), label: cardLabel(c) }))
+  const cardOptions = (cards.data ?? []).map((c) => ({ value: String(c.id), label: cardSelectLabel(c) }))
   const programOptions = (programs.data ?? []).map((p) => ({
     value: String(p.id),
     label: p.label,
