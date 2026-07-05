@@ -113,6 +113,10 @@ export const card = sqliteTable(
 
     status: text('status', { enum: CARD_STATUSES }).notNull().default('open'),
 
+    // Whether autopay is configured with the issuer — a churner safety net
+    // (a missed payment can claw back a bonus and ding the bureau).
+    autopay: integer('autopay', { mode: 'boolean' }).notNull().default(false),
+
     appliedDate: text('applied_date'),
     openedDate: text('opened_date'),
     closedDate: text('closed_date'),

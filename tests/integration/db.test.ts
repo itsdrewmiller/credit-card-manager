@@ -77,6 +77,18 @@ describe('database + router integration', () => {
     expect(db.select().from(signupBonus).where(eq(signupBonus.cardId, csr.id)).all()).toHaveLength(0)
   })
 
+  it('tracks autopay on cards, defaulting to off', async () => {
+    const caller = appRouter.createCaller({ db: t.db })
+    const plain = await caller.cards.create({ rawCreditorName: 'AUTOPAY TEST', status: 'open', source: 'manual' })
+    expect(plain.autopay).toBe(false)
+
+    await caller.cards.update({ id: plain.id, autopay: true })
+    const after = await caller.cards.get({ id: plain.id })
+    expect(after?.autopay).toBe(true)
+
+    await caller.cards.delete({ id: plain.id })
+  })
+
   it('auto-applies product benefit templates to new cards, idempotently', async () => {
     const db = t.db
     const caller = appRouter.createCaller({ db })

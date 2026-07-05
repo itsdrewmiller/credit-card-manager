@@ -1,0 +1,1 @@
+ALTER TABLE `card` ADD `autopay` integer DEFAULT false NOT NULL;

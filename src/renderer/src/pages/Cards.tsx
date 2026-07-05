@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react'
 import {
   Table,
   Button,
+  Checkbox,
   Group,
   Badge,
   Text,
@@ -72,6 +73,7 @@ export function Cards(): React.ReactElement {
   const [sort, setSort] = useState<Sort>({ field: 'opened', dir: 'desc' })
 
   const remove = trpc.cards.delete.useMutation({ onSuccess: invalidate })
+  const setAutopay = trpc.cards.update.useMutation({ onSuccess: invalidate })
 
   const importCsv = trpc.cards.importCsv.useMutation({
     onSuccess: (res) => {
@@ -162,6 +164,7 @@ export function Cards(): React.ReactElement {
               <Th field="status" label="Status" />
               <Th field="fee" label="Annual fee" />
               <Th field="opened" label="Opened" />
+              <Table.Th>Autopay</Table.Th>
               <Table.Th>Needs info</Table.Th>
               <Table.Th w={48} />
             </Table.Tr>
@@ -194,6 +197,13 @@ export function Cards(): React.ReactElement {
                       closed {formatDate(c.closedDate)}
                     </Text>
                   )}
+                </Table.Td>
+                <Table.Td>
+                  <Checkbox
+                    checked={c.autopay}
+                    onChange={(e) => setAutopay.mutate({ id: c.id, autopay: e.currentTarget.checked })}
+                    aria-label="Automatic payments set up"
+                  />
                 </Table.Td>
                 <Table.Td>
                   {c.missingFields.length === 0 ? (

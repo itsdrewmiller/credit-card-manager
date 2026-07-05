@@ -3,6 +3,7 @@ import {
   TextInput,
   NumberInput,
   Select,
+  Switch,
   Textarea,
   Group,
   Button,
@@ -23,6 +24,7 @@ export interface CardFormValue {
   last4: string | null
   annualFeeCents: number | null
   status: CardStatus
+  autopay: boolean
   appliedDate: string | null
   openedDate: string | null
   closedDate: string | null
@@ -61,6 +63,7 @@ export function CardForm({
       last4: initial?.last4 ?? '',
       annualFeeDollars: centsToDollars(initial?.annualFeeCents),
       status: initial?.status ?? 'open',
+      autopay: initial?.autopay ?? false,
       appliedDate: isoToDate(initial?.appliedDate),
       openedDate: isoToDate(initial?.openedDate),
       closedDate: isoToDate(initial?.closedDate),
@@ -77,6 +80,7 @@ export function CardForm({
       last4: v.last4 || null,
       annualFeeCents: parseCents(v.annualFeeDollars),
       status: v.status as CardStatus,
+      autopay: v.autopay,
       appliedDate: dateToIso(v.appliedDate),
       openedDate: dateToIso(v.openedDate),
       closedDate: dateToIso(v.closedDate),
@@ -160,6 +164,12 @@ export function CardForm({
         />
       </SimpleGrid>
 
+      <Switch
+        label="Automatic payments set up"
+        description="Autopay configured with the issuer"
+        {...form.getInputProps('autopay', { type: 'checkbox' })}
+        mb="sm"
+      />
       <Textarea label="Notes" autosize minRows={2} {...form.getInputProps('notes')} mb="md" />
 
       <Group justify="flex-end">
