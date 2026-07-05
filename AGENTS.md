@@ -69,6 +69,19 @@ tests/             Vitest suite: unit/ (pure domain + format), integration/ (DB,
 
 ## Conventions
 
+- **`dependencies` vs `devDependencies` is a packaging decision, not a runtime
+  one.** electron-vite's `externalizeDepsPlugin` leaves `dependencies` as real
+  `require()`s (shipped as node_modules in the asar) and bundles everything
+  else. Keep only modules that must stay external there — native
+  (`better-sqlite3`), asset-laden (`pdfjs-dist`), instance-sensitive
+  (`drizzle-orm`), or self-locating (`electron-updater`). Pure-JS libraries
+  (zod, @trpc, drizzle-zod) go in `devDependencies`; putting one in
+  `dependencies` ships it unbundled, and if it imports a devDependency at
+  runtime the packaged app crashes on launch while `npm run dev` works fine
+  (this shipped broken once as v0.1.24). After changing `dependencies`, launch
+  a packed build: `npx electron-builder --dir` then run the binary inside
+  `release/mac-arm64/`.
+
 - **Money** is stored as integer **cents**; **point valuation** is REAL
   cents-per-point; **dates** are ISO `YYYY-MM-DD` text; **timestamps** are epoch
   millis. Keeping payloads JSON-safe is why there's no tRPC transformer.
