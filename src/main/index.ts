@@ -13,6 +13,7 @@ import { seedIssuers } from './db/issuers'
 import { seedPointPrograms } from './db/points'
 import { seedExtraProducts } from './db/products'
 import { seedCashbackRates } from './db/cashback'
+import { generateUpcomingBenefits } from './db/generateBenefits'
 import { dedupeCatalog } from './db/dedupe'
 import { productOffer } from './db/schema'
 import { importOffersCsv } from './import/offers'
@@ -72,6 +73,10 @@ function initDatabase(): void {
   }
   const rated = seedCashbackRates(db)
   if (rated) console.log(`[db] filled baseline earn rates for ${rated} products`)
+  const gen = generateUpcomingBenefits(db)
+  if (gen.created || gen.dated) {
+    console.log(`[db] recurring benefits: ${gen.created} generated, ${gen.dated} windows seeded`)
+  }
   console.log(`[db] ready at ${dbPath}`, seeded.issuers ? `(seeded ${seeded.issuers} issuers)` : '')
 }
 
