@@ -92,10 +92,9 @@ export const importerRouter = router({
     .mutation(({ ctx, input }) => {
       let created = 0
       ctx.db.transaction((tx) => {
-        const h = tx as unknown as DB
         for (const r of input.rows) {
           // When a product is matched, inherit its annual fee / network / issuer.
-          const values = applyProductDefaults(h, {
+          const values = applyProductDefaults(tx, {
             cardProductId: r.cardProductId ?? null,
             issuerId: r.issuerId ?? null,
             network: r.network ?? null,

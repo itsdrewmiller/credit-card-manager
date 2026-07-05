@@ -61,6 +61,8 @@ jobs:
           CSC_KEY_PASSWORD: ${{ secrets.WIN_CSC_KEY_PASSWORD }}
         run: npx electron-builder --win --config electron-builder.config.cjs --publish never
 
+      # The yml/zip/blockmap files are electron-updater's update feed — they
+      # must land in the GitHub Release for auto-update to work.
       - name: Upload installer artifact
         uses: actions/upload-artifact@v4
         with:
@@ -68,6 +70,9 @@ jobs:
           path: |
             release/*.dmg
             release/*.exe
+            release/*.zip
+            release/*.blockmap
+            release/latest*.yml
           if-no-files-found: error
 
   release:

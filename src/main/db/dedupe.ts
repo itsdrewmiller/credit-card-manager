@@ -1,10 +1,10 @@
 import { eq } from 'drizzle-orm'
-import type { DB } from './index'
+import type { DB, DbLike } from './index'
 import { cardProduct, issuer, card, referral, productOffer, productBenefit } from './schema'
 import { stripIssuerPrefix, cleanCardName, canonicalProductName } from '../import/naming'
 
 /** Repoint everything from a duplicate product onto the keeper, then delete it. */
-function mergeProduct(db: DB, dupId: number, keeperId: number): void {
+function mergeProduct(db: DbLike, dupId: number, keeperId: number): void {
   db.update(card).set({ cardProductId: keeperId }).where(eq(card.cardProductId, dupId)).run()
   db.update(referral).set({ cardProductId: keeperId }).where(eq(referral.cardProductId, dupId)).run()
   db.update(productBenefit)
@@ -50,8 +50,7 @@ function mergeProduct(db: DB, dupId: number, keeperId: number): void {
 export function dedupeCatalog(db: DB): { renamed: number; merged: number } {
   let renamed = 0
   let merged = 0
-  db.transaction((txRaw) => {
-    const tx = txRaw as unknown as DB
+  db.transaction((tx) => {
     const rows = tx
       .select({
         id: cardProduct.id,

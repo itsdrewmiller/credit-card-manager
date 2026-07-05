@@ -39,6 +39,13 @@ module.exports = {
   afterSign: 'build/notarize.cjs',
   afterAllArtifactBuild: 'build/notarizeDmg.cjs',
   files: ['out/**/*'],
+  // Update feed for electron-updater (bakes app-update.yml into the build).
+  // Release assets are still published by the GitHub Actions release job, so
+  // CI builds keep --publish never.
+  publish: { provider: 'github', owner: 'itsdrewmiller', repo: 'credit-card-manager' },
+  // No spaces: GitHub rewrites spaces in release-asset names (to dots), which
+  // would break the URLs electron-updater reads from latest*.yml.
+  artifactName: '${name}-${version}-${arch}.${ext}',
   extraResources: [
     { from: 'drizzle', to: 'drizzle' },
     { from: 'data/signup_bonuses.csv', to: 'data/signup_bonuses.csv' }
@@ -46,7 +53,8 @@ module.exports = {
   asarUnpack: ['**/node_modules/better-sqlite3/**', '**/node_modules/pdfjs-dist/**'],
   npmRebuild: true,
   mac: {
-    target: 'dmg',
+    // zip is what electron-updater downloads on macOS; the dmg is for humans.
+    target: ['dmg', 'zip'],
     category: 'public.app-category.finance',
     // With a Developer ID cert present, electron-builder signs normally.
     // Without one, skip its signing (the afterPack hook ad-hoc signs instead).

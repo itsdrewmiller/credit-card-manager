@@ -1,5 +1,5 @@
 import { eq, sql } from 'drizzle-orm'
-import type { DB } from '../db'
+import type { DB, DbLike } from '../db'
 import { productOffer, pointProgram } from '../db/schema'
 import { parseCsv } from './csv'
 import { stripIssuerPrefix, cleanCardName, canonicalProductName } from './naming'
@@ -19,7 +19,7 @@ function inferNetwork(issuerName: string): string | null {
 }
 
 /** Match a currency name (e.g. "Amex MR") to a seeded point program. */
-function programIdForCurrency(db: DB, currency: string | null): number | null {
+function programIdForCurrency(db: DbLike, currency: string | null): number | null {
   if (!currency) return null
   const p = db
     .select({ id: pointProgram.id })
@@ -48,8 +48,7 @@ export function importOffersCsv(db: DB, text: string): OfferImportResult {
 
   let created = 0
   let updated = 0
-  db.transaction((tx) => {
-    const h = tx as unknown as DB
+  db.transaction((h) => {
     for (const r of rows) {
       const name = r.card_name?.trim()
       if (!name) continue

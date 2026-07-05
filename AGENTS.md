@@ -118,12 +118,17 @@ Releases — **not** committed binaries (which would bloat git history). Compile
 apps don't belong in the repo tree; the Releases tab is the durable home.
 
 How it works:
-- A **build matrix** on `macos-latest` (`.dmg`) and `windows-latest` (`.exe`)
-  runs `npm run build` + `npx electron-builder --publish never` and uploads each
-  installer as a workflow artifact.
+- A **build matrix** on `macos-latest` (`.dmg` + `.zip`) and `windows-latest`
+  (`.exe`) runs `npm run build` + `npx electron-builder --publish never` and
+  uploads each installer as a workflow artifact.
 - A separate **release** job downloads both artifacts and publishes a single
   GitHub Release via `softprops/action-gh-release` (one writer avoids a
   two-runner race on the same release).
+- **Auto-update**: packaged apps check the latest GitHub Release on launch via
+  `electron-updater` and install on quit. The feed files (`latest*.yml`,
+  `*.blockmap`, and the mac `.zip`) must ship in the Release — the workflow
+  uploads them alongside the installers. macOS only applies updates to signed
+  builds, so auto-update effectively requires the signing secrets.
 
 Cut a release:
 ```bash

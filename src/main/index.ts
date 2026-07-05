@@ -2,6 +2,7 @@ import { app, BrowserWindow, shell, session, dialog, ipcMain } from 'electron'
 import { join } from 'node:path'
 import { existsSync, readFileSync } from 'node:fs'
 import { is } from '@electron-toolkit/utils'
+import { autoUpdater } from 'electron-updater'
 import { sql } from 'drizzle-orm'
 import { openDatabase, runMigrations, type DB } from './db'
 import { seedIssuers } from './db/issuers'
@@ -121,6 +122,17 @@ function installCsp(): void {
   })
 }
 
+/**
+ * Check GitHub Releases for a newer version, download in the background, and
+ * notify when it will install on quit. Packaged builds only; failures
+ * (offline, ad-hoc-signed local build) are logged and never block the app.
+ */
+function setupAutoUpdate(): void {
+  if (!app.isPackaged) return
+  autoUpdater.on('error', (err) => console.warn('[update]', err.message))
+  autoUpdater.checkForUpdatesAndNotify().catch((err) => console.warn('[update]', err))
+}
+
 app.whenReady().then(() => {
   installCsp()
 
@@ -139,6 +151,7 @@ app.whenReady().then(() => {
 
   registerTrpcIpc()
   createWindow()
+  setupAutoUpdate()
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()

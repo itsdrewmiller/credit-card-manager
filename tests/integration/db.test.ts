@@ -124,4 +124,27 @@ describe('database + router integration', () => {
     expect(snap2.data.card).toHaveLength(snap.data.card.length)
     expect(snap2.data.signupBonus).toHaveLength(snap.data.signupBonus.length)
   })
+
+  it('rejects restores with a wrong version, unknown tables, or malformed rows', async () => {
+    const caller = appRouter.createCaller({ db: restoreT.db })
+
+    await expect(caller.exporter.restore({ version: 99, data: {} })).rejects.toThrow(
+      /Unsupported backup version 99/
+    )
+
+    await expect(
+      caller.exporter.restore({ version: 1, data: { notATable: [] } as never })
+    ).rejects.toThrow()
+
+    await expect(
+      caller.exporter.restore({
+        version: 1,
+        data: { person: [{ notes: 'row with no name' }] } as never
+      })
+    ).rejects.toThrow()
+
+    // Validation failures must not have wiped anything.
+    const snap = await caller.exporter.snapshot()
+    expect(snap.data.person.length).toBeGreaterThan(0)
+  })
 })

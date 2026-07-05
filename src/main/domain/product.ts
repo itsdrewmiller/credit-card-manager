@@ -1,5 +1,5 @@
 import { eq } from 'drizzle-orm'
-import type { DB } from '../db'
+import type { DbLike } from '../db'
 import { cardProduct } from '../db/schema'
 
 export interface ProductDefaults {
@@ -9,7 +9,7 @@ export interface ProductDefaults {
 }
 
 /** Look up the issuer/network/annual-fee a card inherits from its product. */
-export function productDefaults(db: DB, productId: number): ProductDefaults | null {
+export function productDefaults(db: DbLike, productId: number): ProductDefaults | null {
   return (
     db
       .select({
@@ -31,7 +31,7 @@ export function applyProductDefaults<
     network?: string | null
     annualFeeCents?: number | null
   }
->(db: DB, input: T): T {
+>(db: DbLike, input: T): T {
   if (input.cardProductId == null) return input
   const d = productDefaults(db, input.cardProductId)
   if (!d) return input

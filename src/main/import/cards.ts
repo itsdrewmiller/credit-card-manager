@@ -1,12 +1,12 @@
 import { eq, and, sql, isNull } from 'drizzle-orm'
-import type { DB } from '../db'
+import type { DB, DbLike } from '../db'
 import { card, person, business } from '../db/schema'
 import { CARD_STATUSES, type CardStatus } from '@shared/constants'
 import { parseCsv } from './csv'
 import { stripIssuerPrefix, cleanCardName, canonicalProductName } from './naming'
 import { centsOrNull, normalizeNetwork, findOrCreateIssuer, findOrCreateProduct } from './shared'
 
-function findOrCreatePerson(db: DB, name: string): number {
+function findOrCreatePerson(db: DbLike, name: string): number {
   const existing = db
     .select({ id: person.id })
     .from(person)
@@ -16,7 +16,7 @@ function findOrCreatePerson(db: DB, name: string): number {
   return db.insert(person).values({ name }).returning({ id: person.id }).get().id
 }
 
-function findOrCreateBusiness(db: DB, name: string, ownerPersonId: number): number {
+function findOrCreateBusiness(db: DbLike, name: string, ownerPersonId: number): number {
   const existing = db
     .select({ id: business.id })
     .from(business)
@@ -41,7 +41,7 @@ function parseStatus(s: string | undefined): CardStatus {
  * Rows without either always insert a fresh card.
  */
 function findExistingCard(
-  db: DB,
+  db: DbLike,
   productId: number,
   ownerPersonId: number | null,
   last4: string | null,
@@ -82,8 +82,7 @@ export function importCardsCsv(db: DB, text: string): CardImportResult {
 
   let created = 0
   let updated = 0
-  db.transaction((tx) => {
-    const h = tx as unknown as DB
+  db.transaction((h) => {
     for (const r of rows) {
       const name = r.card_name?.trim()
       const issuerName = r.issuer?.trim()

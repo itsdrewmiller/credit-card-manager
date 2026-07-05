@@ -1,9 +1,23 @@
 import Database from 'better-sqlite3'
 import { drizzle, type BetterSQLite3Database } from 'drizzle-orm/better-sqlite3'
 import { migrate } from 'drizzle-orm/better-sqlite3/migrator'
+import type { ExtractTablesWithRelations } from 'drizzle-orm'
+import type { BaseSQLiteDatabase } from 'drizzle-orm/sqlite-core'
 import { schema } from './schema'
 
 export type DB = BetterSQLite3Database<typeof schema>
+
+/**
+ * The root handle or a transaction from db.transaction() — both extend this
+ * base. Read/write helpers accept DbLike so they compose into transactions
+ * without casts.
+ */
+export type DbLike = BaseSQLiteDatabase<
+  'sync',
+  Database.RunResult,
+  typeof schema,
+  ExtractTablesWithRelations<typeof schema>
+>
 
 export interface Db {
   db: DB

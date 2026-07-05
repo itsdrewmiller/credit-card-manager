@@ -1,5 +1,5 @@
 import { eq, and, sql } from 'drizzle-orm'
-import type { DB } from '../db'
+import type { DbLike } from '../db'
 import { cardProduct, issuer } from '../db/schema'
 
 /** "12.5" -> 12.5, blank/invalid -> null. */
@@ -26,7 +26,7 @@ export function normalizeNetwork(s: string | undefined): string | null {
   return v
 }
 
-export function findOrCreateIssuer(db: DB, name: string): number {
+export function findOrCreateIssuer(db: DbLike, name: string): number {
   const existing = db
     .select({ id: issuer.id })
     .from(issuer)
@@ -37,7 +37,7 @@ export function findOrCreateIssuer(db: DB, name: string): number {
 }
 
 export function findOrCreateProduct(
-  db: DB,
+  db: DbLike,
   issuerId: number,
   name: string,
   isBusiness: boolean,

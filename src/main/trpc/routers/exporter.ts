@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { createInsertSchema } from 'drizzle-zod'
 import { router, publicProcedure } from '../trpc'
 import {
   person,
@@ -33,6 +34,29 @@ const TABLES = [
 
 export const SNAPSHOT_VERSION = 1
 
+/**
+ * Snapshot payload schema, derived from the Drizzle tables so it can't drift:
+ * each table key maps to rows matching that table's insert shape (ids and
+ * timestamps included, so relationships survive the round-trip). `.strict()`
+ * makes an unknown table name a loud error instead of silently dropped data.
+ */
+const snapshotDataSchema = z
+  .object({
+    person: z.array(createInsertSchema(person)).optional(),
+    business: z.array(createInsertSchema(business)).optional(),
+    issuer: z.array(createInsertSchema(issuer)).optional(),
+    cardProduct: z.array(createInsertSchema(cardProduct)).optional(),
+    issuerAlias: z.array(createInsertSchema(issuerAlias)).optional(),
+    pointProgram: z.array(createInsertSchema(pointProgram)).optional(),
+    productOffer: z.array(createInsertSchema(productOffer)).optional(),
+    productBenefit: z.array(createInsertSchema(productBenefit)).optional(),
+    card: z.array(createInsertSchema(card)).optional(),
+    signupBonus: z.array(createInsertSchema(signupBonus)).optional(),
+    benefit: z.array(createInsertSchema(benefit)).optional(),
+    referral: z.array(createInsertSchema(referral)).optional()
+  })
+  .strict()
+
 export const exporterRouter = router({
   /** Full database snapshot: every row of every table, plus metadata. */
   snapshot: publicProcedure.query(({ ctx }) => {
@@ -48,8 +72,13 @@ export const exporterRouter = router({
    * rows (preserving ids/relationships). Destructive — the UI confirms first.
    */
   restore: publicProcedure
-    .input(z.object({ version: z.number(), data: z.record(z.array(z.record(z.any()))) }))
+    .input(z.object({ version: z.number().int(), data: snapshotDataSchema }))
     .mutation(({ ctx, input }) => {
+      if (input.version !== SNAPSHOT_VERSION) {
+        throw new Error(
+          `Unsupported backup version ${input.version} (this app restores version ${SNAPSHOT_VERSION})`
+        )
+      }
       let inserted = 0
       ctx.db.transaction((tx) => {
         // Delete children first.
@@ -61,6 +90,8 @@ export const exporterRouter = router({
         for (const [name, table] of TABLES) {
           const rows = input.data[name]
           if (rows && rows.length > 0) {
+            // Rows are validated against this table's insert schema above; the
+            // cast only bridges the heterogeneous table loop.
             tx.insert(table).values(rows as never).run()
             inserted += rows.length
           }
