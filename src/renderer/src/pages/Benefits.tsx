@@ -94,7 +94,19 @@ export function Benefits(): React.ReactElement {
       )
     },
     { header: 'Card', render: (b) => (b.card ? cardLabel(b.card) : '—') },
-    { header: 'Value', render: (b) => formatCents(b.amountCents) },
+    {
+      header: 'Value',
+      render: (b) => (
+        <>
+          <Text size="sm">{formatCents(b.amountCents)}</Text>
+          {b.valuePct != null && b.amountCents != null && (
+            <Text size="xs" c="dimmed">
+              ≈ {formatCents(Math.round((b.amountCents * b.valuePct) / 100))} to you
+            </Text>
+          )}
+        </>
+      )
+    },
     {
       header: 'Use by',
       render: (b) => {

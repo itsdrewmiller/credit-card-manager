@@ -30,6 +30,7 @@ function applyProductBenefits(db: DB, cardId: number, cardProductId: number): vo
         name: t.name,
         category: t.category,
         amountCents: t.amountCents,
+        valuePct: t.valuePct,
         period: t.period,
         notes: t.notes
       })

@@ -32,7 +32,12 @@ export const reportsRouter = router({
       .from(referral)
       .all()
     const benefits = ctx.db
-      .select({ used: benefit.used, usedDate: benefit.usedDate, amountCents: benefit.amountCents })
+      .select({
+        used: benefit.used,
+        usedDate: benefit.usedDate,
+        amountCents: benefit.amountCents,
+        valuePct: benefit.valuePct
+      })
       .from(benefit)
       .all()
 

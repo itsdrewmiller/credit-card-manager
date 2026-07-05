@@ -9,6 +9,7 @@ const upsert = z.object({
   name: z.string().min(1, 'Name is required'),
   category: z.string().nullish(),
   amountCents: z.number().int().nullish(),
+  valuePct: z.number().nullish(),
   period: z.enum(BENEFIT_PERIODS).nullish(),
   notes: z.string().nullish()
 })

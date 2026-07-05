@@ -32,7 +32,13 @@ export interface ReportInput {
     valuationCpp: number | null
   }[]
   referrals: { status: string | null; date: string | null; rewardValueCents: number | null }[]
-  benefits: { used: boolean; usedDate: string | null; amountCents: number | null }[]
+  benefits: {
+    used: boolean
+    usedDate: string | null
+    amountCents: number | null
+    /** Personal redemption efficiency percent; null = full face value. */
+    valuePct?: number | null
+  }[]
 }
 
 export interface ReportOverview {
@@ -107,7 +113,8 @@ export function buildReport(input: ReportInput): ReportOverview {
   }
   for (const b of input.benefits) {
     if (b.used && b.usedDate && b.amountCents != null) {
-      at(monthOf(b.usedDate)).benefitReturnCents += b.amountCents
+      const factor = b.valuePct == null ? 1 : b.valuePct / 100
+      at(monthOf(b.usedDate)).benefitReturnCents += Math.round(b.amountCents * factor)
     }
   }
 

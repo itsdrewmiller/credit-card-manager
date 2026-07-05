@@ -240,7 +240,10 @@ export const benefit = sqliteTable(
       .references(() => card.id, { onDelete: 'cascade' }),
     name: text('name').notNull(),
     category: text('category'), // Groceries, Travel, Dining, ...
-    amountCents: integer('amount_cents'), // value of the credit
+    amountCents: integer('amount_cents'), // face value of the credit
+    // Personal redemption efficiency as a percent (50 = worth half of face).
+    // Reports count amount × valuePct as the realized value; null = 100.
+    valuePct: real('value_pct'),
     period: text('period'), // monthly | quarterly | semiannual | annual | one_time
     year: integer('year'),
     useAfter: text('use_after'),
@@ -300,6 +303,7 @@ export const productBenefit = sqliteTable(
     name: text('name').notNull(),
     category: text('category'),
     amountCents: integer('amount_cents'),
+    valuePct: real('value_pct'), // default redemption efficiency, copied to cards
     period: text('period'), // monthly | quarterly | semiannual | annual | one_time
     notes: text('notes'),
     ...timestamps

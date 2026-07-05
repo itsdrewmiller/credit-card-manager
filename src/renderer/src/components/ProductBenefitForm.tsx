@@ -10,6 +10,7 @@ export interface ProductBenefitFormValue {
   name: string
   category: string | null
   amountCents: number | null
+  valuePct: number | null
   period: BenefitPeriod | null
   notes: string | null
 }
@@ -38,6 +39,7 @@ export function ProductBenefitForm({
       name: initial?.name ?? '',
       category: initial?.category ?? '',
       amountDollars: centsToDollars(initial?.amountCents),
+      valuePct: initial?.valuePct ?? ('' as number | ''),
       period: initial?.period ?? '',
       notes: initial?.notes ?? ''
     },
@@ -53,6 +55,7 @@ export function ProductBenefitForm({
       name: v.name.trim(),
       category: v.category || null,
       amountCents: parseCents(v.amountDollars),
+      valuePct: v.valuePct === '' ? null : Number(v.valuePct),
       period: (v.period || null) as BenefitPeriod | null,
       notes: v.notes || null
     })
@@ -82,13 +85,22 @@ export function ProductBenefitForm({
           {...form.getInputProps('period')}
         />
       </Group>
-      <NumberInput
-        label="Value ($)"
-        min={0}
-        decimalScale={2}
-        {...form.getInputProps('amountDollars')}
-        mb="sm"
-      />
+      <Group grow mb="sm">
+        <NumberInput
+          label="Value ($)"
+          min={0}
+          decimalScale={2}
+          {...form.getInputProps('amountDollars')}
+        />
+        <NumberInput
+          label="Worth to you (%)"
+          description="Blank = full face value"
+          min={0}
+          max={100}
+          suffix="%"
+          {...form.getInputProps('valuePct')}
+        />
+      </Group>
       <Textarea label="Notes" autosize minRows={2} {...form.getInputProps('notes')} mb="md" />
       <Group justify="flex-end">
         <Button variant="default" onClick={onCancel}>

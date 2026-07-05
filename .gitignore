@@ -34,3 +34,4 @@ release/
 
 # Root icon source drops (canonical copies live in build/icon.*)
 /credit-card-stack-mac-icon.*
+sample benefits.tsv

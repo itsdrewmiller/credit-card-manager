@@ -54,6 +54,17 @@ describe('buildReport', () => {
     expect(r.months[0].bonusReturnCents).toBe(110000)
   })
 
+  it('discounts benefit return by the personal value percent', () => {
+    const r = buildReport({
+      ...empty,
+      benefits: [
+        { used: true, usedDate: '2026-05-01', amountCents: 20900, valuePct: 5 }, // Clear at 5%
+        { used: true, usedDate: '2026-05-02', amountCents: 10000, valuePct: null } // full face
+      ]
+    })
+    expect(r.months[0].benefitReturnCents).toBe(1045 + 10000)
+  })
+
   it('counts paid referrals and used benefits on their dates', () => {
     const r = buildReport({
       ...empty,

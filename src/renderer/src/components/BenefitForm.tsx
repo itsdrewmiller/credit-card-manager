@@ -23,6 +23,7 @@ export interface BenefitFormValue {
   name: string
   category: string | null
   amountCents: number | null
+  valuePct: number | null
   period: BenefitPeriod | null
   year: number | null
   useAfter: string | null
@@ -58,6 +59,7 @@ export function BenefitForm({
       name: initial?.name ?? '',
       category: initial?.category ?? '',
       amountDollars: centsToDollars(initial?.amountCents),
+      valuePct: initial?.valuePct ?? ('' as number | ''),
       period: (initial?.period as BenefitPeriod | null) ?? '',
       year: initial?.year ?? ('' as number | ''),
       useAfter: isoToDate(initial?.useAfter),
@@ -79,6 +81,7 @@ export function BenefitForm({
       name: v.name.trim(),
       category: v.category || null,
       amountCents: parseCents(v.amountDollars),
+      valuePct: v.valuePct === '' ? null : Number(v.valuePct),
       period: (v.period || null) as BenefitPeriod | null,
       year: v.year === '' ? null : Number(v.year),
       useAfter: dateToIso(v.useAfter),
@@ -114,12 +117,20 @@ export function BenefitForm({
           {...form.getInputProps('period')}
         />
       </SimpleGrid>
-      <SimpleGrid cols={2} mb="sm">
+      <SimpleGrid cols={3} mb="sm">
         <NumberInput
           label="Value ($)"
           min={0}
           decimalScale={2}
           {...form.getInputProps('amountDollars')}
+        />
+        <NumberInput
+          label="Worth to you (%)"
+          description="Blank = full face value"
+          min={0}
+          max={100}
+          suffix="%"
+          {...form.getInputProps('valuePct')}
         />
         <NumberInput label="Year" min={2000} max={2100} {...form.getInputProps('year')} />
       </SimpleGrid>
