@@ -38,7 +38,26 @@ module.exports = {
   // afterSign notarizes/staples the .app; afterAllArtifactBuild does the DMG.
   afterSign: 'build/notarize.cjs',
   afterAllArtifactBuild: 'build/notarizeDmg.cjs',
-  files: ['out/**/*'],
+  files: [
+    'out/**/*',
+    // ——— packaging diet (see AGENTS.md) ———
+    // pdfjs's optional canvas backend rasterizes pages; we only extract text
+    // (verified: tests/integration/import.test.ts passes without it).
+    '!**/node_modules/@napi-rs/**',
+    // Only legacy/build/pdf.mjs + pdf.worker.mjs are imported (src/main/import/pdf.ts);
+    // keep cmaps + standard_fonts, drop the viewer, decoders, and duplicate builds.
+    '!**/node_modules/pdfjs-dist/{build,web,image_decoders,types}/**',
+    '!**/node_modules/pdfjs-dist/legacy/build/*.map',
+    '!**/node_modules/pdfjs-dist/legacy/build/*.min.mjs',
+    '!**/node_modules/pdfjs-dist/legacy/build/pdf.sandbox.*',
+    // Ship the compiled binary + JS lib, not sources and gyp intermediates.
+    '!**/node_modules/better-sqlite3/{deps,src,bin}/**',
+    '!**/node_modules/better-sqlite3/build/Release/{obj,obj.target}/**',
+    '!**/node_modules/better-sqlite3/build/Release/{sqlite3.a,test_extension.node}',
+    '!**/node_modules/better-sqlite3/build/{Makefile,config.gypi,*.mk,gyp-mac-tool}'
+  ],
+  // Strip the ~54 unused Chromium locale packs.
+  electronLanguages: ['en'],
   // Update feed for electron-updater (bakes app-update.yml into the build).
   // Release assets are still published by the GitHub Actions release job, so
   // CI builds keep --publish never.
