@@ -187,9 +187,11 @@ export const signupBonus = sqliteTable(
   })
 )
 
-// --- Recurring payments (subscriptions/bills that auto-bill a card) ---------
-// Tracked so charges can be steered toward cards still earning a bonus: the
-// UI flags payments whose card has no signup bonus left to work on.
+// --- Card assignments (places that keep a card on file) ---------------------
+// "Amazon charges the Venture" — a merchant/service and its default card, with
+// no schedule or amount attached. Tracked so charges can be steered toward
+// cards still earning a bonus: the UI flags assignments whose card has no
+// signup bonus left to work on.
 
 export const recurringPayment = sqliteTable(
   'recurring_payment',
@@ -198,8 +200,6 @@ export const recurringPayment = sqliteTable(
     name: text('name').notNull(),
     // The card currently on file; unassigned when the card is deleted.
     cardId: integer('card_id').references(() => card.id, { onDelete: 'set null' }),
-    amountCents: integer('amount_cents'),
-    period: text('period'), // monthly | quarterly | semiannual | annual
     notes: text('notes'),
     ...timestamps
   },

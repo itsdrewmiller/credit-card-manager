@@ -2,14 +2,11 @@ import { z } from 'zod'
 import { eq, asc } from 'drizzle-orm'
 import { router, publicProcedure } from '../trpc'
 import { recurringPayment } from '../../db/schema'
-import { RECURRING_PERIODS } from '@shared/constants'
 import { cardSpendStatus, type CardSpendStatus } from '../../domain/recurring'
 
 const upsert = z.object({
   name: z.string().min(1, 'Name is required'),
   cardId: z.number().int().nullish(),
-  amountCents: z.number().int().nullish(),
-  period: z.enum(RECURRING_PERIODS).nullish(),
   notes: z.string().nullish()
 })
 

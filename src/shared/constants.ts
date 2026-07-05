@@ -42,9 +42,6 @@ export type BenefitPeriod = (typeof BENEFIT_PERIODS)[number]
 export const REFERRAL_STATUSES = ['pending', 'clicked', 'approved', 'paid'] as const
 export type ReferralStatus = (typeof REFERRAL_STATUSES)[number]
 
-export const RECURRING_PERIODS = ['monthly', 'quarterly', 'semiannual', 'annual'] as const
-export type RecurringPeriod = (typeof RECURRING_PERIODS)[number]
-
 /** Fields a card needs before it's "complete enough" for churning. Drives the
  *  Needs-info inbox. Keep in sync with the importer + UI. */
 export const CARD_REQUIRED_FIELDS = [

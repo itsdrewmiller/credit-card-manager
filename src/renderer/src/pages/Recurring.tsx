@@ -12,7 +12,6 @@ import {
   type RecurringPaymentFormValue
 } from '../components/RecurringPaymentForm'
 import { cardLabel } from '../components/useCardEditor'
-import { formatCents } from '@shared/format'
 import type { RecurringPaymentRow } from '../lib/types'
 
 /** The whole point of the page: flag cards whose spend no longer feeds a bonus. */
@@ -30,12 +29,8 @@ function CardCell({ r }: { r: RecurringPaymentRow }): React.ReactElement {
         {cardLabel(r.card)}
       </Text>
       {alert ? (
-        <Tooltip label={`${alert.hint} Consider moving this payment.`} withArrow>
-          <Badge
-            color="red"
-            variant="light"
-            leftSection={<IconAlertTriangle size={12} />}
-          >
+        <Tooltip label={`${alert.hint} Consider switching the card here.`} withArrow>
+          <Badge color="red" variant="light" leftSection={<IconAlertTriangle size={12} />}>
             {alert.label}
           </Badge>
         </Tooltip>
@@ -49,17 +44,8 @@ function CardCell({ r }: { r: RecurringPaymentRow }): React.ReactElement {
 }
 
 const COLUMNS: Column<RecurringPaymentRow>[] = [
-  { header: 'Payment', render: (r) => <Text fw={500}>{r.name}</Text> },
-  { header: 'Amount', render: (r) => formatCents(r.amountCents) },
-  {
-    header: 'Period',
-    render: (r) => (
-      <Text size="sm" c="dimmed">
-        {r.period ?? '—'}
-      </Text>
-    )
-  },
-  { header: 'Billed to', render: (r) => <CardCell r={r} /> },
+  { header: 'Merchant / service', render: (r) => <Text fw={500}>{r.name}</Text> },
+  { header: 'Default card', render: (r) => <CardCell r={r} /> },
   { header: 'Notes', render: (r) => <Text c="dimmed">{r.notes}</Text> }
 ]
 
@@ -79,8 +65,8 @@ export function Recurring(): React.ReactElement {
     .map((c) => ({ value: String(c.id), label: cardLabel(c) }))
 
   const editor = useEntityEditor<RecurringPaymentRow, RecurringPaymentFormValue>({
-    entityLabel: 'recurring payment',
-    titles: { create: 'Add recurring payment', edit: (r) => `Edit ${r.name}` },
+    entityLabel: 'assignment',
+    titles: { create: 'Add card assignment', edit: (r) => `Edit ${r.name}` },
     create,
     update,
     form: (props) => <RecurringPaymentForm cardOptions={cardOptions} {...props} />
@@ -92,18 +78,19 @@ export function Recurring(): React.ReactElement {
 
   return (
     <>
-      <PageHeader title="Recurring Payments">
+      <PageHeader title="Card Assignments">
         <Button leftSection={<IconPlus size={16} />} onClick={editor.openCreate}>
-          Add payment
+          Add assignment
         </Button>
       </PageHeader>
       <Text c="dimmed" mb="md">
-        Subscriptions and bills that auto-charge a card. Red flags mean the card on file isn&apos;t
-        earning toward a signup bonus anymore — move those charges to a card that is.
+        Places that keep a card on file — Amazon, subscriptions, bills — and which card they
+        charge. Red flags mean the card on file isn&apos;t earning toward a signup bonus anymore —
+        switch those to a card that is.
         {flagged > 0 && (
           <Text span fw={600} c="red">
             {' '}
-            {flagged} payment{flagged === 1 ? '' : 's'} could work harder.
+            {flagged} assignment{flagged === 1 ? '' : 's'} could work harder.
           </Text>
         )}
       </Text>
@@ -113,9 +100,9 @@ export function Recurring(): React.ReactElement {
           columns={COLUMNS}
           rows={payments.data}
           empty={{
-            title: 'No recurring payments tracked',
+            title: 'No card assignments tracked',
             description:
-              'Add the subscriptions and bills that auto-bill your cards, and which card each one hits.'
+              'Add the merchants and services that keep a card on file, and which card each one charges.'
           }}
           rowActions={(r) => (
             <RowActionsMenu

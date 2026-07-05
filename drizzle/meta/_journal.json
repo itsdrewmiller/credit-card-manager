@@ -85,6 +85,13 @@
       "when": 1783279166144,
       "tag": "0011_fair_alice",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "6",
+      "when": 1783282753297,
+      "tag": "0012_lowly_iron_fist",
+      "breakpoints": true
     }
   ]
 }

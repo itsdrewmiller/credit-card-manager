@@ -1,15 +1,11 @@
 import React from 'react'
-import { TextInput, NumberInput, Select, Textarea, Group, Button, SimpleGrid } from '@mantine/core'
+import { TextInput, Select, Textarea, Group, Button } from '@mantine/core'
 import { useForm } from '@mantine/form'
-import { RECURRING_PERIODS, type RecurringPeriod } from '@shared/constants'
-import { centsToDollars, parseCents } from '@shared/format'
 import type { RecurringPaymentRow } from '../lib/types'
 
 export interface RecurringPaymentFormValue {
   name: string
   cardId: number | null
-  amountCents: number | null
-  period: RecurringPeriod | null
   notes: string | null
 }
 
@@ -35,8 +31,6 @@ export function RecurringPaymentForm({
     initialValues: {
       name: initial?.name ?? '',
       cardId: initial?.cardId ? String(initial.cardId) : '',
-      amountDollars: centsToDollars(initial?.amountCents),
-      period: (initial?.period as RecurringPeriod | null) ?? 'monthly',
       notes: initial?.notes ?? ''
     },
     validate: { name: (v) => (v.trim() ? null : 'Name is required') }
@@ -46,8 +40,6 @@ export function RecurringPaymentForm({
     onSubmit({
       name: v.name.trim(),
       cardId: v.cardId ? Number(v.cardId) : null,
-      amountCents: parseCents(v.amountDollars),
-      period: (v.period || null) as RecurringPeriod | null,
       notes: v.notes || null
     })
   )
@@ -55,35 +47,21 @@ export function RecurringPaymentForm({
   return (
     <form onSubmit={submit}>
       <TextInput
-        label="Name"
+        label="Merchant / service"
         withAsterisk
-        placeholder="Netflix, electric bill, gym…"
+        placeholder="Amazon, Netflix, electric bill…"
         {...form.getInputProps('name')}
         mb="sm"
       />
       <Select
-        label="Billed to card"
-        placeholder="Which card is on file"
+        label="Default card"
+        placeholder="Which card it charges"
         data={cardOptions}
         searchable
         clearable
         {...form.getInputProps('cardId')}
         mb="sm"
       />
-      <SimpleGrid cols={2} mb="sm">
-        <NumberInput
-          label="Amount ($)"
-          min={0}
-          decimalScale={2}
-          thousandSeparator=","
-          {...form.getInputProps('amountDollars')}
-        />
-        <Select
-          label="Period"
-          data={RECURRING_PERIODS as unknown as string[]}
-          {...form.getInputProps('period')}
-        />
-      </SimpleGrid>
       <Textarea label="Notes" autosize minRows={2} {...form.getInputProps('notes')} mb="md" />
       <Group justify="flex-end">
         <Button variant="default" onClick={onCancel}>

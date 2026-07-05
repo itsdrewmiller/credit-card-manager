@@ -47,7 +47,7 @@ const NAV: NavItem[] = [
   { to: '/benefits', label: 'Benefits', icon: <IconTicket size={18} /> },
   { to: '/velocity', label: 'Velocity (5/24)', icon: <IconChartBar size={18} /> },
   { to: '/referrals', label: 'Referrals', icon: <IconShare size={18} /> },
-  { to: '/recurring', label: 'Recurring', icon: <IconRepeat size={18} /> },
+  { to: '/recurring', label: 'Card Assignments', icon: <IconRepeat size={18} /> },
   { to: '/add-cards', label: 'Add Cards', icon: <IconFileImport size={18} /> },
   { to: '/export', label: 'Export & Backup', icon: <IconDownload size={18} /> }
 ]
