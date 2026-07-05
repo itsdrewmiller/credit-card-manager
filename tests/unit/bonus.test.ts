@@ -38,3 +38,40 @@ describe('computeBonus', () => {
     expect(computed.spendMet).toBe(true)
   })
 })
+
+describe('computeBonus pace', () => {
+  // Halfway through a 90-day window.
+  const today = new Date('2026-02-15T00:00:00')
+  const window = { startDate: '2026-01-01', deadline: '2026-04-01', targetSpendCents: 400000 }
+
+  it('reports met once the target is reached, regardless of dates', () => {
+    expect(computeBonus({ ...window, spendSoFarCents: 400000 }, null, today).pace).toBe('met')
+  })
+
+  it('reports on_track when spend keeps up with elapsed time', () => {
+    expect(computeBonus({ ...window, spendSoFarCents: 220000 }, null, today).pace).toBe('on_track')
+  })
+
+  it('reports behind when spend lags elapsed time', () => {
+    expect(computeBonus({ ...window, spendSoFarCents: 100000 }, null, today).pace).toBe('behind')
+  })
+
+  it('reports overdue past the deadline without meeting the target', () => {
+    const late = new Date('2026-04-02T00:00:00')
+    expect(computeBonus({ ...window, spendSoFarCents: 100000 }, null, late).pace).toBe('overdue')
+  })
+
+  it('reports unknown without a target, deadline, or start date', () => {
+    expect(computeBonus({ spendSoFarCents: 0 }, null, today).pace).toBe('unknown')
+    expect(
+      computeBonus({ targetSpendCents: 400000, spendSoFarCents: 0 }, null, today).pace
+    ).toBe('unknown')
+    expect(
+      computeBonus(
+        { targetSpendCents: 400000, deadline: '2026-04-01', spendSoFarCents: 0 },
+        null,
+        today
+      ).pace
+    ).toBe('unknown')
+  })
+})

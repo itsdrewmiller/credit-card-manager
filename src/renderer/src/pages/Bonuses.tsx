@@ -29,6 +29,15 @@ function rewardText(b: BonusRow): string {
   return '—'
 }
 
+/** Bar color signals pace: green met, blue on track, orange behind, red overdue. */
+const PACE_COLOR: Record<BonusRow['pace'], string> = {
+  met: 'green',
+  on_track: 'blue',
+  behind: 'orange',
+  overdue: 'red',
+  unknown: 'blue'
+}
+
 /** Spend-so-far edited right in the table; Enter or blur commits. */
 function SpendCell({
   bonus,
@@ -59,7 +68,7 @@ function SpendCell({
   return (
     <Stack gap={4}>
       {bonus.targetSpendCents != null && (
-        <Progress value={pct} color={bonus.spendMet ? 'green' : 'blue'} size="sm" />
+        <Progress value={pct} color={PACE_COLOR[bonus.pace]} size="sm" />
       )}
       <Group gap={6} wrap="nowrap">
         <NumberInput
