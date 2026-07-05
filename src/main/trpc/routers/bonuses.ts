@@ -75,8 +75,8 @@ export const bonusesRouter = router({
       const values = { ...input }
       if (values.received && values.receivedDate == null) values.receivedDate = today()
       const created = tx.insert(signupBonus).values(values).returning().get()
-      // Opening balance lands on the start date when known.
-      recordSpendDelta(tx, created.id, created.spendSoFarCents, created.startDate ?? today())
+      // Spend is dated by when it was recorded, not by the bonus window.
+      recordSpendDelta(tx, created.id, created.spendSoFarCents, today())
       return created
     })
   ),

@@ -94,7 +94,9 @@ describe('database + router integration', () => {
 
     const entries = t.db.query.spendEntry.findMany().sync().filter((e) => e.bonusId === bonus.id)
     expect(entries.map((e) => e.amountCents)).toEqual([100000, 150000, -30000])
-    expect(entries[0].date).toBe('2026-01-01') // opening balance on the start date
+    // Spend is dated by when it was recorded, not by the bonus window.
+    const todayIso = new Date().toISOString().slice(0, 10)
+    expect(entries[0].date).toBe(todayIso)
 
     // Marking received stamps a receivedDate, which puts value on the timeline.
     await caller.bonuses.update({ id: bonus.id, received: true, cashAmountCents: 75000 })

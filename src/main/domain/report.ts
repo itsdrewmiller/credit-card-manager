@@ -8,6 +8,7 @@ import { bonusValueCents } from '@shared/format'
  *  - signup bonuses on their receivedDate (valued as cash, else points × cpp)
  *  - referrals on their date once status is 'paid'
  *  - benefit credits on their usedDate
+ *  - baseline cash back (the product's default earn rate) on each spend entry
  */
 
 export interface MonthRow {
@@ -17,11 +18,12 @@ export interface MonthRow {
   bonusReturnCents: number
   referralReturnCents: number
   benefitReturnCents: number
+  cashbackReturnCents: number
   returnCents: number
 }
 
 export interface ReportInput {
-  spendEntries: { amountCents: number; date: string }[]
+  spendEntries: { amountCents: number; date: string; cashbackPct?: number | null }[]
   bonuses: {
     received: boolean
     receivedDate: string | null
@@ -42,6 +44,7 @@ export interface ReportOverview {
     bonusReturnCents: number
     referralReturnCents: number
     benefitReturnCents: number
+    cashbackReturnCents: number
     /** returnCents / spendCents, or null with no tracked spend. */
     returnOnSpend: number | null
   }
@@ -56,6 +59,7 @@ function emptyRow(month: string): MonthRow {
     bonusReturnCents: 0,
     referralReturnCents: 0,
     benefitReturnCents: 0,
+    cashbackReturnCents: 0,
     returnCents: 0
   }
 }
@@ -79,7 +83,13 @@ export function buildReport(input: ReportInput): ReportOverview {
   }
 
   for (const e of input.spendEntries) {
-    if (e.date) at(monthOf(e.date)).spendCents += e.amountCents
+    if (!e.date) continue
+    const row = at(monthOf(e.date))
+    row.spendCents += e.amountCents
+    // Baseline earn rides along with the spend (negative entries claw it back).
+    if (e.cashbackPct != null && e.cashbackPct > 0) {
+      row.cashbackReturnCents += Math.round((e.amountCents * e.cashbackPct) / 100)
+    }
   }
   for (const b of input.bonuses) {
     if (!b.received || !b.receivedDate) continue
@@ -107,7 +117,11 @@ export function buildReport(input: ReportInput): ReportOverview {
   if (present.length > 0) {
     for (let m = present[0]; m <= present[present.length - 1]; m = nextMonth(m)) {
       const row = rows.get(m) ?? emptyRow(m)
-      row.returnCents = row.bonusReturnCents + row.referralReturnCents + row.benefitReturnCents
+      row.returnCents =
+        row.bonusReturnCents +
+        row.referralReturnCents +
+        row.benefitReturnCents +
+        row.cashbackReturnCents
       months.push(row)
     }
   }
@@ -119,6 +133,7 @@ export function buildReport(input: ReportInput): ReportOverview {
       bonusReturnCents: t.bonusReturnCents + r.bonusReturnCents,
       referralReturnCents: t.referralReturnCents + r.referralReturnCents,
       benefitReturnCents: t.benefitReturnCents + r.benefitReturnCents,
+      cashbackReturnCents: t.cashbackReturnCents + r.cashbackReturnCents,
       returnOnSpend: null as number | null
     }),
     {
@@ -127,6 +142,7 @@ export function buildReport(input: ReportInput): ReportOverview {
       bonusReturnCents: 0,
       referralReturnCents: 0,
       benefitReturnCents: 0,
+      cashbackReturnCents: 0,
       returnOnSpend: null as number | null
     }
   )

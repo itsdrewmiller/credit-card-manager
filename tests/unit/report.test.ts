@@ -91,6 +91,21 @@ describe('buildReport', () => {
     expect(r.totals.returnOnSpend).toBeCloseTo(0.25)
   })
 
+  it('adds baseline cash back on spend entries carrying an earn rate', () => {
+    const r = buildReport({
+      ...empty,
+      spendEntries: [
+        { amountCents: 100000, date: '2026-01-05', cashbackPct: 2 },
+        { amountCents: 50000, date: '2026-01-20', cashbackPct: null }, // no rate -> no cash back
+        { amountCents: -10000, date: '2026-01-25', cashbackPct: 2 } // corrections claw back
+      ]
+    })
+    expect(r.months[0].spendCents).toBe(140000)
+    expect(r.months[0].cashbackReturnCents).toBe(1800) // (1000 - 100) * 2%
+    expect(r.months[0].returnCents).toBe(1800)
+    expect(r.totals.returnOnSpend).toBeCloseTo(1800 / 140000)
+  })
+
   it('crosses year boundaries when filling months', () => {
     const r = buildReport({
       ...empty,

@@ -62,6 +62,9 @@ export const cardProduct = sqliteTable(
     network: text('network'), // Visa | Mastercard | Amex | Discover
     isBusiness: integer('is_business', { mode: 'boolean' }).notNull().default(false),
     defaultAnnualFeeCents: integer('default_annual_fee_cents'),
+    // Baseline earn rate as a percent (2 = 2%); counted as cash-back return
+    // on tracked spend in Reports.
+    defaultCashbackPct: real('default_cashback_pct'),
     notes: text('notes'),
     ...timestamps
   },

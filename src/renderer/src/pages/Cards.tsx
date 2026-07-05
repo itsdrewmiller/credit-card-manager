@@ -1,10 +1,11 @@
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useEffect, useRef } from 'react'
 import {
   Table,
   Button,
   Checkbox,
   Group,
   Badge,
+  NumberInput,
   Text,
   Tooltip,
   SegmentedControl,
@@ -30,6 +31,54 @@ const STATUS_COLOR: Record<CardStatus, string> = {
   closed: 'gray',
   product_changed: 'grape',
   rejected: 'red'
+}
+
+/** Product-level baseline earn rate, edited inline; feeds cash-back return in Reports. */
+function EarnRateCell({
+  card: c,
+  onCommit
+}: {
+  card: CardRow
+  onCommit: (productId: number, pct: number | null) => void
+}): React.ReactElement {
+  const current = c.product?.defaultCashbackPct ?? null
+  const [value, setValue] = useState<number | string>(current ?? '')
+  const focused = useRef(false)
+
+  useEffect(() => {
+    if (!focused.current) setValue(current ?? '')
+  }, [current])
+
+  if (!c.product) return <Text c="dimmed">—</Text>
+  const productId = c.product.id
+
+  const commit = (): void => {
+    focused.current = false
+    const pct = value === '' ? null : Number(value)
+    if (pct !== current) onCommit(productId, pct)
+  }
+
+  return (
+    <NumberInput
+      size="xs"
+      w={80}
+      min={0}
+      step={0.25}
+      decimalScale={2}
+      suffix="%"
+      hideControls
+      aria-label="Default cash back percent"
+      value={value}
+      onChange={setValue}
+      onFocus={() => {
+        focused.current = true
+      }}
+      onBlur={commit}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') e.currentTarget.blur()
+      }}
+    />
+  )
 }
 
 type SortField = 'card' | 'owner' | 'business' | 'status' | 'fee' | 'opened'
@@ -74,6 +123,7 @@ export function Cards(): React.ReactElement {
 
   const remove = trpc.cards.delete.useMutation({ onSuccess: invalidate })
   const setAutopay = trpc.cards.update.useMutation({ onSuccess: invalidate })
+  const setCashback = trpc.products.update.useMutation({ onSuccess: invalidate })
 
   const importCsv = trpc.cards.importCsv.useMutation({
     onSuccess: (res) => {
@@ -165,6 +215,7 @@ export function Cards(): React.ReactElement {
               <Th field="fee" label="Annual fee" />
               <Th field="opened" label="Opened" />
               <Table.Th>Autopay</Table.Th>
+              <Table.Th>Earn %</Table.Th>
               <Table.Th>Needs info</Table.Th>
               <Table.Th w={48} />
             </Table.Tr>
@@ -203,6 +254,14 @@ export function Cards(): React.ReactElement {
                     checked={c.autopay}
                     onChange={(e) => setAutopay.mutate({ id: c.id, autopay: e.currentTarget.checked })}
                     aria-label="Automatic payments set up"
+                  />
+                </Table.Td>
+                <Table.Td>
+                  <EarnRateCell
+                    card={c}
+                    onCommit={(productId, pct) =>
+                      setCashback.mutate({ id: productId, defaultCashbackPct: pct })
+                    }
                   />
                 </Table.Td>
                 <Table.Td>

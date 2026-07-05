@@ -1,14 +1,18 @@
 import { router, publicProcedure } from '../trpc'
-import { spendEntry, signupBonus, referral, benefit } from '../../db/schema'
+import { signupBonus, referral, benefit } from '../../db/schema'
 import { buildReport } from '../../domain/report'
 
 export const reportsRouter = router({
   /** Monthly spend + return series with overall totals (see domain/report.ts). */
   overview: publicProcedure.query(({ ctx }) => {
-    const spendEntries = ctx.db
-      .select({ amountCents: spendEntry.amountCents, date: spendEntry.date })
-      .from(spendEntry)
-      .all()
+    const spendEntries = ctx.db.query.spendEntry
+      .findMany({ with: { bonus: { with: { card: { with: { product: true } } } } } })
+      .sync()
+      .map((e) => ({
+        amountCents: e.amountCents,
+        date: e.date,
+        cashbackPct: e.bonus?.card?.product?.defaultCashbackPct ?? null
+      }))
     const bonuses = ctx.db.query.signupBonus
       .findMany({ with: { pointProgram: true } })
       .sync()

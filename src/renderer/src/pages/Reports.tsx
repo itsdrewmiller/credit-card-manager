@@ -54,6 +54,7 @@ function MonthlyTable({ overview }: { overview: Overview }): React.ReactElement 
           <Table.Th ta="right">Bonuses</Table.Th>
           <Table.Th ta="right">Referrals</Table.Th>
           <Table.Th ta="right">Benefits</Table.Th>
+          <Table.Th ta="right">Cash back</Table.Th>
           <Table.Th ta="right">Return</Table.Th>
           <Table.Th ta="right">Return / spend</Table.Th>
         </Table.Tr>
@@ -66,6 +67,7 @@ function MonthlyTable({ overview }: { overview: Overview }): React.ReactElement 
             <Table.Td ta="right">{formatCents(m.bonusReturnCents)}</Table.Td>
             <Table.Td ta="right">{formatCents(m.referralReturnCents)}</Table.Td>
             <Table.Td ta="right">{formatCents(m.benefitReturnCents)}</Table.Td>
+            <Table.Td ta="right">{formatCents(m.cashbackReturnCents)}</Table.Td>
             <Table.Td ta="right" fw={500}>
               {formatCents(m.returnCents)}
             </Table.Td>
@@ -97,7 +99,7 @@ export function Reports(): React.ReactElement {
       <PageHeader title="Reports" />
       <Text c="dimmed" mb="md">
         Tracked bonus spend against realized return — signup bonuses when received, referrals when
-        paid, and benefit credits when used.
+        paid, benefit credits when used, and baseline cash back on tracked spend.
       </Text>
 
       <QueryGate queries={[overview]}>
@@ -115,7 +117,9 @@ export function Reports(): React.ReactElement {
                 value={formatCents(totals?.returnCents ?? 0)}
                 hint={`${formatCents(totals?.bonusReturnCents ?? 0)} bonuses · ${formatCents(
                   totals?.referralReturnCents ?? 0
-                )} referrals · ${formatCents(totals?.benefitReturnCents ?? 0)} benefits`}
+                )} referrals · ${formatCents(totals?.benefitReturnCents ?? 0)} benefits · ${formatCents(
+                  totals?.cashbackReturnCents ?? 0
+                )} cash back`}
               />
               <StatTile
                 label="Return on spend"

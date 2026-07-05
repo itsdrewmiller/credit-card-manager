@@ -9,6 +9,7 @@ const productInput = z.object({
   network: z.string().nullish(),
   isBusiness: z.boolean().default(false),
   defaultAnnualFeeCents: z.number().int().nullish(),
+  defaultCashbackPct: z.number().nullish(),
   notes: z.string().nullish()
 })
 
