@@ -13,6 +13,7 @@ import { velocityRouter } from './routers/velocity'
 import { referralsRouter } from './routers/referrals'
 import { importerRouter } from './routers/importer'
 import { exporterRouter } from './routers/exporter'
+import { reportsRouter } from './routers/reports'
 
 export const appRouter = router({
   system: systemRouter,
@@ -29,7 +30,8 @@ export const appRouter = router({
   velocity: velocityRouter,
   referrals: referralsRouter,
   importer: importerRouter,
-  exporter: exporterRouter
+  exporter: exporterRouter,
+  reports: reportsRouter
 })
 
 export type AppRouter = typeof appRouter

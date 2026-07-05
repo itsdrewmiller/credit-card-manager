@@ -173,12 +173,35 @@ export const signupBonus = sqliteTable(
     referralBonus: text('referral_bonus'),
 
     received: integer('received', { mode: 'boolean' }).notNull().default(false),
+    // When the bonus actually posted — drives the return timeline in reports.
+    receivedDate: text('received_date'),
     amountUsedCents: integer('amount_used_cents'),
     notes: text('notes'),
     ...timestamps
   },
   (t) => ({
     cardIdx: index('bonus_card_idx').on(t.cardId)
+  })
+)
+
+// --- Spend entries (the dated ledger behind a bonus's spend-so-far) ---------
+// spendSoFarCents on signup_bonus stays as the cached total; every change to
+// it flows through a dated entry here so reports can chart spend over time.
+
+export const spendEntry = sqliteTable(
+  'spend_entry',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    bonusId: integer('bonus_id')
+      .notNull()
+      .references(() => signupBonus.id, { onDelete: 'cascade' }),
+    amountCents: integer('amount_cents').notNull(), // negative = correction
+    date: text('date').notNull(),
+    note: text('note'),
+    ...timestamps
+  },
+  (t) => ({
+    bonusIdx: index('spend_entry_bonus_idx').on(t.bonusId)
   })
 )
 
@@ -199,6 +222,8 @@ export const benefit = sqliteTable(
     useAfter: text('use_after'),
     useBy: text('use_by'),
     used: integer('used', { mode: 'boolean' }).notNull().default(false),
+    // When the credit was consumed — drives the return timeline in reports.
+    usedDate: text('used_date'),
     confirmed: integer('confirmed', { mode: 'boolean' }).notNull().default(false),
     isSubscription: integer('is_subscription', { mode: 'boolean' }).notNull().default(false),
     notes: text('notes'),
@@ -273,6 +298,9 @@ export const referral = sqliteTable('referral', {
   }),
   link: text('link'),
   rewardAmount: text('reward_amount'),
+  // Dollar value of the reward (rewardAmount is free text like "20,000 pts");
+  // counted as return in reports once the referral is paid.
+  rewardValueCents: integer('reward_value_cents'),
   rewardKind: text('reward_kind'),
   date: text('date'),
   status: text('status'), // pending | clicked | approved | paid
@@ -321,12 +349,17 @@ export const pointProgramRelations = relations(pointProgram, ({ one, many }) => 
   bonuses: many(signupBonus)
 }))
 
-export const signupBonusRelations = relations(signupBonus, ({ one }) => ({
+export const signupBonusRelations = relations(signupBonus, ({ one, many }) => ({
   card: one(card, { fields: [signupBonus.cardId], references: [card.id] }),
   pointProgram: one(pointProgram, {
     fields: [signupBonus.pointProgramId],
     references: [pointProgram.id]
-  })
+  }),
+  spendEntries: many(spendEntry)
+}))
+
+export const spendEntryRelations = relations(spendEntry, ({ one }) => ({
+  bonus: one(signupBonus, { fields: [spendEntry.bonusId], references: [signupBonus.id] })
 }))
 
 export const benefitRelations = relations(benefit, ({ one }) => ({
@@ -363,6 +396,7 @@ export const schema = {
   card,
   pointProgram,
   signupBonus,
+  spendEntry,
   benefit,
   productOffer,
   productBenefit,
@@ -375,6 +409,7 @@ export const schema = {
   cardRelations,
   pointProgramRelations,
   signupBonusRelations,
+  spendEntryRelations,
   benefitRelations,
   productOfferRelations,
   productBenefitRelations,

@@ -8,6 +8,7 @@ import { HashRouter } from 'react-router-dom'
 import '@mantine/core/styles.css'
 import '@mantine/notifications/styles.css'
 import '@mantine/dates/styles.css'
+import '@mantine/charts/styles.css'
 
 import { trpc, createTrpcClient } from './trpc'
 import { App } from './App'

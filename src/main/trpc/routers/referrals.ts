@@ -10,6 +10,7 @@ const upsert = z.object({
   cardProductId: z.number().int().nullish(),
   link: z.string().nullish(),
   rewardAmount: z.string().nullish(),
+  rewardValueCents: z.number().int().nullish(),
   rewardKind: z.string().nullish(),
   date: z.string().nullish(),
   status: z.enum(REFERRAL_STATUSES).nullish(),

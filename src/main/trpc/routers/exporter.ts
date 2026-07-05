@@ -12,6 +12,7 @@ import {
   productBenefit,
   card,
   signupBonus,
+  spendEntry,
   benefit,
   referral
 } from '../../db/schema'
@@ -28,6 +29,7 @@ const TABLES = [
   ['productBenefit', productBenefit],
   ['card', card],
   ['signupBonus', signupBonus],
+  ['spendEntry', spendEntry],
   ['benefit', benefit],
   ['referral', referral]
 ] as const
@@ -52,6 +54,7 @@ const snapshotDataSchema = z
     productBenefit: z.array(createInsertSchema(productBenefit)).optional(),
     card: z.array(createInsertSchema(card)).optional(),
     signupBonus: z.array(createInsertSchema(signupBonus)).optional(),
+    spendEntry: z.array(createInsertSchema(spendEntry)).optional(),
     benefit: z.array(createInsertSchema(benefit)).optional(),
     referral: z.array(createInsertSchema(referral)).optional()
   })

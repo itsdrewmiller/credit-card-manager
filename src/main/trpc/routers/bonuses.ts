@@ -1,9 +1,19 @@
 import { z } from 'zod'
 import { eq, asc, sql } from 'drizzle-orm'
 import { router, publicProcedure } from '../trpc'
-import { signupBonus } from '../../db/schema'
+import type { DbLike } from '../../db'
+import { signupBonus, spendEntry } from '../../db/schema'
 import { REWARD_KINDS } from '@shared/constants'
+import { toIsoDate } from '@shared/format'
 import { computeBonus } from '../../domain/bonus'
+
+const today = (): string => toIsoDate(new Date()) as string
+
+/** Every change to spendSoFarCents flows through a dated ledger entry. */
+function recordSpendDelta(db: DbLike, bonusId: number, deltaCents: number, date: string): void {
+  if (deltaCents === 0) return
+  db.insert(spendEntry).values({ bonusId, amountCents: deltaCents, date }).run()
+}
 
 const upsert = z.object({
   cardId: z.number().int(),
@@ -17,6 +27,7 @@ const upsert = z.object({
   cashAmountCents: z.number().int().nullish(),
   referralBonus: z.string().nullish(),
   received: z.boolean().default(false),
+  receivedDate: z.string().nullish(),
   amountUsedCents: z.number().int().nullish(),
   notes: z.string().nullish()
 })
@@ -60,19 +71,46 @@ export const bonusesRouter = router({
     }),
 
   create: publicProcedure.input(upsert).mutation(({ ctx, input }) =>
-    ctx.db.insert(signupBonus).values(input).returning().get()
+    ctx.db.transaction((tx) => {
+      const values = { ...input }
+      if (values.received && values.receivedDate == null) values.receivedDate = today()
+      const created = tx.insert(signupBonus).values(values).returning().get()
+      // Opening balance lands on the start date when known.
+      recordSpendDelta(tx, created.id, created.spendSoFarCents, created.startDate ?? today())
+      return created
+    })
   ),
 
   update: publicProcedure
     .input(upsert.partial().extend({ id: z.number().int() }))
     .mutation(({ ctx, input }) => {
       const { id, ...rest } = input
-      return ctx.db
-        .update(signupBonus)
-        .set({ ...rest, updatedAt: Date.now() })
-        .where(eq(signupBonus.id, id))
-        .returning()
-        .get()
+      return ctx.db.transaction((tx) => {
+        const current = tx
+          .select({ spendSoFarCents: signupBonus.spendSoFarCents, received: signupBonus.received })
+          .from(signupBonus)
+          .where(eq(signupBonus.id, id))
+          .get()
+        if (!current) throw new Error(`Bonus ${id} not found`)
+
+        const values: typeof rest = { ...rest }
+        // Stamp/clear receivedDate as received flips, unless caller set one.
+        if (values.received === true && !current.received && values.receivedDate == null) {
+          values.receivedDate = today()
+        }
+        if (values.received === false) values.receivedDate = values.receivedDate ?? null
+
+        const updated = tx
+          .update(signupBonus)
+          .set({ ...values, updatedAt: Date.now() })
+          .where(eq(signupBonus.id, id))
+          .returning()
+          .get()
+        if (values.spendSoFarCents != null) {
+          recordSpendDelta(tx, id, values.spendSoFarCents - current.spendSoFarCents, today())
+        }
+        return updated
+      })
     }),
 
   delete: publicProcedure

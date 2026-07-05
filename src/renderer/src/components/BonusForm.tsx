@@ -37,6 +37,7 @@ export interface BonusFormValue {
   startDate: string | null
   deadline: string | null
   received: boolean
+  receivedDate: string | null
   referralBonus: string | null
   notes: string | null
 }
@@ -75,6 +76,7 @@ export function BonusForm({
       deadline: isoToDate(initial?.deadline),
       windowDays: daysBetween(isoToDate(initial?.startDate), isoToDate(initial?.deadline)) ?? ('' as number | ''),
       received: initial?.received ?? false,
+      receivedDate: isoToDate(initial?.receivedDate),
       referralBonus: initial?.referralBonus ?? '',
       notes: initial?.notes ?? ''
     },
@@ -121,6 +123,7 @@ export function BonusForm({
       startDate: dateToIso(v.startDate),
       deadline: dateToIso(v.deadline),
       received: v.received,
+      receivedDate: dateToIso(v.receivedDate),
       referralBonus: v.referralBonus || null,
       notes: v.notes || null
     })
@@ -230,11 +233,21 @@ export function BonusForm({
         {...form.getInputProps('referralBonus')}
         mb="sm"
       />
-      <Switch
-        label="Bonus received"
-        {...form.getInputProps('received', { type: 'checkbox' })}
-        mb="sm"
-      />
+      <Group align="flex-end" mb="sm">
+        <Switch
+          label="Bonus received"
+          {...form.getInputProps('received', { type: 'checkbox' })}
+        />
+        {form.values.received && (
+          <DateInput
+            label="Received on"
+            description="When the points/cash posted (drives Reports)"
+            valueFormat="YYYY-MM-DD"
+            clearable
+            {...form.getInputProps('receivedDate')}
+          />
+        )}
+      </Group>
       <Textarea label="Notes" autosize minRows={2} {...form.getInputProps('notes')} mb="md" />
 
       <Group justify="flex-end">

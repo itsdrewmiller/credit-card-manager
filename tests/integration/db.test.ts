@@ -77,6 +77,37 @@ describe('database + router integration', () => {
     expect(db.select().from(signupBonus).where(eq(signupBonus.cardId, csr.id)).all()).toHaveLength(0)
   })
 
+  it('records spend deltas as dated ledger entries and reports on them', async () => {
+    const caller = appRouter.createCaller({ db: t.db })
+    const c = await caller.cards.create({ rawCreditorName: 'LEDGER TEST', status: 'open', source: 'manual' })
+
+    const bonus = await caller.bonuses.create({
+      cardId: c.id,
+      targetSpendCents: 400000,
+      spendSoFarCents: 100000,
+      startDate: '2026-01-01',
+      deadline: '2026-04-01'
+    })
+    // Inline edits set a new total; the router turns that into a delta entry.
+    await caller.bonuses.update({ id: bonus.id, spendSoFarCents: 250000 })
+    await caller.bonuses.update({ id: bonus.id, spendSoFarCents: 220000 }) // correction
+
+    const entries = t.db.query.spendEntry.findMany().sync().filter((e) => e.bonusId === bonus.id)
+    expect(entries.map((e) => e.amountCents)).toEqual([100000, 150000, -30000])
+    expect(entries[0].date).toBe('2026-01-01') // opening balance on the start date
+
+    // Marking received stamps a receivedDate, which puts value on the timeline.
+    await caller.bonuses.update({ id: bonus.id, received: true, cashAmountCents: 75000 })
+    const report = await caller.reports.overview()
+    expect(report.totals.spendCents).toBeGreaterThanOrEqual(220000)
+    expect(report.totals.bonusReturnCents).toBeGreaterThanOrEqual(75000)
+    expect(report.months.length).toBeGreaterThan(0)
+
+    await caller.cards.delete({ id: c.id }) // cascades bonus + entries
+    const orphans = t.db.query.spendEntry.findMany().sync().filter((e) => e.bonusId === bonus.id)
+    expect(orphans).toHaveLength(0)
+  })
+
   it('tracks autopay on cards, defaulting to off', async () => {
     const caller = appRouter.createCaller({ db: t.db })
     const plain = await caller.cards.create({ rawCreditorName: 'AUTOPAY TEST', status: 'open', source: 'manual' })

@@ -1,8 +1,9 @@
 import React from 'react'
-import { TextInput, Select, Textarea, Group, Button, SimpleGrid } from '@mantine/core'
+import { TextInput, NumberInput, Select, Textarea, Group, Button, SimpleGrid } from '@mantine/core'
 import { DateInput } from '@mantine/dates'
 import { useForm } from '@mantine/form'
 import { REFERRAL_STATUSES, type ReferralStatus } from '@shared/constants'
+import { centsToDollars, parseCents } from '@shared/format'
 import { isoToDate, dateToIso } from '../lib/dates'
 import type { ReferralRow } from '../lib/types'
 
@@ -12,6 +13,7 @@ export interface ReferralFormValue {
   cardProductId: number | null
   link: string | null
   rewardAmount: string | null
+  rewardValueCents: number | null
   date: string | null
   status: ReferralStatus | null
   notes: string | null
@@ -44,6 +46,7 @@ export function ReferralForm({
       cardProductId: initial?.cardProductId ? String(initial.cardProductId) : '',
       link: initial?.link ?? '',
       rewardAmount: initial?.rewardAmount ?? '',
+      rewardValueDollars: centsToDollars(initial?.rewardValueCents),
       date: isoToDate(initial?.date),
       status: initial?.status ?? '',
       notes: initial?.notes ?? ''
@@ -58,6 +61,7 @@ export function ReferralForm({
       cardProductId: v.cardProductId ? Number(v.cardProductId) : null,
       link: v.link || null,
       rewardAmount: v.rewardAmount || null,
+      rewardValueCents: parseCents(v.rewardValueDollars),
       date: dateToIso(v.date),
       status: (v.status || null) as ReferralStatus | null,
       notes: v.notes || null
@@ -91,11 +95,19 @@ export function ReferralForm({
         mb="sm"
       />
       <TextInput label="Link" placeholder="https://…" {...form.getInputProps('link')} mb="sm" />
-      <SimpleGrid cols={2} mb="sm">
+      <SimpleGrid cols={3} mb="sm">
         <TextInput
           label="Reward"
           placeholder="e.g. 20,000 pts"
           {...form.getInputProps('rewardAmount')}
+        />
+        <NumberInput
+          label="Reward value ($)"
+          description="Counted in Reports once paid"
+          min={0}
+          decimalScale={2}
+          thousandSeparator=","
+          {...form.getInputProps('rewardValueDollars')}
         />
         <Select
           label="Status"
