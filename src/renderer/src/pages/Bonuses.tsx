@@ -1,5 +1,5 @@
-import React from 'react'
-import { Button, Badge, Text, Progress, Stack, Group, Tabs } from '@mantine/core'
+import React, { useEffect, useRef, useState } from 'react'
+import { Button, Badge, NumberInput, Text, Progress, Stack, Group, Tabs } from '@mantine/core'
 import { IconPlus } from '@tabler/icons-react'
 import { trpc } from '../trpc'
 import { PageHeader } from '../components/PageHeader'
@@ -11,7 +11,14 @@ import { useEntityEditor } from '../components/useEntityEditor'
 import { BonusForm, type BonusFormValue } from '../components/BonusForm'
 import { AvailableOffers } from './AvailableOffers'
 import { cardLabel } from '../components/useCardEditor'
-import { formatCents, formatPoints, formatDate, daysUntil } from '@shared/format'
+import {
+  centsToDollars,
+  parseCents,
+  formatCents,
+  formatPoints,
+  formatDate,
+  daysUntil
+} from '@shared/format'
 import type { BonusRow } from '../lib/types'
 
 function rewardText(b: BonusRow): string {
@@ -22,33 +29,82 @@ function rewardText(b: BonusRow): string {
   return '—'
 }
 
-const COLUMNS: Column<BonusRow>[] = [
+/** Spend-so-far edited right in the table; Enter or blur commits. */
+function SpendCell({
+  bonus,
+  onCommit
+}: {
+  bonus: BonusRow
+  onCommit: (bonus: BonusRow, spendSoFarCents: number) => void
+}): React.ReactElement {
+  const [value, setValue] = useState<number | string>(centsToDollars(bonus.spendSoFarCents) || 0)
+  const focused = useRef(false)
+
+  // Pick up outside changes (drawer edit, refetch) unless the user is typing.
+  useEffect(() => {
+    if (!focused.current) setValue(centsToDollars(bonus.spendSoFarCents) || 0)
+  }, [bonus.spendSoFarCents])
+
+  const commit = (): void => {
+    focused.current = false
+    const cents = parseCents(value) ?? 0
+    if (cents !== bonus.spendSoFarCents) onCommit(bonus, cents)
+  }
+
+  const pct =
+    bonus.targetSpendCents && bonus.targetSpendCents > 0
+      ? Math.min(100, (bonus.spendSoFarCents / bonus.targetSpendCents) * 100)
+      : 0
+
+  return (
+    <Stack gap={4}>
+      {bonus.targetSpendCents != null && (
+        <Progress value={pct} color={bonus.spendMet ? 'green' : 'blue'} size="sm" />
+      )}
+      <Group gap={6} wrap="nowrap">
+        <NumberInput
+          size="xs"
+          w={110}
+          min={0}
+          decimalScale={2}
+          thousandSeparator=","
+          prefix="$"
+          hideControls
+          aria-label="Spent so far"
+          value={value}
+          onChange={setValue}
+          onFocus={() => {
+            focused.current = true
+          }}
+          onBlur={commit}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') e.currentTarget.blur()
+          }}
+        />
+        <Text size="xs" c="dimmed" style={{ whiteSpace: 'nowrap' }}>
+          {bonus.targetSpendCents != null ? (
+            <>
+              / {formatCents(bonus.targetSpendCents)}
+              {!bonus.spendMet && bonus.remainingSpendCents != null
+                ? ` · ${formatCents(bonus.remainingSpendCents)} to go`
+                : ''}
+            </>
+          ) : (
+            'spent'
+          )}
+        </Text>
+      </Group>
+    </Stack>
+  )
+}
+
+const STATIC_COLUMNS: Column<BonusRow>[] = [
   { header: 'Card', render: (b) => <Text fw={500}>{b.card ? cardLabel(b.card) : '—'}</Text> },
   { header: 'Reward', render: rewardText },
-  { header: 'Value', render: (b) => <Text fw={600}>{formatCents(b.valueCents)}</Text> },
-  {
-    header: 'Min spend',
-    miw: 200,
-    render: (b) => {
-      const pct =
-        b.targetSpendCents && b.targetSpendCents > 0
-          ? Math.min(100, (b.spendSoFarCents / b.targetSpendCents) * 100)
-          : 0
-      return b.targetSpendCents ? (
-        <Stack gap={2}>
-          <Progress value={pct} color={b.spendMet ? 'green' : 'blue'} size="sm" />
-          <Text size="xs" c="dimmed">
-            {formatCents(b.spendSoFarCents)} / {formatCents(b.targetSpendCents)}
-            {!b.spendMet && b.remainingSpendCents != null
-              ? ` · ${formatCents(b.remainingSpendCents)} to go`
-              : ''}
-          </Text>
-        </Stack>
-      ) : (
-        <Text c="dimmed">—</Text>
-      )
-    }
-  },
+  { header: 'Value', render: (b) => <Text fw={600}>{formatCents(b.valueCents)}</Text> }
+]
+
+const TRAILING_COLUMNS: Column<BonusRow>[] = [
   {
     header: 'Deadline',
     render: (b) => {
@@ -120,6 +176,21 @@ export function Bonuses(): React.ReactElement {
     )
   })
 
+  const columns: Column<BonusRow>[] = [
+    ...STATIC_COLUMNS,
+    {
+      header: 'Min spend',
+      miw: 230,
+      render: (b) => (
+        <SpendCell
+          bonus={b}
+          onCommit={(bonus, spendSoFarCents) => update.mutate({ id: bonus.id, spendSoFarCents })}
+        />
+      )
+    },
+    ...TRAILING_COLUMNS
+  ]
+
   return (
     <>
       <PageHeader title="Signup Bonuses" />
@@ -152,7 +223,7 @@ export function Bonuses(): React.ReactElement {
               <EmptyState title="Add a card first" description="Signup bonuses attach to a card." />
             ) : (
               <DataTable
-                columns={COLUMNS}
+                columns={columns}
                 rows={bonuses.data}
                 verticalSpacing="sm"
                 empty={{
