@@ -12,7 +12,15 @@ export interface TestDb {
 /** Fresh migrated SQLite DB in a temp dir. Call cleanup() when done. */
 export function makeTestDb(): TestDb {
   const dir = mkdtempSync(join(tmpdir(), 'ccm-test-'))
-  const { db } = openDatabase(join(dir, 'test.db'))
+  const { db, sqlite } = openDatabase(join(dir, 'test.db'))
   runMigrations(db, join(process.cwd(), 'drizzle'))
-  return { db, dir, cleanup: () => rmSync(dir, { recursive: true, force: true }) }
+  return {
+    db,
+    dir,
+    cleanup: () => {
+      // Close before deleting: Windows refuses to unlink an open DB file.
+      sqlite.close()
+      rmSync(dir, { recursive: true, force: true })
+    }
+  }
 }
