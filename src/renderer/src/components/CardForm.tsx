@@ -131,7 +131,7 @@ export function CardForm({
           clearable
           {...form.getInputProps('network')}
         />
-        <TextInput label="Last 4" maxLength={4} {...form.getInputProps('last4')} />
+        <TextInput label="Last 4–5" maxLength={5} {...form.getInputProps('last4')} />
         <NumberInput
           label="Annual fee ($)"
           min={0}

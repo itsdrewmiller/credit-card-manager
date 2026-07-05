@@ -93,7 +93,22 @@ export function Benefits(): React.ReactElement {
         </>
       )
     },
-    { header: 'Card', render: (b) => (b.card ? cardLabel(b.card) : '—') },
+    {
+      header: 'Card',
+      render: (b) =>
+        b.card ? (
+          <>
+            <Text size="sm">{cardLabel(b.card)}</Text>
+            {b.card.last4 && (
+              <Text size="xs" c="dimmed">
+                ····{b.card.last4}
+              </Text>
+            )}
+          </>
+        ) : (
+          '—'
+        )
+    },
     {
       header: 'Value',
       render: (b) => (
