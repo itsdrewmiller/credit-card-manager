@@ -100,8 +100,21 @@ function SpendCell({
 
 const STATIC_COLUMNS: Column<BonusRow>[] = [
   { header: 'Card', render: (b) => <Text fw={500}>{b.card ? cardLabel(b.card) : '—'}</Text> },
-  { header: 'Reward', render: rewardText },
-  { header: 'Value', render: (b) => <Text fw={600}>{formatCents(b.valueCents)}</Text> }
+  // Reward carries the value as subtext for points bonuses (cash IS the value);
+  // a separate Value column was duplicative and crowded out the Status badges.
+  {
+    header: 'Reward',
+    render: (b) => (
+      <>
+        <Text size="sm">{rewardText(b)}</Text>
+        {b.cashAmountCents == null && b.valueCents != null && (
+          <Text size="xs" c="dimmed">
+            ≈ {formatCents(b.valueCents)}
+          </Text>
+        )}
+      </>
+    )
+  }
 ]
 
 const TRAILING_COLUMNS: Column<BonusRow>[] = [
