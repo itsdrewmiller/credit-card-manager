@@ -14,7 +14,8 @@ import {
   signupBonus,
   spendEntry,
   benefit,
-  referral
+  referral,
+  recurringPayment
 } from '../../db/schema'
 
 /** Parent-first order so inserts satisfy FKs; reverse it to delete. */
@@ -31,7 +32,8 @@ const TABLES = [
   ['signupBonus', signupBonus],
   ['spendEntry', spendEntry],
   ['benefit', benefit],
-  ['referral', referral]
+  ['referral', referral],
+  ['recurringPayment', recurringPayment]
 ] as const
 
 export const SNAPSHOT_VERSION = 1
@@ -56,7 +58,8 @@ const snapshotDataSchema = z
     signupBonus: z.array(createInsertSchema(signupBonus)).optional(),
     spendEntry: z.array(createInsertSchema(spendEntry)).optional(),
     benefit: z.array(createInsertSchema(benefit)).optional(),
-    referral: z.array(createInsertSchema(referral)).optional()
+    referral: z.array(createInsertSchema(referral)).optional(),
+    recurringPayment: z.array(createInsertSchema(recurringPayment)).optional()
   })
   .strict()
 

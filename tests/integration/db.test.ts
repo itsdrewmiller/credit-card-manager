@@ -108,6 +108,27 @@ describe('database + router integration', () => {
     expect(orphans).toHaveLength(0)
   })
 
+  it('flags recurring payments whose card stops earning a bonus', async () => {
+    const caller = appRouter.createCaller({ db: t.db })
+    const c = await caller.cards.create({ rawCreditorName: 'RECURRING TEST', status: 'open', source: 'manual' })
+    const bonus = await caller.bonuses.create({ cardId: c.id, targetSpendCents: 100000, spendSoFarCents: 0 })
+    const payment = await caller.recurringPayments.create({ name: 'Netflix', cardId: c.id })
+
+    let rows = await caller.recurringPayments.list()
+    expect(rows.find((r) => r.id === payment.id)?.cardStatus).toBe('working')
+
+    await caller.bonuses.update({ id: bonus.id, spendSoFarCents: 100000 })
+    rows = await caller.recurringPayments.list()
+    expect(rows.find((r) => r.id === payment.id)?.cardStatus).toBe('bonus_done')
+
+    // Deleting the card unassigns rather than deleting the payment.
+    await caller.cards.delete({ id: c.id })
+    rows = await caller.recurringPayments.list()
+    expect(rows.find((r) => r.id === payment.id)?.cardStatus).toBeNull()
+
+    await caller.recurringPayments.delete({ id: payment.id })
+  })
+
   it('tracks autopay on cards, defaulting to off', async () => {
     const caller = appRouter.createCaller({ db: t.db })
     const plain = await caller.cards.create({ rawCreditorName: 'AUTOPAY TEST', status: 'open', source: 'manual' })

@@ -184,6 +184,27 @@ export const signupBonus = sqliteTable(
   })
 )
 
+// --- Recurring payments (subscriptions/bills that auto-bill a card) ---------
+// Tracked so charges can be steered toward cards still earning a bonus: the
+// UI flags payments whose card has no signup bonus left to work on.
+
+export const recurringPayment = sqliteTable(
+  'recurring_payment',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    name: text('name').notNull(),
+    // The card currently on file; unassigned when the card is deleted.
+    cardId: integer('card_id').references(() => card.id, { onDelete: 'set null' }),
+    amountCents: integer('amount_cents'),
+    period: text('period'), // monthly | quarterly | semiannual | annual
+    notes: text('notes'),
+    ...timestamps
+  },
+  (t) => ({
+    cardIdx: index('recurring_payment_card_idx').on(t.cardId)
+  })
+)
+
 // --- Spend entries (the dated ledger behind a bonus's spend-so-far) ---------
 // spendSoFarCents on signup_bonus stays as the cached total; every change to
 // it flows through a dated entry here so reports can chart spend over time.
@@ -341,7 +362,12 @@ export const cardRelations = relations(card, ({ one, many }) => ({
   owner: one(person, { fields: [card.ownerPersonId], references: [person.id] }),
   business: one(business, { fields: [card.businessId], references: [business.id] }),
   bonuses: many(signupBonus),
-  benefits: many(benefit)
+  benefits: many(benefit),
+  recurringPayments: many(recurringPayment)
+}))
+
+export const recurringPaymentRelations = relations(recurringPayment, ({ one }) => ({
+  card: one(card, { fields: [recurringPayment.cardId], references: [card.id] })
 }))
 
 export const pointProgramRelations = relations(pointProgram, ({ one, many }) => ({
@@ -401,6 +427,7 @@ export const schema = {
   productOffer,
   productBenefit,
   referral,
+  recurringPayment,
   personRelations,
   businessRelations,
   issuerRelations,
@@ -413,5 +440,6 @@ export const schema = {
   benefitRelations,
   productOfferRelations,
   productBenefitRelations,
-  referralRelations
+  referralRelations,
+  recurringPaymentRelations
 }

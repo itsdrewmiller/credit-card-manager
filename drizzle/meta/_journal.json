@@ -71,6 +71,13 @@
       "when": 1783271063975,
       "tag": "0009_shiny_microchip",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1783271729034,
+      "tag": "0010_shiny_fenris",
+      "breakpoints": true
     }
   ]
 }
