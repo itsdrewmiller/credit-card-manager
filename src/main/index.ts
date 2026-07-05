@@ -2,7 +2,11 @@ import { app, BrowserWindow, shell, session, dialog, ipcMain } from 'electron'
 import { join } from 'node:path'
 import { existsSync, readFileSync } from 'node:fs'
 import { is } from '@electron-toolkit/utils'
-import { autoUpdater } from 'electron-updater'
+// electron-updater is CJS; the main bundle is ESM, so named imports fail at
+// runtime ("Named export 'autoUpdater' not found") — go through the default.
+import electronUpdater from 'electron-updater'
+
+const { autoUpdater } = electronUpdater
 import { sql } from 'drizzle-orm'
 import { openDatabase, runMigrations, type DB } from './db'
 import { seedIssuers } from './db/issuers'
