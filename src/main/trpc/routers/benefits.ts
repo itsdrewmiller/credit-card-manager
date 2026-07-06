@@ -17,6 +17,7 @@ const upsert = z.object({
   useAfter: z.string().nullish(),
   useBy: z.string().nullish(),
   used: z.boolean().default(false),
+  usedAmountCents: z.number().int().nullish(),
   usedDate: z.string().nullish(),
   confirmed: z.boolean().default(false),
   isSubscription: z.boolean().default(false),
@@ -77,21 +78,61 @@ export const benefitsRouter = router({
         .get()
     }),
 
-  /** Quick toggle for the inline "used" checkbox. */
+  /** Quick toggle for the inline "used" checkbox. Keeps the first-use date
+   *  when one exists (e.g. from a partial use); unchecking only clears the
+   *  date when nothing partial remains. */
   setUsed: publicProcedure
     .input(z.object({ id: z.number().int(), used: z.boolean() }))
-    .mutation(({ ctx, input }) =>
-      ctx.db
+    .mutation(({ ctx, input }) => {
+      const current = ctx.db
+        .select({ usedDate: benefit.usedDate, usedAmountCents: benefit.usedAmountCents })
+        .from(benefit)
+        .where(eq(benefit.id, input.id))
+        .get()
+      const hasPartial = (current?.usedAmountCents ?? 0) > 0
+      return ctx.db
         .update(benefit)
         .set({
           used: input.used,
-          usedDate: input.used ? toIsoDate(new Date()) : null,
+          usedDate: input.used
+            ? (current?.usedDate ?? toIsoDate(new Date()))
+            : hasPartial
+              ? current?.usedDate
+              : null,
           updatedAt: Date.now()
         })
         .where(eq(benefit.id, input.id))
         .returning()
         .get()
-    ),
+    }),
+
+  /** Inline partial-use entry: "$65 of the $150 credit". Stamps the first-use
+   *  date; clearing the amount on an unused benefit clears the date too. */
+  setUsedAmount: publicProcedure
+    .input(z.object({ id: z.number().int(), usedAmountCents: z.number().int().nullish() }))
+    .mutation(({ ctx, input }) => {
+      const current = ctx.db
+        .select({ usedDate: benefit.usedDate, used: benefit.used })
+        .from(benefit)
+        .where(eq(benefit.id, input.id))
+        .get()
+      const amount = input.usedAmountCents && input.usedAmountCents > 0 ? input.usedAmountCents : null
+      return ctx.db
+        .update(benefit)
+        .set({
+          usedAmountCents: amount,
+          usedDate:
+            amount != null
+              ? (current?.usedDate ?? toIsoDate(new Date()))
+              : current?.used
+                ? current.usedDate
+                : null,
+          updatedAt: Date.now()
+        })
+        .where(eq(benefit.id, input.id))
+        .returning()
+        .get()
+    }),
 
   delete: publicProcedure
     .input(z.object({ id: z.number().int() }))

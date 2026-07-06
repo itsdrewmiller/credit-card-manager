@@ -21,8 +21,62 @@ import { useEntityEditor } from '../components/useEntityEditor'
 import { BenefitForm, type BenefitFormValue } from '../components/BenefitForm'
 import { CardBenefits } from './CardBenefits'
 import { cardLabel, cardSelectLabel } from '../components/useCardEditor'
-import { formatCents, formatDate, daysUntil } from '@shared/format'
+import { centsToDollars, parseCents, formatCents, formatDate, daysUntil } from '@shared/format'
 import type { BenefitRow } from '../lib/types'
+import { NumberInput } from '@mantine/core'
+
+/** Full-used checkbox plus inline partial amount ("$65 of the $150 credit"). */
+function UsedCell({
+  b,
+  onToggle,
+  onAmount
+}: {
+  b: BenefitRow
+  onToggle: (used: boolean) => void
+  onAmount: (usedAmountCents: number | null) => void
+}): React.ReactElement {
+  const [value, setValue] = React.useState<number | string>(centsToDollars(b.usedAmountCents))
+  const focused = React.useRef(false)
+
+  React.useEffect(() => {
+    if (!focused.current) setValue(centsToDollars(b.usedAmountCents))
+  }, [b.usedAmountCents])
+
+  const commit = (): void => {
+    focused.current = false
+    const cents = value === '' ? null : parseCents(value)
+    if (cents !== (b.usedAmountCents ?? null)) onAmount(cents)
+  }
+
+  return (
+    <Group gap={6} wrap="nowrap">
+      <Checkbox
+        checked={b.used}
+        onChange={(e) => onToggle(e.currentTarget.checked)}
+        aria-label="Fully used"
+      />
+      <NumberInput
+        size="xs"
+        w={90}
+        min={0}
+        decimalScale={2}
+        prefix="$"
+        hideControls
+        placeholder="partial"
+        aria-label="Amount used so far"
+        value={value}
+        onChange={setValue}
+        onFocus={() => {
+          focused.current = true
+        }}
+        onBlur={commit}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') e.currentTarget.blur()
+        }}
+      />
+    </Group>
+  )
+}
 
 type StatusFilter = 'all' | 'available' | 'upcoming' | 'used' | 'expired'
 
@@ -45,6 +99,7 @@ export function Benefits(): React.ReactElement {
   const create = trpc.benefits.create.useMutation({ onSuccess: invalidate })
   const update = trpc.benefits.update.useMutation({ onSuccess: invalidate })
   const setUsed = trpc.benefits.setUsed.useMutation({ onSuccess: invalidate })
+  const setUsedAmount = trpc.benefits.setUsedAmount.useMutation({ onSuccess: invalidate })
   const remove = trpc.benefits.delete.useMutation({ onSuccess: invalidate })
 
   const cardOptions = (cards.data ?? []).map((c) => ({ value: String(c.id), label: cardSelectLabel(c) }))
@@ -84,11 +139,12 @@ export function Benefits(): React.ReactElement {
   const columns: Column<BenefitRow>[] = [
     {
       header: 'Used',
-      w: 40,
+      w: 150,
       render: (b) => (
-        <Checkbox
-          checked={b.used}
-          onChange={(e) => setUsed.mutate({ id: b.id, used: e.currentTarget.checked })}
+        <UsedCell
+          b={b}
+          onToggle={(used) => setUsed.mutate({ id: b.id, used })}
+          onAmount={(usedAmountCents) => setUsedAmount.mutate({ id: b.id, usedAmountCents })}
         />
       )
     },
@@ -133,6 +189,11 @@ export function Benefits(): React.ReactElement {
       render: (b) => (
         <>
           <Text size="sm">{formatCents(b.amountCents)}</Text>
+          {b.usedAmountCents != null && !b.used && (
+            <Text size="xs" c="teal">
+              {formatCents(b.usedAmountCents)} used
+            </Text>
+          )}
           {b.valuePct != null && b.amountCents != null && (
             <Text size="xs" c="dimmed">
               ≈ {formatCents(Math.round((b.amountCents * b.valuePct) / 100))} to you

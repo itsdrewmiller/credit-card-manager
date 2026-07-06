@@ -36,6 +36,8 @@ export interface ReportInput {
     used: boolean
     usedDate: string | null
     amountCents: number | null
+    /** Partial consumption; null with used=true means full face value. */
+    usedAmountCents?: number | null
     /** Personal redemption efficiency percent; null = full face value. */
     valuePct?: number | null
   }[]
@@ -112,10 +114,13 @@ export function buildReport(input: ReportInput): ReportOverview {
     }
   }
   for (const b of input.benefits) {
-    if (b.used && b.usedDate && b.amountCents != null) {
-      const factor = b.valuePct == null ? 1 : b.valuePct / 100
-      at(monthOf(b.usedDate)).benefitReturnCents += Math.round(b.amountCents * factor)
-    }
+    if (!b.usedDate) continue
+    // What was actually consumed: an explicit partial amount wins; a benefit
+    // marked used without one counts at face value.
+    const consumed = b.usedAmountCents ?? (b.used ? b.amountCents : null)
+    if (consumed == null || consumed <= 0) continue
+    const factor = b.valuePct == null ? 1 : b.valuePct / 100
+    at(monthOf(b.usedDate)).benefitReturnCents += Math.round(consumed * factor)
   }
 
   // Contiguous ascending months so charts don't silently skip quiet periods.

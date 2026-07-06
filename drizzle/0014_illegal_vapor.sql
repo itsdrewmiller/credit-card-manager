@@ -1,0 +1,1 @@
+ALTER TABLE `benefit` ADD `used_amount_cents` integer;

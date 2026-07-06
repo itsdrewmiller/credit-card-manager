@@ -36,6 +36,7 @@ export const reportsRouter = router({
         used: benefit.used,
         usedDate: benefit.usedDate,
         amountCents: benefit.amountCents,
+        usedAmountCents: benefit.usedAmountCents,
         valuePct: benefit.valuePct
       })
       .from(benefit)

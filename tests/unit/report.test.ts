@@ -54,6 +54,21 @@ describe('buildReport', () => {
     expect(r.months[0].bonusReturnCents).toBe(110000)
   })
 
+  it('counts partial benefit use at the consumed amount', () => {
+    const r = buildReport({
+      ...empty,
+      benefits: [
+        // $65 of a $150 StubHub credit at 90% -> $58.50
+        { used: false, usedDate: '2026-07-01', amountCents: 15000, usedAmountCents: 6500, valuePct: 90 },
+        // fully used with an explicit partial amount -> the amount wins
+        { used: true, usedDate: '2026-07-02', amountCents: 15000, usedAmountCents: 14000, valuePct: null },
+        // partial amount but never dated -> excluded
+        { used: false, usedDate: null, amountCents: 15000, usedAmountCents: 6500, valuePct: null }
+      ]
+    })
+    expect(r.months[0].benefitReturnCents).toBe(5850 + 14000)
+  })
+
   it('discounts benefit return by the personal value percent', () => {
     const r = buildReport({
       ...empty,

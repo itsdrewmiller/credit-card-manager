@@ -29,6 +29,7 @@ export interface BenefitFormValue {
   useAfter: string | null
   useBy: string | null
   used: boolean
+  usedAmountCents: number | null
   confirmed: boolean
   isSubscription: boolean
   notes: string | null
@@ -65,6 +66,7 @@ export function BenefitForm({
       useAfter: isoToDate(initial?.useAfter),
       useBy: isoToDate(initial?.useBy),
       used: initial?.used ?? false,
+      usedAmountDollars: centsToDollars(initial?.usedAmountCents),
       confirmed: initial?.confirmed ?? false,
       isSubscription: initial?.isSubscription ?? false,
       notes: initial?.notes ?? ''
@@ -87,6 +89,7 @@ export function BenefitForm({
       useAfter: dateToIso(v.useAfter),
       useBy: dateToIso(v.useBy),
       used: v.used,
+      usedAmountCents: parseCents(v.usedAmountDollars),
       confirmed: v.confirmed,
       isSubscription: v.isSubscription,
       notes: v.notes || null
@@ -152,7 +155,19 @@ export function BenefitForm({
       </SimpleGrid>
 
       <Stack gap="xs" mb="md">
-        <Switch label="Used" {...form.getInputProps('used', { type: 'checkbox' })} />
+        <Group align="center" gap="md">
+          <Switch label="Used" {...form.getInputProps('used', { type: 'checkbox' })} />
+          <NumberInput
+            size="xs"
+            w={140}
+            min={0}
+            decimalScale={2}
+            prefix="$"
+            placeholder="Used so far"
+            aria-label="Amount used so far"
+            {...form.getInputProps('usedAmountDollars')}
+          />
+        </Group>
         <Switch
           label="Confirmed (verified the credit posted)"
           {...form.getInputProps('confirmed', { type: 'checkbox' })}

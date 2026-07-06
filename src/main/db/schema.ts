@@ -249,7 +249,10 @@ export const benefit = sqliteTable(
     useAfter: text('use_after'),
     useBy: text('use_by'),
     used: integer('used', { mode: 'boolean' }).notNull().default(false),
-    // When the credit was consumed — drives the return timeline in reports.
+    // Partial consumption: $65 of a $150 credit. Null with used=true means
+    // the full face value was consumed.
+    usedAmountCents: integer('used_amount_cents'),
+    // When the credit was (first) consumed — drives the return timeline.
     usedDate: text('used_date'),
     confirmed: integer('confirmed', { mode: 'boolean' }).notNull().default(false),
     isSubscription: integer('is_subscription', { mode: 'boolean' }).notNull().default(false),
