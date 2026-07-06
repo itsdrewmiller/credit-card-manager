@@ -1,6 +1,16 @@
 import React, { useState, useMemo } from 'react'
-import { Button, Badge, Text, Checkbox, SegmentedControl, Group, Tabs } from '@mantine/core'
-import { IconPlus } from '@tabler/icons-react'
+import {
+  Button,
+  Badge,
+  Menu,
+  Text,
+  TextInput,
+  Checkbox,
+  SegmentedControl,
+  Group,
+  Tabs
+} from '@mantine/core'
+import { IconPlus, IconSearch, IconCopy } from '@tabler/icons-react'
 import { trpc } from '../trpc'
 import { PageHeader } from '../components/PageHeader'
 import { EmptyState } from '../components/EmptyState'
@@ -28,6 +38,7 @@ export function Benefits(): React.ReactElement {
   const benefits = trpc.benefits.list.useQuery()
   const cards = trpc.cards.list.useQuery()
   const [filter, setFilter] = useState<StatusFilter>('all')
+  const [search, setSearch] = useState('')
 
   const invalidate = (): void => void utils.benefits.list.invalidate()
 
@@ -39,10 +50,18 @@ export function Benefits(): React.ReactElement {
   const cardOptions = (cards.data ?? []).map((c) => ({ value: String(c.id), label: cardSelectLabel(c) }))
 
   const filtered = useMemo(() => {
-    const rows = benefits.data ?? []
-    if (filter === 'all') return rows
-    return rows.filter((b) => b.status === filter)
-  }, [benefits.data, filter])
+    let rows = benefits.data ?? []
+    if (filter !== 'all') rows = rows.filter((b) => b.status === filter)
+    const q = search.trim().toLowerCase()
+    if (q) {
+      rows = rows.filter((b) =>
+        [b.name, b.category, b.notes, b.card ? cardLabel(b.card) : '', b.card?.last4]
+          .filter(Boolean)
+          .some((s) => String(s).toLowerCase().includes(q))
+      )
+    }
+    return rows
+  }, [benefits.data, filter, search])
 
   const editor = useEntityEditor<BenefitRow, BenefitFormValue>({
     entityLabel: 'benefit',
@@ -163,17 +182,26 @@ export function Benefits(): React.ReactElement {
 
         <Tabs.Panel value="mine">
           <Group justify="space-between" mb="md">
-            <SegmentedControl
-              value={filter}
-              onChange={(v) => setFilter(v as StatusFilter)}
-              data={[
-                { label: 'All', value: 'all' },
-                { label: 'Available', value: 'available' },
-                { label: 'Upcoming', value: 'upcoming' },
-                { label: 'Used', value: 'used' },
-                { label: 'Expired', value: 'expired' }
-              ]}
-            />
+            <Group gap="sm">
+              <SegmentedControl
+                value={filter}
+                onChange={(v) => setFilter(v as StatusFilter)}
+                data={[
+                  { label: 'All', value: 'all' },
+                  { label: 'Available', value: 'available' },
+                  { label: 'Upcoming', value: 'upcoming' },
+                  { label: 'Used', value: 'used' },
+                  { label: 'Expired', value: 'expired' }
+                ]}
+              />
+              <TextInput
+                placeholder="Search benefits…"
+                leftSection={<IconSearch size={16} />}
+                value={search}
+                onChange={(e) => setSearch(e.currentTarget.value)}
+                w={220}
+              />
+            </Group>
             <Button
               leftSection={<IconPlus size={16} />}
               onClick={editor.openCreate}
@@ -194,7 +222,7 @@ export function Benefits(): React.ReactElement {
                 empty={{
                   title: benefits.data?.length ? 'Nothing in this view' : 'No benefits tracked',
                   description: benefits.data?.length
-                    ? 'Try a different filter.'
+                    ? 'Try a different filter or search.'
                     : 'Add recurring credits like dining, travel, or subscription perks.'
                 }}
                 rowActions={(b) => (
@@ -202,6 +230,14 @@ export function Benefits(): React.ReactElement {
                     onEdit={() => editor.openEdit(b)}
                     onDelete={() => remove.mutate({ id: b.id })}
                     deleteLabel={`Delete ${b.name}?`}
+                    extraItems={
+                      <Menu.Item
+                        leftSection={<IconCopy size={16} />}
+                        onClick={() => editor.openCopy(b)}
+                      >
+                        Duplicate
+                      </Menu.Item>
+                    }
                   />
                 )}
               />

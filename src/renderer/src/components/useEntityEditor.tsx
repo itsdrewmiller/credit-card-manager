@@ -35,9 +35,16 @@ export function useEntityEditor<Row extends { id: number }, FormValue>(opts: {
   create: EntityMutation<FormValue>
   update: EntityMutation<FormValue & { id: number }>
   form: (props: EntityFormProps<Row, FormValue>) => React.ReactElement
-}): { openCreate: () => void; openEdit: (row: Row) => void; element: React.ReactElement } {
+}): {
+  openCreate: () => void
+  openEdit: (row: Row) => void
+  /** Create-mode prefilled from an existing row (duplicate). */
+  openCopy: (row: Row) => void
+  element: React.ReactElement
+} {
   const [opened, setOpened] = useState(false)
   const [editing, setEditing] = useState<Row | null>(null)
+  const [template, setTemplate] = useState<Row | null>(null)
 
   const submitting = opts.create.isPending || opts.update.isPending
 
@@ -60,7 +67,7 @@ export function useEntityEditor<Row extends { id: number }, FormValue>(opts: {
 
   const body = opened
     ? opts.form({
-        initial: editing,
+        initial: editing ?? template,
         submitting,
         onSubmit: submit,
         onCancel: () => setOpened(false)
@@ -87,10 +94,17 @@ export function useEntityEditor<Row extends { id: number }, FormValue>(opts: {
   return {
     openCreate: () => {
       setEditing(null)
+      setTemplate(null)
       setOpened(true)
     },
     openEdit: (row) => {
       setEditing(row)
+      setTemplate(null)
+      setOpened(true)
+    },
+    openCopy: (row) => {
+      setEditing(null)
+      setTemplate(row)
       setOpened(true)
     },
     element
