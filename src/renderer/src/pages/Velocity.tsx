@@ -15,7 +15,7 @@ import { trpc } from '../trpc'
 import { PageHeader } from '../components/PageHeader'
 import { EmptyState } from '../components/EmptyState'
 import { QueryGate } from '../components/QueryGate'
-import { cardLabel } from '../components/useCardEditor'
+import { cardLabel, cardSelectLabel } from '../components/useCardEditor'
 import { formatDate } from '@shared/format'
 import type { RouterOutputs, VelocityRow, RejectedRow } from '../lib/types'
 
@@ -40,9 +40,11 @@ function BusinessVelocityCard({ v }: { v: BusinessVelocityRow }): React.ReactEle
       {v.recent.length > 0 && (
         <Stack gap={2} mt="xs">
           {v.recent.map((c) => (
-            <Group key={c.id} justify="space-between">
-              <Text size="sm">{cardLabel(c)}</Text>
-              <Text size="xs" c="dimmed">
+            <Group key={c.id} justify="space-between" wrap="nowrap" gap="xs">
+              <Text size="sm" truncate style={{ flex: 1, minWidth: 0 }}>
+                {cardSelectLabel(c)}
+              </Text>
+              <Text size="xs" c="dimmed" style={{ flexShrink: 0 }}>
                 {formatDate(c.openedDate)}
               </Text>
             </Group>
