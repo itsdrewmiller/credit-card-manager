@@ -27,8 +27,8 @@ const KINDS: { value: string; label: string; hint: string; example: string }[] =
   {
     value: 'reserve_524_slots',
     label: 'Reserve 5/24 slots',
-    hint: 'Near 5/24, blocks counting cards from issuers other than the protected list.',
-    example: '{"slots": 1, "forIssuers": ["Chase"]}'
+    hint: 'Near 5/24, blocks counting cards so no recommendation reaches 5/24; spendLastSlots lets protected issuers use the reserve.',
+    example: '{"slots": 1, "forIssuers": ["Chase"], "spendLastSlots": false}'
   },
   {
     value: 'max_recent_apps_person',

@@ -109,17 +109,32 @@ describe('recommend', () => {
         rules: [{ kind: 'reserve_524_slots', params: { slots: 1, forIssuers: ['Chase'] } }]
       })
     )
-    // Chase personal + non-reporting business cards still flow.
+    // Non-reporting business cards still flow; ALL counting personal cards are
+    // parked — a recommendation never pushes someone to 5/24 by default.
     expect(drew.recommended.map((c) => c.label).sort()).toEqual([
       'Capital One Spark Cash Plus', // SPARK has no reportsToPersonal -> doesn't consume a slot
-      'Chase Ink Preferred',
-      'Chase Sapphire Preferred'
+      'Chase Ink Preferred'
     ])
-    // The Amex personal card would burn the last slot.
+    const chase = drew.blocked.find((c) => c.label.includes('Sapphire'))!
+    expect(chase.blocks[0].reason).toBe('would put them at 5/24')
+    // The Amex personal card would burn the reserved slot.
     const amex = drew.blocked.find((c) => c.label.includes('Gold'))!
     expect(amex.blocks[0].kind).toBe('reserve_524_slots')
     expect(amex.blocks[0].reason).toMatch(/reserving 1 slot for Chase/)
     expect(amex.waitUntil).toBe('2027-02-01') // oldest counting card ages out
+
+    // Opting in lets protected issuers spend the reserved slot.
+    const [spender] = recommend(
+      base({
+        offers: [CSR, AMEX],
+        cards: four,
+        rules: [
+          { kind: 'reserve_524_slots', params: { slots: 1, forIssuers: ['Chase'], spendLastSlots: true } }
+        ]
+      })
+    )
+    expect(spender.recommended.map((c) => c.label)).toContain('Chase Sapphire Preferred')
+    expect(spender.recommended.map((c) => c.label)).not.toContain('American Express Gold')
 
     // A reporting business product also consumes a slot -> blocked too.
     const [drew2] = recommend(

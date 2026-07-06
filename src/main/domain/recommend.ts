@@ -13,7 +13,9 @@ import { personVelocity, type VelocityCardLike } from './velocity'
  * Rule kinds (params are JSON on the stored rule):
  *  - no_duplicate_product { scope: 'holder' }         skip products the person/business already holds
  *  - under_524 { issuers: string[] | null }           at/over 5/24 blocks listed issuers (null = all)
- *  - reserve_524_slots { slots, forIssuers }          near 5/24, park counting cards from other issuers
+ *  - reserve_524_slots { slots, forIssuers, spendLastSlots }
+ *        near 5/24, park counting cards; protected issuers may spend the
+ *        reserved slots only when spendLastSlots is true
  *  - max_recent_apps_person { months, max }           application pacing per person
  *  - max_recent_apps_business { months, max }         application pacing per business
  *  - min_spend_capacity { lookbackMonths, buffer }    min-spend must fit tracked spend rate × window
@@ -185,7 +187,12 @@ export function recommend(input: RecommendInput): PersonRecommendations[] {
           if (!consumesSlot) break
           const slots = Number(p.slots ?? 1)
           const forIssuers = (p.forIssuers as string[] | undefined) ?? ['Chase']
-          if (offer.issuerName != null && forIssuers.includes(offer.issuerName)) break
+          // By default nothing may spend the reserved slots — a recommendation
+          // never pushes someone to 5/24. Opt in with spendLastSlots to let
+          // protected issuers use them (the "save it FOR Chase" strategy).
+          const protectedIssuer =
+            offer.issuerName != null && forIssuers.includes(offer.issuerName)
+          if (protectedIssuer && p.spendLastSlots === true) break
           const v = velocityByPerson.get(personId)
           if (!v) break
           const freeSlots = 5 - v.count
@@ -195,7 +202,9 @@ export function recommend(input: RecommendInput): PersonRecommendations[] {
           const gate = v.contributing[v.contributing.length - dropNeeded]
           blocks.push({
             kind: rule.kind,
-            reason: `at ${v.count}/24 — reserving ${slots} slot${slots === 1 ? '' : 's'} for ${forIssuers.join('/')}`,
+            reason: protectedIssuer
+              ? `would put them at ${v.count + 1}/24`
+              : `at ${v.count}/24 — reserving ${slots} slot${slots === 1 ? '' : 's'} for ${forIssuers.join('/')}`,
             waitUntil: gate?.openedDate ? addMonthsIso(gate.openedDate, 24) : null
           })
           break
