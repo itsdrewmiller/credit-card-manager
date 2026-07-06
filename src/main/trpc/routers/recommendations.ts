@@ -63,6 +63,7 @@ export const recommendationsRouter = router({
         productName: o.product?.name ?? 'Unknown product',
         issuerName: o.product?.issuer?.name ?? null,
         isBusiness: o.product?.isBusiness ?? false,
+        reportsToPersonal: o.product?.reportsToPersonal ?? false,
         valueCents:
           o.cashAmountCents ??
           (o.pointsAmount != null && (o.pointValueCpp ?? o.pointProgram?.valuationCpp) != null

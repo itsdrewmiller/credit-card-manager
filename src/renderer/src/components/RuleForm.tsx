@@ -25,6 +25,12 @@ const KINDS: { value: string; label: string; hint: string; example: string }[] =
     example: '{"issuers": ["Chase"]}'
   },
   {
+    value: 'reserve_524_slots',
+    label: 'Reserve 5/24 slots',
+    hint: 'Near 5/24, blocks counting cards from issuers other than the protected list.',
+    example: '{"slots": 1, "forIssuers": ["Chase"]}'
+  },
+  {
     value: 'max_recent_apps_person',
     label: 'Application pacing (person)',
     hint: 'At most N applications per person in a trailing window.',

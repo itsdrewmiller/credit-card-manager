@@ -88,6 +88,59 @@ describe('recommend', () => {
     expect(drew.recommended.map((c) => c.label)).toEqual(['Capital One Spark Cash Plus'])
   })
 
+  it('reserves 5/24 slots for protected issuers when close to the limit', () => {
+    // Four counting cards -> one free slot; slots:1 engages the reserve.
+    const four = Array.from({ length: 4 }, (_, i) => ({
+      id: i + 1,
+      cardProductId: 900 + i,
+      ownerPersonId: 1,
+      businessId: null,
+      appliedDate: null,
+      openedDate: i === 3 ? '2025-02-01' : '2026-03-01',
+      status: 'open'
+    }))
+    const AMEX = { ...CSR, id: 3, cardProductId: 300, productName: 'Gold', issuerName: 'American Express' }
+    const NONREPORTING = { ...SPARK, id: 4, cardProductId: 400, productName: 'Ink Preferred', issuerName: 'Chase' }
+    const [drew] = recommend(
+      base({
+        offers: [CSR, AMEX, SPARK, NONREPORTING],
+        cards: four,
+        rules: [{ kind: 'reserve_524_slots', params: { slots: 1, forIssuers: ['Chase'] } }]
+      })
+    )
+    // Chase personal + non-reporting business cards still flow.
+    expect(drew.recommended.map((c) => c.label).sort()).toEqual([
+      'Capital One Spark Cash Plus', // SPARK has no reportsToPersonal -> doesn't consume a slot
+      'Chase Ink Preferred',
+      'Chase Sapphire Preferred'
+    ])
+    // The Amex personal card would burn the last slot.
+    const amex = drew.blocked.find((c) => c.label.includes('Gold'))!
+    expect(amex.blocks[0].kind).toBe('reserve_524_slots')
+    expect(amex.blocks[0].reason).toMatch(/reserving 1 slot for Chase/)
+    expect(amex.waitUntil).toBe('2027-02-01') // oldest counting card ages out
+
+    // A reporting business product also consumes a slot -> blocked too.
+    const [drew2] = recommend(
+      base({
+        offers: [{ ...SPARK, reportsToPersonal: true }],
+        cards: four,
+        rules: [{ kind: 'reserve_524_slots', params: { slots: 1, forIssuers: ['Chase'] } }]
+      })
+    )
+    expect(drew2.blocked).toHaveLength(1)
+
+    // Plenty of slots -> rule stays quiet.
+    const [calm] = recommend(
+      base({
+        offers: [AMEX],
+        cards: four.slice(0, 2),
+        rules: [{ kind: 'reserve_524_slots', params: { slots: 1, forIssuers: ['Chase'] } }]
+      })
+    )
+    expect(calm.recommended).toHaveLength(1)
+  })
+
   it('paces recent applications per person with a computable waitUntil', () => {
     const [drew] = recommend(
       base({

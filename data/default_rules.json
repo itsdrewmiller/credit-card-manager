@@ -10,6 +10,11 @@
     "notes": "Chase auto-declines at 5/24 — don't recommend Chase cards to anyone at or over."
   },
   {
+    "kind": "reserve_524_slots",
+    "params": { "slots": 1, "forIssuers": ["Chase"] },
+    "notes": "Near 5/24, save the remaining slot(s) for Chase: park counting cards from other issuers."
+  },
+  {
     "kind": "max_recent_apps_person",
     "params": { "months": 3, "max": 2 },
     "notes": "Pace personal applications: at most 2 in any trailing 3 months."

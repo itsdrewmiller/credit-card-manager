@@ -13,6 +13,7 @@ import { personVelocity, type VelocityCardLike } from './velocity'
  * Rule kinds (params are JSON on the stored rule):
  *  - no_duplicate_product { scope: 'holder' }         skip products the person/business already holds
  *  - under_524 { issuers: string[] | null }           at/over 5/24 blocks listed issuers (null = all)
+ *  - reserve_524_slots { slots, forIssuers }          near 5/24, park counting cards from other issuers
  *  - max_recent_apps_person { months, max }           application pacing per person
  *  - max_recent_apps_business { months, max }         application pacing per business
  *  - min_spend_capacity { lookbackMonths, buffer }    min-spend must fit tracked spend rate × window
@@ -26,6 +27,8 @@ export interface RecommendInput {
     productName: string
     issuerName: string | null
     isBusiness: boolean
+    /** Business products from a few issuers count toward 5/24. */
+    reportsToPersonal?: boolean
     valueCents: number | null
     minSpendCents: number | null
     windowMonths: number | null
@@ -149,6 +152,28 @@ export function recommend(input: RecommendInput): PersonRecommendations[] {
               waitUntil: v.under524Date
             })
           }
+          break
+        }
+        case 'reserve_524_slots': {
+          // Getting this card consumes a 5/24 slot unless it's a
+          // non-reporting business card.
+          const consumesSlot = !offer.isBusiness || offer.reportsToPersonal === true
+          if (!consumesSlot) break
+          const slots = Number(p.slots ?? 1)
+          const forIssuers = (p.forIssuers as string[] | undefined) ?? ['Chase']
+          if (offer.issuerName != null && forIssuers.includes(offer.issuerName)) break
+          const v = velocityByPerson.get(personId)
+          if (!v) break
+          const freeSlots = 5 - v.count
+          if (freeSlots > slots) break
+          // Unblocks once enough cards age out that free slots exceed the reserve.
+          const dropNeeded = v.count - (4 - slots)
+          const gate = v.contributing[v.contributing.length - dropNeeded]
+          blocks.push({
+            kind: rule.kind,
+            reason: `at ${v.count}/24 — reserving ${slots} slot${slots === 1 ? '' : 's'} for ${forIssuers.join('/')}`,
+            waitUntil: gate?.openedDate ? addMonthsIso(gate.openedDate, 24) : null
+          })
           break
         }
         case 'max_recent_apps_person': {
