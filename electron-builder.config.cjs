@@ -67,7 +67,8 @@ module.exports = {
   artifactName: '${name}-${version}-${arch}.${ext}',
   extraResources: [
     { from: 'drizzle', to: 'drizzle' },
-    { from: 'data/signup_bonuses.csv', to: 'data/signup_bonuses.csv' }
+    { from: 'data/signup_bonuses.csv', to: 'data/signup_bonuses.csv' },
+    { from: 'data/default_rules.json', to: 'data/default_rules.json' }
   ],
   asarUnpack: ['**/node_modules/better-sqlite3/**', '**/node_modules/pdfjs-dist/**'],
   npmRebuild: true,

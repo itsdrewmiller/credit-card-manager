@@ -14,6 +14,9 @@ import { seedPointPrograms } from './db/points'
 import { seedExtraProducts } from './db/products'
 import { seedCashbackRates, seedBureauReporting } from './db/cashback'
 import { generateUpcomingBenefits } from './db/generateBenefits'
+import { seedDefaultRules } from './db/rules'
+import { getSetting } from './db/settings'
+import { refreshOfferFeed, FEED_REFRESHED_KEY } from './trpc/routers/recommendations'
 import { dedupeCatalog } from './db/dedupe'
 import { productOffer } from './db/schema'
 import { importOffersCsv } from './import/offers'
@@ -75,6 +78,8 @@ function initDatabase(): void {
   if (rated) console.log(`[db] filled baseline earn rates for ${rated} products`)
   const flagged = seedBureauReporting(db)
   if (flagged) console.log(`[db] flagged ${flagged} business products as personal-reporting`)
+  const seededRules = seedDefaultRules(db, resourcePath(join('data', 'default_rules.json')))
+  if (seededRules) console.log(`[db] seeded ${seededRules} default recommendation rules`)
   const gen = generateUpcomingBenefits(db)
   if (gen.created || gen.dated) {
     console.log(`[db] recurring benefits: ${gen.created} generated, ${gen.dated} windows seeded`)
@@ -136,6 +141,16 @@ function installCsp(): void {
   })
 }
 
+/** Weekly background refresh of the offer feed; failures only log. */
+function maybeRefreshOfferFeed(): void {
+  const last = getSetting(db, FEED_REFRESHED_KEY)
+  const weekMs = 7 * 24 * 3600 * 1000
+  if (last && Date.now() - Date.parse(last) < weekMs) return
+  refreshOfferFeed(db)
+    .then((r) => console.log(`[feed] refreshed offers: ${r.total} rows (${r.created} new) from ${r.url}`))
+    .catch((err) => console.warn('[feed]', err instanceof Error ? err.message : err))
+}
+
 /**
  * Check GitHub Releases for a newer version, download in the background, and
  * notify when it will install on quit. Packaged builds only; failures
@@ -166,6 +181,7 @@ app.whenReady().then(() => {
   registerTrpcIpc()
   createWindow()
   setupAutoUpdate()
+  maybeRefreshOfferFeed()
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()

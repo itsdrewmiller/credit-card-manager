@@ -347,6 +347,30 @@ export const referral = sqliteTable('referral', {
   ...timestamps
 })
 
+// --- Recommendation rules (the dynamic rules engine) -------------------------
+// Each row is one rule: a kind from the fixed vocabulary implemented in
+// domain/recommend.ts plus JSON params. Defaults ship in data/default_rules.json
+// and seed on first run; users add/tune/disable rules from the UI.
+
+export const recommendationRule = sqliteTable('recommendation_rule', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  kind: text('kind').notNull(),
+  enabled: integer('enabled', { mode: 'boolean' }).notNull().default(true),
+  params: text('params').notNull().default('{}'), // JSON, validated per kind
+  notes: text('notes'),
+  ...timestamps
+})
+
+// --- App settings (small key/value store) ------------------------------------
+
+export const appSetting = sqliteTable('app_setting', {
+  key: text('key').primaryKey(),
+  value: text('value').notNull(),
+  updatedAt: integer('updated_at')
+    .notNull()
+    .default(sql`(unixepoch() * 1000)`)
+})
+
 // --- Relations -------------------------------------------------------------
 
 export const personRelations = relations(person, ({ many }) => ({
@@ -446,6 +470,8 @@ export const schema = {
   productBenefit,
   referral,
   recurringPayment,
+  recommendationRule,
+  appSetting,
   personRelations,
   businessRelations,
   issuerRelations,

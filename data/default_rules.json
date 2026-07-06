@@ -1,0 +1,32 @@
+[
+  {
+    "kind": "no_duplicate_product",
+    "params": { "scope": "holder" },
+    "notes": "Skip offers for a product this person/business already holds (open or applied)."
+  },
+  {
+    "kind": "under_524",
+    "params": { "issuers": ["Chase"] },
+    "notes": "Chase auto-declines at 5/24 — don't recommend Chase cards to anyone at or over."
+  },
+  {
+    "kind": "max_recent_apps_person",
+    "params": { "months": 3, "max": 2 },
+    "notes": "Pace personal applications: at most 2 in any trailing 3 months."
+  },
+  {
+    "kind": "max_recent_apps_business",
+    "params": { "months": 6, "max": 2 },
+    "notes": "Pace applications per business: at most 2 in any trailing 6 months."
+  },
+  {
+    "kind": "min_spend_capacity",
+    "params": { "lookbackMonths": 3, "buffer": 1 },
+    "notes": "The bonus min-spend must fit your tracked monthly spend rate over the offer window."
+  },
+  {
+    "kind": "min_bonus_value",
+    "params": { "minCents": 30000 },
+    "notes": "Skip bonuses worth less than $300."
+  }
+]

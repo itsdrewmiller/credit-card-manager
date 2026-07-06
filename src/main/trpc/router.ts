@@ -15,6 +15,7 @@ import { importerRouter } from './routers/importer'
 import { exporterRouter } from './routers/exporter'
 import { reportsRouter } from './routers/reports'
 import { recurringPaymentsRouter } from './routers/recurringPayments'
+import { recommendationsRouter } from './routers/recommendations'
 
 export const appRouter = router({
   system: systemRouter,
@@ -33,7 +34,8 @@ export const appRouter = router({
   importer: importerRouter,
   exporter: exporterRouter,
   reports: reportsRouter,
-  recurringPayments: recurringPaymentsRouter
+  recurringPayments: recurringPaymentsRouter,
+  recommendations: recommendationsRouter
 })
 
 export type AppRouter = typeof appRouter

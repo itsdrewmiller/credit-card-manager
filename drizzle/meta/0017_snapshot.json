@@ -1,0 +1,1663 @@
+{
+  "version": "6",
+  "dialect": "sqlite",
+  "id": "b0ba40c2-1a6d-4464-bf19-b3ef38ae4684",
+  "prevId": "e2a9ef65-f392-4931-8135-12a730912a82",
+  "tables": {
+    "app_setting": {
+      "name": "app_setting",
+      "columns": {
+        "key": {
+          "name": "key",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "value": {
+          "name": "value",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(unixepoch() * 1000)"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "benefit": {
+      "name": "benefit",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "card_id": {
+          "name": "card_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "category": {
+          "name": "category",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "amount_cents": {
+          "name": "amount_cents",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "value_pct": {
+          "name": "value_pct",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "period": {
+          "name": "period",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "year": {
+          "name": "year",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "use_after": {
+          "name": "use_after",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "use_by": {
+          "name": "use_by",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "used": {
+          "name": "used",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
+        },
+        "used_amount_cents": {
+          "name": "used_amount_cents",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "used_date": {
+          "name": "used_date",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "confirmed": {
+          "name": "confirmed",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
+        },
+        "is_subscription": {
+          "name": "is_subscription",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
+        },
+        "notes": {
+          "name": "notes",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(unixepoch() * 1000)"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(unixepoch() * 1000)"
+        }
+      },
+      "indexes": {
+        "benefit_card_idx": {
+          "name": "benefit_card_idx",
+          "columns": [
+            "card_id"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "benefit_card_id_card_id_fk": {
+          "name": "benefit_card_id_card_id_fk",
+          "tableFrom": "benefit",
+          "tableTo": "card",
+          "columnsFrom": [
+            "card_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "business": {
+      "name": "business",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "owner_person_id": {
+          "name": "owner_person_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "type": {
+          "name": "type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "notes": {
+          "name": "notes",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(unixepoch() * 1000)"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(unixepoch() * 1000)"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "business_owner_person_id_person_id_fk": {
+          "name": "business_owner_person_id_person_id_fk",
+          "tableFrom": "business",
+          "tableTo": "person",
+          "columnsFrom": [
+            "owner_person_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "card": {
+      "name": "card",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "card_product_id": {
+          "name": "card_product_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "issuer_id": {
+          "name": "issuer_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "owner_person_id": {
+          "name": "owner_person_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "business_id": {
+          "name": "business_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "raw_creditor_name": {
+          "name": "raw_creditor_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "raw_account_label": {
+          "name": "raw_account_label",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "network": {
+          "name": "network",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "last4": {
+          "name": "last4",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "annual_fee_cents": {
+          "name": "annual_fee_cents",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'open'"
+        },
+        "autopay": {
+          "name": "autopay",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
+        },
+        "reports_to_personal": {
+          "name": "reports_to_personal",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
+        },
+        "applied_date": {
+          "name": "applied_date",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "opened_date": {
+          "name": "opened_date",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "closed_date": {
+          "name": "closed_date",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "rejected_date": {
+          "name": "rejected_date",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "rejection_reason": {
+          "name": "rejection_reason",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "source": {
+          "name": "source",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'manual'"
+        },
+        "notes": {
+          "name": "notes",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(unixepoch() * 1000)"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(unixepoch() * 1000)"
+        }
+      },
+      "indexes": {
+        "card_owner_idx": {
+          "name": "card_owner_idx",
+          "columns": [
+            "owner_person_id"
+          ],
+          "isUnique": false
+        },
+        "card_product_idx": {
+          "name": "card_product_idx",
+          "columns": [
+            "card_product_id"
+          ],
+          "isUnique": false
+        },
+        "card_status_idx": {
+          "name": "card_status_idx",
+          "columns": [
+            "status"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "card_card_product_id_card_product_id_fk": {
+          "name": "card_card_product_id_card_product_id_fk",
+          "tableFrom": "card",
+          "tableTo": "card_product",
+          "columnsFrom": [
+            "card_product_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "card_issuer_id_issuer_id_fk": {
+          "name": "card_issuer_id_issuer_id_fk",
+          "tableFrom": "card",
+          "tableTo": "issuer",
+          "columnsFrom": [
+            "issuer_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "card_owner_person_id_person_id_fk": {
+          "name": "card_owner_person_id_person_id_fk",
+          "tableFrom": "card",
+          "tableTo": "person",
+          "columnsFrom": [
+            "owner_person_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "card_business_id_business_id_fk": {
+          "name": "card_business_id_business_id_fk",
+          "tableFrom": "card",
+          "tableTo": "business",
+          "columnsFrom": [
+            "business_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "card_product": {
+      "name": "card_product",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "issuer_id": {
+          "name": "issuer_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "network": {
+          "name": "network",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "is_business": {
+          "name": "is_business",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
+        },
+        "default_annual_fee_cents": {
+          "name": "default_annual_fee_cents",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "default_cashback_pct": {
+          "name": "default_cashback_pct",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "reports_to_personal": {
+          "name": "reports_to_personal",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
+        },
+        "notes": {
+          "name": "notes",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(unixepoch() * 1000)"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(unixepoch() * 1000)"
+        }
+      },
+      "indexes": {
+        "card_product_issuer_idx": {
+          "name": "card_product_issuer_idx",
+          "columns": [
+            "issuer_id"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "card_product_issuer_id_issuer_id_fk": {
+          "name": "card_product_issuer_id_issuer_id_fk",
+          "tableFrom": "card_product",
+          "tableTo": "issuer",
+          "columnsFrom": [
+            "issuer_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "issuer": {
+      "name": "issuer",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "issuer_name_unique": {
+          "name": "issuer_name_unique",
+          "columns": [
+            "name"
+          ],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "issuer_alias": {
+      "name": "issuer_alias",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "issuer_id": {
+          "name": "issuer_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "alias_text": {
+          "name": "alias_text",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "issuer_alias_issuer_idx": {
+          "name": "issuer_alias_issuer_idx",
+          "columns": [
+            "issuer_id"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "issuer_alias_issuer_id_issuer_id_fk": {
+          "name": "issuer_alias_issuer_id_issuer_id_fk",
+          "tableFrom": "issuer_alias",
+          "tableTo": "issuer",
+          "columnsFrom": [
+            "issuer_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "person": {
+      "name": "person",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "notes": {
+          "name": "notes",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(unixepoch() * 1000)"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(unixepoch() * 1000)"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "point_program": {
+      "name": "point_program",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "owner_person_id": {
+          "name": "owner_person_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "kind": {
+          "name": "kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "valuation_cpp": {
+          "name": "valuation_cpp",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "balance": {
+          "name": "balance",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "balance_updated": {
+          "name": "balance_updated",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "next_expiration": {
+          "name": "next_expiration",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "notes": {
+          "name": "notes",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(unixepoch() * 1000)"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(unixepoch() * 1000)"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "point_program_owner_person_id_person_id_fk": {
+          "name": "point_program_owner_person_id_person_id_fk",
+          "tableFrom": "point_program",
+          "tableTo": "person",
+          "columnsFrom": [
+            "owner_person_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "product_benefit": {
+      "name": "product_benefit",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "card_product_id": {
+          "name": "card_product_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "category": {
+          "name": "category",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "amount_cents": {
+          "name": "amount_cents",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "value_pct": {
+          "name": "value_pct",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "period": {
+          "name": "period",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "notes": {
+          "name": "notes",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(unixepoch() * 1000)"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(unixepoch() * 1000)"
+        }
+      },
+      "indexes": {
+        "product_benefit_product_idx": {
+          "name": "product_benefit_product_idx",
+          "columns": [
+            "card_product_id"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "product_benefit_card_product_id_card_product_id_fk": {
+          "name": "product_benefit_card_product_id_card_product_id_fk",
+          "tableFrom": "product_benefit",
+          "tableTo": "card_product",
+          "columnsFrom": [
+            "card_product_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "product_offer": {
+      "name": "product_offer",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "card_product_id": {
+          "name": "card_product_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "reward_kind": {
+          "name": "reward_kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "currency": {
+          "name": "currency",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "point_program_id": {
+          "name": "point_program_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "points_amount": {
+          "name": "points_amount",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "cash_amount_cents": {
+          "name": "cash_amount_cents",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "point_value_cpp": {
+          "name": "point_value_cpp",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "min_spend_cents": {
+          "name": "min_spend_cents",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "window_months": {
+          "name": "window_months",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "expires": {
+          "name": "expires",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "notes": {
+          "name": "notes",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(unixepoch() * 1000)"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(unixepoch() * 1000)"
+        }
+      },
+      "indexes": {
+        "offer_product_idx": {
+          "name": "offer_product_idx",
+          "columns": [
+            "card_product_id"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "product_offer_card_product_id_card_product_id_fk": {
+          "name": "product_offer_card_product_id_card_product_id_fk",
+          "tableFrom": "product_offer",
+          "tableTo": "card_product",
+          "columnsFrom": [
+            "card_product_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "product_offer_point_program_id_point_program_id_fk": {
+          "name": "product_offer_point_program_id_point_program_id_fk",
+          "tableFrom": "product_offer",
+          "tableTo": "point_program",
+          "columnsFrom": [
+            "point_program_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "recommendation_rule": {
+      "name": "recommendation_rule",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "kind": {
+          "name": "kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "enabled": {
+          "name": "enabled",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": true
+        },
+        "params": {
+          "name": "params",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'{}'"
+        },
+        "notes": {
+          "name": "notes",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(unixepoch() * 1000)"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(unixepoch() * 1000)"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "recurring_payment": {
+      "name": "recurring_payment",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "card_id": {
+          "name": "card_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "notes": {
+          "name": "notes",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(unixepoch() * 1000)"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(unixepoch() * 1000)"
+        }
+      },
+      "indexes": {
+        "recurring_payment_card_idx": {
+          "name": "recurring_payment_card_idx",
+          "columns": [
+            "card_id"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "recurring_payment_card_id_card_id_fk": {
+          "name": "recurring_payment_card_id_card_id_fk",
+          "tableFrom": "recurring_payment",
+          "tableTo": "card",
+          "columnsFrom": [
+            "card_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "referral": {
+      "name": "referral",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "from_person_id": {
+          "name": "from_person_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "to_person_id": {
+          "name": "to_person_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "card_product_id": {
+          "name": "card_product_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "link": {
+          "name": "link",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "reward_amount": {
+          "name": "reward_amount",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "reward_value_cents": {
+          "name": "reward_value_cents",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "reward_kind": {
+          "name": "reward_kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "date": {
+          "name": "date",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "notes": {
+          "name": "notes",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(unixepoch() * 1000)"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(unixepoch() * 1000)"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "referral_from_person_id_person_id_fk": {
+          "name": "referral_from_person_id_person_id_fk",
+          "tableFrom": "referral",
+          "tableTo": "person",
+          "columnsFrom": [
+            "from_person_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "referral_to_person_id_person_id_fk": {
+          "name": "referral_to_person_id_person_id_fk",
+          "tableFrom": "referral",
+          "tableTo": "person",
+          "columnsFrom": [
+            "to_person_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "referral_card_product_id_card_product_id_fk": {
+          "name": "referral_card_product_id_card_product_id_fk",
+          "tableFrom": "referral",
+          "tableTo": "card_product",
+          "columnsFrom": [
+            "card_product_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "signup_bonus": {
+      "name": "signup_bonus",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "card_id": {
+          "name": "card_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "target_spend_cents": {
+          "name": "target_spend_cents",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "start_date": {
+          "name": "start_date",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "deadline": {
+          "name": "deadline",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "spend_so_far_cents": {
+          "name": "spend_so_far_cents",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        },
+        "reward_kind": {
+          "name": "reward_kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "point_program_id": {
+          "name": "point_program_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "points_amount": {
+          "name": "points_amount",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "cash_amount_cents": {
+          "name": "cash_amount_cents",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "referral_bonus": {
+          "name": "referral_bonus",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "received": {
+          "name": "received",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
+        },
+        "received_date": {
+          "name": "received_date",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "amount_used_cents": {
+          "name": "amount_used_cents",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "notes": {
+          "name": "notes",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(unixepoch() * 1000)"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(unixepoch() * 1000)"
+        }
+      },
+      "indexes": {
+        "bonus_card_idx": {
+          "name": "bonus_card_idx",
+          "columns": [
+            "card_id"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "signup_bonus_card_id_card_id_fk": {
+          "name": "signup_bonus_card_id_card_id_fk",
+          "tableFrom": "signup_bonus",
+          "tableTo": "card",
+          "columnsFrom": [
+            "card_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "signup_bonus_point_program_id_point_program_id_fk": {
+          "name": "signup_bonus_point_program_id_point_program_id_fk",
+          "tableFrom": "signup_bonus",
+          "tableTo": "point_program",
+          "columnsFrom": [
+            "point_program_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "spend_entry": {
+      "name": "spend_entry",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "bonus_id": {
+          "name": "bonus_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "amount_cents": {
+          "name": "amount_cents",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "date": {
+          "name": "date",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "note": {
+          "name": "note",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(unixepoch() * 1000)"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(unixepoch() * 1000)"
+        }
+      },
+      "indexes": {
+        "spend_entry_bonus_idx": {
+          "name": "spend_entry_bonus_idx",
+          "columns": [
+            "bonus_id"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "spend_entry_bonus_id_signup_bonus_id_fk": {
+          "name": "spend_entry_bonus_id_signup_bonus_id_fk",
+          "tableFrom": "spend_entry",
+          "tableTo": "signup_bonus",
+          "columnsFrom": [
+            "bonus_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    }
+  },
+  "views": {},
+  "enums": {},
+  "_meta": {
+    "schemas": {},
+    "tables": {},
+    "columns": {}
+  },
+  "internal": {
+    "indexes": {}
+  }
+}
