@@ -20,6 +20,10 @@ import { personVelocity, type VelocityCardLike } from './velocity'
  *  - max_recent_apps_business { months, max }         application pacing per business
  *  - min_spend_capacity { lookbackMonths, buffer }    min-spend must fit tracked spend rate × window
  *  - min_bonus_value { minCents }                     skip small bonuses
+ *  - finish_open_bonuses { maxOpenMonths, lookbackMonths }
+ *        household-wide: wait while remaining min-spend on open bonuses is
+ *        maxOpenMonths+ of tracked spend pace; waitUntil projects when pace
+ *        or deadlines bring the open spend back under the threshold
  */
 
 export interface RecommendInput {
@@ -54,6 +58,13 @@ export interface RecommendInput {
     appliedDate: string | null
   })[]
   spendEntries: { amountCents: number; date: string }[]
+  /** Signup bonuses on held cards; unfinished ones gate new applications. */
+  bonuses: {
+    targetSpendCents: number | null
+    spendSoFarCents: number
+    deadline: string | null
+    received: boolean
+  }[]
   rules: { kind: string; params: Record<string, unknown> }[]
   today: Date
 }
@@ -252,6 +263,58 @@ export function recommend(input: RecommendInput): PersonRecommendations[] {
               waitUntil: null
             })
           }
+          break
+        }
+        case 'finish_open_bonuses': {
+          const maxOpenMonths = Number(p.maxOpenMonths ?? 2)
+          const lookback = Number(p.lookbackMonths ?? 3)
+          const todayIso = toIso(today)
+          // Open = unreceived, unfinished, and still winnable (deadline ahead).
+          const open = input.bonuses
+            .filter((b) => !b.received && (b.deadline == null || b.deadline >= todayIso))
+            .map((b) => ({
+              remaining: Math.max(0, (b.targetSpendCents ?? 0) - b.spendSoFarCents),
+              deadline: b.deadline
+            }))
+            .filter((b) => b.remaining > 0)
+          const remaining = open.reduce((n, b) => n + b.remaining, 0)
+          const rate = spendRate(lookback)
+          const thresholdCents = maxOpenMonths * rate
+          if (remaining === 0 || remaining < thresholdCents) break
+          // Unblocks when open spend falls under the threshold — by pace, or
+          // by deadlines expiring bonuses out of the open set, whichever first.
+          const paceDate =
+            rate > 0
+              ? toIso(
+                  new Date(
+                    today.getFullYear(),
+                    today.getMonth(),
+                    today.getDate() + Math.ceil(((remaining - thresholdCents) / rate) * 30)
+                  )
+                )
+              : null
+          const deadlineDate =
+            [...new Set(open.map((b) => b.deadline).filter((d): d is string => d != null))]
+              .sort()
+              .find(
+                (d) =>
+                  open
+                    .filter((b) => b.deadline == null || b.deadline > d)
+                    .reduce((n, b) => n + b.remaining, 0) <= thresholdCents
+              ) ?? null
+          blocks.push({
+            kind: rule.kind,
+            reason:
+              rate > 0
+                ? `${dollars(remaining)} of open bonus spend ≈ ${(remaining / rate).toFixed(1)} mo at current pace — finish current bonuses first`
+                : `${dollars(remaining)} of open bonus spend and no tracked spend in ${lookback} mo`,
+            waitUntil:
+              paceDate != null && deadlineDate != null
+                ? paceDate < deadlineDate
+                  ? paceDate
+                  : deadlineDate
+                : (paceDate ?? deadlineDate)
+          })
           break
         }
         case 'min_bonus_value': {

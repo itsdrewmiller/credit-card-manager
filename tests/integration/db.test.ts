@@ -295,4 +295,50 @@ describe('database + router integration', () => {
     const snap = await caller.exporter.snapshot()
     expect(snap.data.person.length).toBeGreaterThan(0)
   })
+
+  it('recommends waiting while open bonus min-spend outpaces tracked spend', async () => {
+    const caller = appRouter.createCaller({ db: t.db })
+    const chase = t.db.select().from(issuer).all().find((i) => i.name === 'Chase')!
+    const product = t.db
+      .insert(cardProduct)
+      .values({ issuerId: chase.id, name: 'Pace Test Card', network: 'Visa' })
+      .returning()
+      .get()
+    const offer = await caller.offers.create({
+      cardProductId: product.id,
+      cashAmountCents: 50000,
+      minSpendCents: 300000,
+      windowMonths: 3
+    })
+    const tester = t.db.insert(person).values({ name: 'Pace Tester' }).returning().get()
+    const held = t.db
+      .insert(card)
+      .values({ ownerPersonId: tester.id, status: 'open', openedDate: '2026-01-01' })
+      .returning()
+      .get()
+    // $50k target with $1k tracked so far: months of open spend at any
+    // realistic test-DB pace, so every candidate should wait.
+    const deadline = new Date(Date.now() + 90 * 86400000).toISOString().slice(0, 10)
+    await caller.bonuses.create({
+      cardId: held.id,
+      targetSpendCents: 5000000,
+      spendSoFarCents: 100000,
+      deadline
+    })
+    await caller.recommendations.createRule({
+      kind: 'finish_open_bonuses',
+      enabled: true,
+      params: '{"maxOpenMonths": 2, "lookbackMonths": 3}'
+    })
+
+    const { results } = await caller.recommendations.overview()
+    const mine = results.find((r) => r.personId === tester.id)!
+    expect(mine.recommended).toHaveLength(0)
+    const cand = mine.blocked.find((c) => c.offerId === offer.id)!
+    const block = cand.blocks.find((b) => b.kind === 'finish_open_bonuses')!
+    expect(block.reason).toMatch(/open bonus spend/)
+    // Wait date is knowable: the deadline retires the bonus if pace doesn't.
+    expect(block.waitUntil).not.toBeNull()
+    expect(block.waitUntil! <= deadline).toBe(true)
+  })
 })

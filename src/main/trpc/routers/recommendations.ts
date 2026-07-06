@@ -87,6 +87,15 @@ export const recommendationsRouter = router({
       .select({ amountCents: spendEntry.amountCents, date: spendEntry.date })
       .from(spendEntry)
       .all()
+    const bonuses = ctx.db.query.signupBonus
+      .findMany()
+      .sync()
+      .map((b) => ({
+        targetSpendCents: b.targetSpendCents,
+        spendSoFarCents: b.spendSoFarCents,
+        deadline: b.deadline,
+        received: b.received
+      }))
 
     return {
       results: recommend({
@@ -95,6 +104,7 @@ export const recommendationsRouter = router({
         businesses,
         cards,
         spendEntries,
+        bonuses,
         rules: enabledRules(ctx.db),
         today: new Date()
       }),

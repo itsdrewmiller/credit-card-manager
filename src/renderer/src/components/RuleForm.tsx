@@ -49,6 +49,12 @@ const KINDS: { value: string; label: string; hint: string; example: string }[] =
     example: '{"lookbackMonths": 3, "buffer": 1}'
   },
   {
+    value: 'finish_open_bonuses',
+    label: 'Finish current bonuses first',
+    hint: 'Blocks all offers while remaining min-spend on open bonuses is N+ months of your tracked spend pace, with a projected wait-until date.',
+    example: '{"maxOpenMonths": 2, "lookbackMonths": 3}'
+  },
+  {
     value: 'min_bonus_value',
     label: 'Minimum bonus value',
     hint: 'Skips offers worth less than a threshold (cents).',

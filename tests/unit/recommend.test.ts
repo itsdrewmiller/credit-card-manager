@@ -38,6 +38,7 @@ function base(over: Partial<RecommendInput> = {}): RecommendInput {
       { amountCents: 200000, date: '2026-06-01' },
       { amountCents: 200000, date: '2026-07-01' }
     ],
+    bonuses: [],
     rules: [],
     today,
     ...over
@@ -385,6 +386,79 @@ describe('recommend', () => {
     expect(csp.earnOnSpendCents).toBe(8000)
     expect(csp.totalValueCents).toBe(98000)
     expect(Math.round(csp.roiPct!)).toBe(25)
+  })
+
+  it('blocks everything while open bonus spend exceeds the pace threshold', () => {
+    // $6k remaining at $2k/mo = 3 months of open spend >= 2 month threshold.
+    const [drew] = recommend(
+      base({
+        bonuses: [
+          { targetSpendCents: 800000, spendSoFarCents: 200000, deadline: null, received: false }
+        ],
+        rules: [{ kind: 'finish_open_bonuses', params: { maxOpenMonths: 2, lookbackMonths: 3 } }]
+      })
+    )
+    expect(drew.recommended).toHaveLength(0)
+    expect(drew.blocked).toHaveLength(2) // household-wide: personal AND business
+    const block = drew.blocked[0].blocks[0]
+    expect(block.kind).toBe('finish_open_bonuses')
+    expect(block.reason).toMatch(/\$6,000 of open bonus spend ≈ 3\.0 mo/)
+    // $2k over the threshold clears at $2k/mo -> ~30 days out.
+    expect(drew.blocked[0].waitUntil).toBe('2026-08-05')
+  })
+
+  it('allows applications when open bonus spend is under the threshold', () => {
+    // $3k remaining = 1.5 months at $2k/mo, under the 2 month threshold.
+    const [drew] = recommend(
+      base({
+        bonuses: [
+          { targetSpendCents: 400000, spendSoFarCents: 100000, deadline: null, received: false }
+        ],
+        rules: [{ kind: 'finish_open_bonuses', params: { maxOpenMonths: 2, lookbackMonths: 3 } }]
+      })
+    )
+    expect(drew.recommended).toHaveLength(2)
+  })
+
+  it('ignores received and past-deadline bonuses when totalling open spend', () => {
+    const [drew] = recommend(
+      base({
+        bonuses: [
+          { targetSpendCents: 800000, spendSoFarCents: 0, deadline: null, received: true },
+          { targetSpendCents: 800000, spendSoFarCents: 0, deadline: '2026-06-30', received: false }
+        ],
+        rules: [{ kind: 'finish_open_bonuses', params: { maxOpenMonths: 2, lookbackMonths: 3 } }]
+      })
+    )
+    expect(drew.recommended).toHaveLength(2)
+  })
+
+  it('uses a bonus deadline as waitUntil when it frees capacity before the pace does', () => {
+    // $8k remaining needs ~60 days of pace, but the bonus dies on 2026-07-20.
+    const [drew] = recommend(
+      base({
+        bonuses: [
+          { targetSpendCents: 800000, spendSoFarCents: 0, deadline: '2026-07-20', received: false }
+        ],
+        rules: [{ kind: 'finish_open_bonuses', params: { maxOpenMonths: 2, lookbackMonths: 3 } }]
+      })
+    )
+    expect(drew.blocked[0].waitUntil).toBe('2026-07-20')
+  })
+
+  it('blocks on open bonuses even with no tracked spend, waiting out deadlines', () => {
+    const [drew] = recommend(
+      base({
+        spendEntries: [],
+        bonuses: [
+          { targetSpendCents: 100000, spendSoFarCents: 0, deadline: '2026-08-15', received: false }
+        ],
+        rules: [{ kind: 'finish_open_bonuses', params: { maxOpenMonths: 2, lookbackMonths: 3 } }]
+      })
+    )
+    expect(drew.recommended).toHaveLength(0)
+    expect(drew.blocked[0].blocks[0].reason).toMatch(/no tracked spend/)
+    expect(drew.blocked[0].waitUntil).toBe('2026-08-15')
   })
 
   it('ignores unknown rule kinds', () => {

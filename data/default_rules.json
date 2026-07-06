@@ -30,6 +30,11 @@
     "notes": "The bonus min-spend must fit your tracked monthly spend rate over the offer window."
   },
   {
+    "kind": "finish_open_bonuses",
+    "params": { "maxOpenMonths": 2, "lookbackMonths": 3 },
+    "notes": "Don't open anything while 2+ months of min-spend (at the tracked pace) remain on current bonuses."
+  },
+  {
     "kind": "min_bonus_value",
     "params": { "minCents": 30000 },
     "notes": "Skip bonuses worth less than $300."
