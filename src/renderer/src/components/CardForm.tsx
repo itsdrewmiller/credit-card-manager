@@ -173,14 +173,12 @@ export function CardForm({
         {...form.getInputProps('autopay', { type: 'checkbox' })}
         mb="sm"
       />
-      {form.values.businessId && (
-        <Switch
-          label="Counts toward 5/24"
-          description="This business card reports to the personal bureaus (Capital One, Discover, TD…)"
-          {...form.getInputProps('reportsToPersonal', { type: 'checkbox' })}
-          mb="sm"
-        />
-      )}
+      <Switch
+        label="Counts toward 5/24"
+        description="For business cards that report to the personal bureaus (Capital One, Discover, TD…). Personal cards always count."
+        {...form.getInputProps('reportsToPersonal', { type: 'checkbox' })}
+        mb="sm"
+      />
       <Textarea label="Notes" autosize minRows={2} {...form.getInputProps('notes')} mb="md" />
 
       <Group justify="flex-end">
