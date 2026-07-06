@@ -1,4 +1,4 @@
-import { and, eq, inArray, sql } from 'drizzle-orm'
+import { eq, sql } from 'drizzle-orm'
 import type { DbLike } from './index'
 import { cardProduct, issuer } from './schema'
 
@@ -144,31 +144,45 @@ const lookup = new Map(
   Object.entries(RATES).map(([k, v]) => [k.toLowerCase(), v] as const)
 )
 
-/** Issuers whose business cards report to the personal bureaus and therefore
- *  count toward 5/24. Applied by rule so newly imported products get flagged. */
-const PERSONAL_REPORTING_ISSUERS = ['Capital One', 'Discover', 'TD Bank']
+/**
+ * Business products known to report (or not) to the personal bureaus.
+ * Capital One's REVOLVING business cards report and count toward 5/24; their
+ * pay-in-full CHARGE cards (Venture X Business, Spark Cash Plus, Venture
+ * Business) do not. Enforced both directions for exactly these products, so a
+ * bad earlier blanket rule self-heals; card-level overrides are unaffected.
+ */
+const PRODUCT_REPORTING: Record<string, boolean> = {
+  'Capital One|Spark Cash': true,
+  'Capital One|Spark Cash Select': true,
+  'Capital One|VentureOne Business': true,
+  'Capital One|Venture X Business': false,
+  'Capital One|Spark Cash Plus': false,
+  'Capital One|Venture Business': false
+}
 
-/** Flag business products from personal-reporting issuers. Idempotent. */
+/** Reconcile product-level bureau-reporting flags with the known map. */
 export function seedBureauReporting(db: DbLike): number {
   const rows = db
-    .select({ id: cardProduct.id })
+    .select({
+      id: cardProduct.id,
+      name: cardProduct.name,
+      issuerName: issuer.name,
+      current: cardProduct.reportsToPersonal
+    })
     .from(cardProduct)
     .innerJoin(issuer, eq(issuer.id, cardProduct.issuerId))
-    .where(
-      and(
-        eq(cardProduct.isBusiness, true),
-        eq(cardProduct.reportsToPersonal, false),
-        inArray(issuer.name, PERSONAL_REPORTING_ISSUERS)
-      )
-    )
     .all()
+  let changed = 0
   for (const p of rows) {
+    const want = PRODUCT_REPORTING[`${p.issuerName}|${p.name}`]
+    if (want == null || want === p.current) continue
     db.update(cardProduct)
-      .set({ reportsToPersonal: true })
+      .set({ reportsToPersonal: want })
       .where(eq(cardProduct.id, p.id))
       .run()
+    changed++
   }
-  return rows.length
+  return changed
 }
 
 /** Fill known baseline earn rates where none is set. Idempotent; never
