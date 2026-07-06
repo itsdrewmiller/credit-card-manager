@@ -2,7 +2,7 @@ import { z } from 'zod'
 import { eq, desc } from 'drizzle-orm'
 import { router, publicProcedure } from '../trpc'
 import type { DB } from '../../db'
-import { card, productBenefit, benefit } from '../../db/schema'
+import { card, cardProduct, productBenefit, benefit } from '../../db/schema'
 import { CARD_STATUSES } from '@shared/constants'
 import { cardMissingFields } from '../../domain/needsInfo'
 import { applyProductDefaults } from '../../domain/product'
@@ -12,6 +12,18 @@ import { importCardsCsv } from '../../import/cards'
  * Copy a product's benefit templates onto a card. Idempotent by benefit name,
  * so it won't duplicate benefits already present on the card.
  */
+/** Products seed the card-level 5/24 flag when first assigned; the card value
+ *  stays the single source of truth afterward (velocity never reads products). */
+function productReportsToPersonal(db: DB, cardProductId: number): boolean {
+  return (
+    db
+      .select({ r: cardProduct.reportsToPersonal })
+      .from(cardProduct)
+      .where(eq(cardProduct.id, cardProductId))
+      .get()?.r ?? false
+  )
+}
+
 function applyProductBenefits(db: DB, cardId: number, cardProductId: number): void {
   const templates = db
     .select()
@@ -97,7 +109,11 @@ export const cardsRouter = router({
   }),
 
   create: publicProcedure.input(upsert).mutation(({ ctx, input }) => {
-    const created = ctx.db.insert(card).values(applyProductDefaults(ctx.db, input)).returning().get()
+    const values = applyProductDefaults(ctx.db, input)
+    if (values.cardProductId != null && productReportsToPersonal(ctx.db, values.cardProductId)) {
+      values.reportsToPersonal = true
+    }
+    const created = ctx.db.insert(card).values(values).returning().get()
     if (created.cardProductId != null) {
       applyProductBenefits(ctx.db, created.id, created.cardProductId)
     }
@@ -115,9 +131,18 @@ export const cardsRouter = router({
         .where(eq(card.id, id))
         .returning()
         .get()
-      // When a product is newly assigned, seed its benefit templates.
+      // When a product is newly assigned, seed its benefit templates and its
+      // 5/24 default onto the card.
       if (updated.cardProductId != null && updated.cardProductId !== before?.p) {
         applyProductBenefits(ctx.db, id, updated.cardProductId)
+        if (!updated.reportsToPersonal && productReportsToPersonal(ctx.db, updated.cardProductId)) {
+          return ctx.db
+            .update(card)
+            .set({ reportsToPersonal: true })
+            .where(eq(card.id, id))
+            .returning()
+            .get()
+        }
       }
       return updated
     }),

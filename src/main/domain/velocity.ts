@@ -11,15 +11,11 @@ export interface VelocityCardLike {
   id: number
   openedDate: string | null
   businessId: number | null
-  /** Manual per-card override: this card reports to the personal bureaus. */
+  /** This business card reports to the personal bureaus (seeded from the
+   *  product on assignment; the card value is the single source of truth). */
   reportsToPersonal?: boolean | null
   status: string
-  product?: {
-    issuer?: { name: string } | null
-    name: string
-    /** Product-level rule (e.g. Capital One business cards). */
-    reportsToPersonal?: boolean | null
-  } | null
+  product?: { issuer?: { name: string } | null; name: string } | null
   rawCreditorName?: string | null
 }
 
@@ -32,10 +28,7 @@ function addMonthsIso(iso: string, months: number): string {
 }
 
 function countsTowardVelocity(c: VelocityCardLike): boolean {
-  const personalReporting =
-    c.businessId == null ||
-    c.reportsToPersonal === true ||
-    c.product?.reportsToPersonal === true
+  const personalReporting = c.businessId == null || c.reportsToPersonal === true
   return personalReporting && c.openedDate != null && COUNTABLE_STATUSES.has(c.status)
 }
 

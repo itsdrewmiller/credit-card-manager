@@ -44,30 +44,6 @@ describe('personVelocity', () => {
     expect(v.contributing.map((c) => c.id)).toEqual([1, 2])
   })
 
-  it('counts business cards whose product reports to the personal bureau', () => {
-    const v = personVelocity(
-      [
-        {
-          id: 1,
-          openedDate: '2026-01-10',
-          businessId: 7,
-          status: 'open',
-          product: { name: 'Venture X Business', reportsToPersonal: true }
-        },
-        {
-          id: 2,
-          openedDate: '2026-01-10',
-          businessId: 7,
-          status: 'open',
-          product: { name: 'Ink Unlimited', reportsToPersonal: false }
-        }
-      ],
-      now
-    )
-    expect(v.count).toBe(1)
-    expect(v.contributing[0].id).toBe(1)
-  })
-
   it('reports when an over-5/24 person gets back under', () => {
     const v = personVelocity(
       [

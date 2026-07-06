@@ -155,6 +155,36 @@ describe('database + router integration', () => {
     await caller.recurringPayments.delete({ id: payment.id })
   })
 
+  it('seeds the card 5/24 flag from a reporting product, once', async () => {
+    const caller = appRouter.createCaller({ db: t.db })
+    const chase = t.db.select().from(issuer).all().find((i) => i.name === 'Chase')!
+    const spark = await caller.products.create({
+      issuerId: chase.id,
+      name: 'Reporting Biz Card',
+      isBusiness: true,
+      reportsToPersonal: true
+    })
+
+    // Creating a card with the product seeds the flag on.
+    const c = await caller.cards.create({ cardProductId: spark.id, status: 'open', source: 'manual' })
+    expect(c.reportsToPersonal).toBe(true)
+
+    // The card value is authoritative: turning it off sticks through edits.
+    await caller.cards.update({ id: c.id, reportsToPersonal: false })
+    const after = await caller.cards.update({ id: c.id, notes: 'still off' })
+    expect(after.reportsToPersonal).toBe(false)
+
+    // Newly assigning the product to another card seeds it there too.
+    const stub = await caller.cards.create({ rawCreditorName: 'STUB', status: 'open', source: 'manual' })
+    expect(stub.reportsToPersonal).toBe(false)
+    const assigned = await caller.cards.update({ id: stub.id, cardProductId: spark.id })
+    expect(assigned.reportsToPersonal).toBe(true)
+
+    await caller.cards.delete({ id: c.id })
+    await caller.cards.delete({ id: stub.id })
+    await caller.products.delete({ id: spark.id })
+  })
+
   it('tracks autopay on cards, defaulting to off', async () => {
     const caller = appRouter.createCaller({ db: t.db })
     const plain = await caller.cards.create({ rawCreditorName: 'AUTOPAY TEST', status: 'open', source: 'manual' })
