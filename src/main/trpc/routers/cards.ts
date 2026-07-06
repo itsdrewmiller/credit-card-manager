@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { eq, desc } from 'drizzle-orm'
+import { and, eq, desc, gte, isNull, lte, or } from 'drizzle-orm'
 import { router, publicProcedure } from '../trpc'
 import type { DB } from '../../db'
 import { card, cardProduct, productBenefit, benefit } from '../../db/schema'
@@ -124,13 +124,35 @@ export const cardsRouter = router({
     .input(upsert.partial().extend({ id: z.number().int() }))
     .mutation(({ ctx, input }) => {
       const { id, ...rest } = applyProductDefaults(ctx.db, input)
-      const before = ctx.db.select({ p: card.cardProductId }).from(card).where(eq(card.id, id)).get()
+      const before = ctx.db
+        .select({ p: card.cardProductId, status: card.status })
+        .from(card)
+        .where(eq(card.id, id))
+        .get()
       const updated = ctx.db
         .update(card)
         .set({ ...rest, updatedAt: Date.now() })
         .where(eq(card.id, id))
         .returning()
         .get()
+      // Closing a card sweeps its pending benefits: anything unused (no full
+      // or partial use) whose window hasn't expired. Used, partially used,
+      // and already-expired benefits stay as history.
+      if (rest.status === 'closed' && before?.status !== 'closed') {
+        const today = new Date().toISOString().slice(0, 10)
+        ctx.db
+          .delete(benefit)
+          .where(
+            and(
+              eq(benefit.cardId, id),
+              eq(benefit.used, false),
+              or(isNull(benefit.usedAmountCents), lte(benefit.usedAmountCents, 0)),
+              or(isNull(benefit.useBy), gte(benefit.useBy, today))
+            )
+          )
+          .run()
+      }
+
       // When a product is newly assigned, seed its benefit templates and its
       // 5/24 default onto the card.
       if (updated.cardProductId != null && updated.cardProductId !== before?.p) {

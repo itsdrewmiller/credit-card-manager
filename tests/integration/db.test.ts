@@ -185,6 +185,34 @@ describe('database + router integration', () => {
     await caller.products.delete({ id: spark.id })
   })
 
+  it('sweeps pending benefits when a card closes, keeping history', async () => {
+    const caller = appRouter.createCaller({ db: t.db })
+    const c = await caller.cards.create({ rawCreditorName: 'CLOSE TEST', status: 'open', source: 'manual' })
+    const today = new Date().toISOString().slice(0, 10)
+
+    const mk = (over: Record<string, unknown>) =>
+      caller.benefits.create({ cardId: c.id, name: 'X', ...over } as never)
+    await mk({ name: 'used past', used: true, usedDate: '2026-01-15', useBy: '2026-01-31' })
+    await mk({ name: 'expired unused', used: false, useBy: '2026-01-31' })
+    await mk({ name: 'partially used future', used: false, usedAmountCents: 500, useBy: '2099-12-31' })
+    await mk({ name: 'pending future', used: false, useBy: '2099-12-31' })
+    await mk({ name: 'pending undated', used: false })
+
+    await caller.cards.update({ id: c.id, status: 'closed' })
+    const remaining = t.db.query.benefit
+      .findMany()
+      .sync()
+      .filter((b) => b.cardId === c.id)
+    expect(remaining.map((b) => b.name).sort()).toEqual([
+      'expired unused',
+      'partially used future',
+      'used past'
+    ])
+    void today
+
+    await caller.cards.delete({ id: c.id })
+  })
+
   it('tracks autopay on cards, defaulting to off', async () => {
     const caller = appRouter.createCaller({ db: t.db })
     const plain = await caller.cards.create({ rawCreditorName: 'AUTOPAY TEST', status: 'open', source: 'manual' })
