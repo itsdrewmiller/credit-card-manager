@@ -278,6 +278,69 @@ describe('recommend', () => {
     expect(hers.totalValueCents).toBe(90000)
   })
 
+  it('never counts referrals between accounts owned by the same person', () => {
+    const people = [
+      { id: 1, name: 'Drew' },
+      { id: 2, name: 'Kathleen' }
+    ]
+    const businesses = [
+      { id: 10, name: 'Lambda', ownerPersonId: 1 },
+      { id: 11, name: 'Searchlight', ownerPersonId: 1 }
+    ]
+    // Drew's Searchlight business holds the Spark product.
+    const searchlightSpark = {
+      id: 60,
+      cardProductId: 200,
+      ownerPersonId: 1,
+      businessId: 11,
+      appliedDate: null,
+      openedDate: '2024-01-01',
+      status: 'open'
+    }
+    const [drew, kathleen] = recommend(
+      base({
+        people,
+        businesses,
+        offers: [{ ...SPARK, referralValueCents: 20000 }],
+        cards: [searchlightSpark]
+      })
+    )
+    // Drew applying via Lambda: same person owns the would-be referrer -> no referral.
+    const lambda = [...drew.recommended, ...drew.blocked].find((c) => c.businessName === 'Lambda')!
+    expect(lambda.referralFrom).toBeNull()
+    // Kathleen has no businesses here, so no business candidates for her —
+    // but if she held one, Drew's card could refer it (different person).
+    expect(kathleen.recommended).toHaveLength(0)
+  })
+
+  it('lets a different person refer a business application', () => {
+    const people = [
+      { id: 1, name: 'Drew' },
+      { id: 2, name: 'Kathleen' }
+    ]
+    const businesses = [{ id: 12, name: 'Kath Sole', ownerPersonId: 2 }]
+    const drewsSpark = {
+      id: 61,
+      cardProductId: 200,
+      ownerPersonId: 1,
+      businessId: null,
+      appliedDate: null,
+      openedDate: '2024-01-01',
+      status: 'open'
+    }
+    const kathleen = recommend(
+      base({
+        people,
+        businesses,
+        offers: [{ ...SPARK, referralValueCents: 20000 }],
+        cards: [drewsSpark]
+      })
+    )[1]
+    const cand = [...kathleen.recommended, ...kathleen.blocked].find((c) => c.businessName === 'Kath Sole')!
+    expect(cand.referralFrom).toBe('Drew')
+    expect(cand.referralValueCents).toBe(20000)
+  })
+
   it('notes a possible referral even when its value is unknown', () => {
     const people = [
       { id: 1, name: 'Drew' },

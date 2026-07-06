@@ -276,22 +276,19 @@ export function recommend(input: RecommendInput): PersonRecommendations[] {
       blocks.push({ kind: 'expired', reason: `offer expired ${offer.expires}`, waitUntil: null })
     }
 
-    // A referral is possible when someone ELSE in the household holds an open
-    // card of this product (self-referral across one's own cards is excluded;
-    // a person's business card can refer their personal application and vice
-    // versa, matching how issuers treat them as distinct accounts).
-    const referrerCard = input.cards.find((c) => {
-      if (c.cardProductId !== offer.cardProductId || c.status !== 'open') return false
-      const sameHolder =
-        businessId != null
-          ? c.businessId === businessId
-          : c.businessId == null && c.ownerPersonId === personId
-      return !sameHolder
-    })
+    // A referral is possible only when a DIFFERENT PERSON holds an open card
+    // of this product — issuers attribute referrals to the person, so a
+    // person's own cards (personal or via any of their businesses) can never
+    // refer their own application.
+    const referrerCard = input.cards.find(
+      (c) =>
+        c.cardProductId === offer.cardProductId &&
+        c.status === 'open' &&
+        c.ownerPersonId != null &&
+        c.ownerPersonId !== personId
+    )
     const referralFrom = referrerCard
-      ? (referrerCard.businessId != null
-          ? (input.businesses.find((b) => b.id === referrerCard.businessId)?.name ?? 'a business')
-          : (input.people.find((pp) => pp.id === referrerCard.ownerPersonId)?.name ?? 'someone'))
+      ? (input.people.find((pp) => pp.id === referrerCard.ownerPersonId)?.name ?? 'someone')
       : null
     const referralValueCents =
       referralFrom != null && offer.referralValueCents != null ? offer.referralValueCents : null
