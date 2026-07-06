@@ -1,12 +1,13 @@
-import React from 'react'
+import React, { useMemo, useState } from 'react'
 import {
   Accordion,
   Badge,
   Button,
-  Card,
   Checkbox,
   Code,
   Group,
+  NumberInput,
+  Select,
   Table,
   Tabs,
   Text
@@ -25,7 +26,7 @@ import { showSuccess } from '../lib/mutations'
 import type { RecommendationOverview, RecommendationRuleRow } from '../lib/types'
 
 type PersonResult = RecommendationOverview['results'][number]
-type Candidate = PersonResult['recommended'][number]
+type Candidate = PersonResult['recommended'][number] & { personName: string }
 
 function bonusText(c: Candidate): string {
   if (c.cashAmountCents != null) return formatCents(c.cashAmountCents)
@@ -33,29 +34,52 @@ function bonusText(c: Candidate): string {
   return '—'
 }
 
-function OfferLine({ c }: { c: Candidate }): React.ReactElement {
+function WhoCell({ c }: { c: Candidate }): React.ReactElement {
   return (
-    <Group justify="space-between" wrap="nowrap">
-      <div>
-        <Group gap={6}>
-          <Text size="sm" fw={500}>
-            {c.label}
-          </Text>
-          {c.isBusiness && (
-            <Badge size="xs" variant="light" color="grape">
-              {c.businessName ?? 'business'}
-            </Badge>
-          )}
-        </Group>
-        <Text size="xs" c="dimmed">
-          {bonusText(c)}
-          {c.minSpendCents != null ? ` · ${formatCents(c.minSpendCents)} min spend` : ''}
-          {c.windowMonths != null ? ` · ${c.windowMonths} mo` : ''}
-        </Text>
-      </div>
-      <Text fw={600}>{formatCents(c.valueCents)}</Text>
+    <Group gap={6} wrap="nowrap">
+      <Text size="sm">{c.personName}</Text>
+      {c.isBusiness && (
+        <Badge size="xs" variant="light" color="grape">
+          {c.businessName ?? 'business'}
+        </Badge>
+      )}
     </Group>
   )
+}
+
+function ValueCell({ c }: { c: Candidate }): React.ReactElement {
+  return (
+    <>
+      <Text fw={600}>{formatCents(c.totalValueCents ?? c.valueCents)}</Text>
+      {c.referralFrom &&
+        (c.referralValueCents != null ? (
+          <Text size="xs" c="teal">
+            incl. {formatCents(c.referralValueCents)} referral via {c.referralFrom}
+          </Text>
+        ) : (
+          <Text size="xs" c="dimmed">
+            referral via {c.referralFrom} possible
+          </Text>
+        ))}
+    </>
+  )
+}
+
+interface Filters {
+  issuer: string | null
+  holder: string | null // 'personal' | business name
+  maxMinSpend: number | string
+}
+
+function applyFilters(rows: Candidate[], f: Filters): Candidate[] {
+  return rows.filter((c) => {
+    if (f.issuer && c.issuerName !== f.issuer) return false
+    if (f.holder === 'personal' && c.isBusiness) return false
+    if (f.holder && f.holder !== 'personal' && c.businessName !== f.holder) return false
+    if (f.maxMinSpend !== '' && c.minSpendCents != null && c.minSpendCents > Number(f.maxMinSpend) * 100)
+      return false
+    return true
+  })
 }
 
 function RecommendedTable({ rows }: { rows: Candidate[] }): React.ReactElement {
@@ -63,6 +87,7 @@ function RecommendedTable({ rows }: { rows: Candidate[] }): React.ReactElement {
     <Table withTableBorder highlightOnHover verticalSpacing="xs">
       <Table.Thead>
         <Table.Tr>
+          <Table.Th>Who</Table.Th>
           <Table.Th>Card</Table.Th>
           <Table.Th>Bonus</Table.Th>
           <Table.Th ta="right">Value</Table.Th>
@@ -72,18 +97,14 @@ function RecommendedTable({ rows }: { rows: Candidate[] }): React.ReactElement {
       </Table.Thead>
       <Table.Tbody>
         {rows.map((c) => (
-          <Table.Tr key={`${c.offerId}-${c.businessId ?? 'p'}`}>
+          <Table.Tr key={`${c.offerId}-${c.personId}-${c.businessId ?? 'p'}`}>
             <Table.Td>
-              <Group gap={6} wrap="nowrap">
-                <Text size="sm" fw={500}>
-                  {c.label}
-                </Text>
-                {c.isBusiness && (
-                  <Badge size="xs" variant="light" color="grape">
-                    {c.businessName ?? 'business'}
-                  </Badge>
-                )}
-              </Group>
+              <WhoCell c={c} />
+            </Table.Td>
+            <Table.Td>
+              <Text size="sm" fw={500}>
+                {c.label}
+              </Text>
             </Table.Td>
             <Table.Td>
               <Text size="sm">{bonusText(c)}</Text>
@@ -93,7 +114,7 @@ function RecommendedTable({ rows }: { rows: Candidate[] }): React.ReactElement {
               </Text>
             </Table.Td>
             <Table.Td ta="right">
-              <Text fw={600}>{formatCents(c.valueCents)}</Text>
+              <ValueCell c={c} />
             </Table.Td>
             <Table.Td ta="right">
               <Text size="sm">{c.earnPct != null ? `${c.earnPct}%` : '—'}</Text>
@@ -110,41 +131,107 @@ function RecommendedTable({ rows }: { rows: Candidate[] }): React.ReactElement {
   )
 }
 
-function PersonSection({ r }: { r: PersonResult }): React.ReactElement {
+function CombinedResults({ results }: { results: PersonResult[] }): React.ReactElement {
+  const [filters, setFilters] = useState<Filters>({ issuer: null, holder: null, maxMinSpend: '' })
+
+  const { recommended, blocked, issuers, holders } = useMemo(() => {
+    const tag = (r: PersonResult, list: PersonResult['recommended']): Candidate[] =>
+      list.map((c) => ({ ...c, personName: r.name }))
+    const rec = results.flatMap((r) => tag(r, r.recommended))
+    const blk = results.flatMap((r) => tag(r, r.blocked))
+    // ROI ordering across the whole household.
+    const byRoi = (a: Candidate, b: Candidate) =>
+      (b.roiPct ?? -1) - (a.roiPct ?? -1) || ((b.totalValueCents ?? 0) - (a.totalValueCents ?? 0))
+    rec.sort(byRoi)
+    blk.sort(byRoi)
+    const issuers = [...new Set([...rec, ...blk].map((c) => c.issuerName).filter(Boolean))].sort() as string[]
+    const holders = [...new Set([...rec, ...blk].map((c) => c.businessName).filter(Boolean))].sort() as string[]
+    return { recommended: rec, blocked: blk, issuers, holders }
+  }, [results])
+
+  const rec = applyFilters(recommended, filters)
+  const blk = applyFilters(blocked, filters)
+  const over524 = results.filter((r) => r.atChase524)
+
   return (
-    <Card withBorder radius="md" padding="lg" mb="md">
-      <Group justify="space-between" mb="sm">
-        <Text fw={600} size="lg">
-          {r.name}
-        </Text>
-        {r.atChase524 && (
-          <Badge color="red" variant="light">
-            at/over 5/24
+    <>
+      <Group mb="md" gap="sm">
+        <Select
+          placeholder="Bank"
+          data={issuers}
+          clearable
+          searchable
+          w={190}
+          value={filters.issuer}
+          onChange={(v) => setFilters((f) => ({ ...f, issuer: v }))}
+        />
+        <Select
+          placeholder="Holder"
+          data={[{ value: 'personal', label: 'Personal only' }, ...holders.map((h) => ({ value: h, label: h }))]}
+          clearable
+          w={190}
+          value={filters.holder}
+          onChange={(v) => setFilters((f) => ({ ...f, holder: v }))}
+        />
+        <NumberInput
+          placeholder="Max min-spend ($)"
+          min={0}
+          thousandSeparator=","
+          prefix="$"
+          hideControls
+          w={170}
+          value={filters.maxMinSpend}
+          onChange={(v) => setFilters((f) => ({ ...f, maxMinSpend: v }))}
+        />
+        {over524.map((r) => (
+          <Badge key={r.personId} color="red" variant="light">
+            {r.name} at/over 5/24
           </Badge>
-        )}
+        ))}
       </Group>
 
-      {r.recommended.length === 0 ? (
-        <Text size="sm" c="dimmed">
-          Nothing recommended right now — see below for what's blocked and why.
+      {rec.length === 0 ? (
+        <Text size="sm" c="dimmed" mb="md">
+          Nothing recommended with these filters — see blocked below for why.
         </Text>
       ) : (
-        <RecommendedTable rows={r.recommended} />
+        <RecommendedTable rows={rec} />
       )}
 
-      {r.blocked.length > 0 && (
-        <Accordion variant="subtle" chevronPosition="left">
+      {blk.length > 0 && (
+        <Accordion variant="subtle" chevronPosition="left" mt="sm">
           <Accordion.Item value="blocked">
             <Accordion.Control>
               <Text size="sm" c="dimmed">
-                {r.blocked.length} blocked
+                {blk.length} blocked
               </Text>
             </Accordion.Control>
             <Accordion.Panel>
-              {r.blocked.map((c) => (
-                <Group key={`${c.offerId}-${c.businessId ?? 'p'}`} justify="space-between" mb={6} wrap="nowrap">
+              {blk.map((c) => (
+                <Group
+                  key={`${c.offerId}-${c.personId}-${c.businessId ?? 'p'}`}
+                  justify="space-between"
+                  mb={6}
+                  wrap="nowrap"
+                >
                   <div>
-                    <OfferLine c={c} />
+                    <Group gap={6} wrap="nowrap">
+                      <Text size="sm" fw={500}>
+                        {c.label}
+                      </Text>
+                      <Text size="xs" c="dimmed">
+                        {c.personName}
+                      </Text>
+                      {c.isBusiness && (
+                        <Badge size="xs" variant="light" color="grape">
+                          {c.businessName ?? 'business'}
+                        </Badge>
+                      )}
+                      <Text size="xs" c="dimmed">
+                        {bonusText(c)} · {formatCents(c.totalValueCents ?? c.valueCents)}
+                        {c.roiPct != null ? ` · ${Math.round(c.roiPct)}% ROI` : ''}
+                      </Text>
+                    </Group>
                     <Text size="xs" c="red">
                       {c.blocks.map((b) => b.reason).join(' · ')}
                     </Text>
@@ -160,7 +247,7 @@ function PersonSection({ r }: { r: PersonResult }): React.ReactElement {
           </Accordion.Item>
         </Accordion>
       )}
-    </Card>
+    </>
   )
 }
 
@@ -251,7 +338,8 @@ export function Recommendations(): React.ReactElement {
         </Button>
       </PageHeader>
       <Text c="dimmed" mb="md">
-        What to apply for next, per person — current offers run through your rules. The feed
+        What to apply for next across the household — every eligible person/business combination,
+        ranked by return on required spend, referrals included. The feed
         auto-refreshes weekly
         {overview.data?.feedRefreshedAt
           ? ` (last checked ${formatDate(overview.data.feedRefreshedAt.slice(0, 10))})`
@@ -272,7 +360,7 @@ export function Recommendations(): React.ReactElement {
             {overview.data && overview.data.results.length === 0 ? (
               <EmptyState title="No people yet" description="Add people to get recommendations." />
             ) : (
-              overview.data?.results.map((r) => <PersonSection key={r.personId} r={r} />)
+              overview.data && <CombinedResults results={overview.data.results} />
             )}
           </QueryGate>
         </Tabs.Panel>

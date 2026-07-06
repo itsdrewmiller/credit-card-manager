@@ -73,6 +73,7 @@ export const recommendationsRouter = router({
         cashAmountCents: o.cashAmountCents,
         currency: o.pointProgram?.name ?? o.currency,
         earnPct: o.product?.defaultCashbackPct ?? null,
+        referralValueCents: o.referralValueCents,
         minSpendCents: o.minSpendCents,
         windowMonths: o.windowMonths,
         expires: o.expires

@@ -1,0 +1,1 @@
+ALTER TABLE `product_offer` ADD `referral_value_cents` integer;

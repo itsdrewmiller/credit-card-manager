@@ -13,6 +13,7 @@ const upsert = z.object({
   pointsAmount: z.number().int().nullish(),
   cashAmountCents: z.number().int().nullish(),
   pointValueCpp: z.number().nullish(),
+  referralValueCents: z.number().int().nullish(),
   minSpendCents: z.number().int().nullish(),
   windowMonths: z.number().int().nullish(),
   expires: z.string().nullish(),

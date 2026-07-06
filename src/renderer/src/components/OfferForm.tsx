@@ -25,6 +25,7 @@ export interface OfferFormValue {
   pointsAmount: number | null
   cashAmountCents: number | null
   pointValueCpp: number | null
+  referralValueCents: number | null
   minSpendCents: number | null
   windowMonths: number | null
   expires: string | null
@@ -61,6 +62,7 @@ export function OfferForm({
       pointsAmount: initial?.pointsAmount ?? ('' as number | ''),
       cashDollars: centsToDollars(initial?.cashAmountCents),
       pointValueCpp: initial?.pointValueCpp ?? ('' as number | ''),
+      referralValueDollars: centsToDollars(initial?.referralValueCents),
       minSpendDollars: centsToDollars(initial?.minSpendCents),
       windowMonths: initial?.windowMonths ?? ('' as number | ''),
       expires: isoToDate(initial?.expires),
@@ -91,6 +93,7 @@ export function OfferForm({
       pointsAmount: !isCash && v.pointsAmount !== '' ? Number(v.pointsAmount) : null,
       cashAmountCents: isCash ? parseCents(v.cashDollars) : null,
       pointValueCpp: v.pointValueCpp === '' ? null : Number(v.pointValueCpp),
+      referralValueCents: parseCents(v.referralValueDollars),
       minSpendCents: parseCents(v.minSpendDollars),
       windowMonths: v.windowMonths === '' ? null : Number(v.windowMonths),
       expires: dateToIso(v.expires),
@@ -150,6 +153,15 @@ export function OfferForm({
           Estimated value: <strong>{formatCents(preview)}</strong>
         </Text>
       </Alert>
+      <NumberInput
+        label="Referral value ($)"
+        description="What the referrer earns — counted in household recommendations"
+        min={0}
+        decimalScale={2}
+        thousandSeparator=","
+        {...form.getInputProps('referralValueDollars')}
+        mb="sm"
+      />
       <SimpleGrid cols={3} mb="sm">
         <NumberInput
           label="Min spend ($)"

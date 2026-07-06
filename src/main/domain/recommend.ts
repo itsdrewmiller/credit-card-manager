@@ -34,6 +34,8 @@ export interface RecommendInput {
     currency?: string | null
     /** Product's baseline earn rate (percent). */
     earnPct?: number | null
+    /** What a referrer earns when this application uses their link. */
+    referralValueCents?: number | null
     valueCents: number | null
     minSpendCents: number | null
     windowMonths: number | null
@@ -71,7 +73,13 @@ export interface Candidate {
   cashAmountCents: number | null
   currency: string | null
   earnPct: number | null
-  /** Bonus value as a percent of the required spend. */
+  /** Who in the household can refer this application (holds the card). */
+  referralFrom: string | null
+  /** Referrer's bonus — counted in household value when a referral exists. */
+  referralValueCents: number | null
+  /** Bonus + referral value: what the household gains from this application. */
+  totalValueCents: number | null
+  /** Household value as a percent of the required spend. */
   roiPct: number | null
   minSpendCents: number | null
   windowMonths: number | null
@@ -254,6 +262,28 @@ export function recommend(input: RecommendInput): PersonRecommendations[] {
       blocks.push({ kind: 'expired', reason: `offer expired ${offer.expires}`, waitUntil: null })
     }
 
+    // A referral is possible when someone ELSE in the household holds an open
+    // card of this product (self-referral across one's own cards is excluded;
+    // a person's business card can refer their personal application and vice
+    // versa, matching how issuers treat them as distinct accounts).
+    const referrerCard = input.cards.find((c) => {
+      if (c.cardProductId !== offer.cardProductId || c.status !== 'open') return false
+      const sameHolder =
+        businessId != null
+          ? c.businessId === businessId
+          : c.businessId == null && c.ownerPersonId === personId
+      return !sameHolder
+    })
+    const referralFrom = referrerCard
+      ? (referrerCard.businessId != null
+          ? (input.businesses.find((b) => b.id === referrerCard.businessId)?.name ?? 'a business')
+          : (input.people.find((pp) => pp.id === referrerCard.ownerPersonId)?.name ?? 'someone'))
+      : null
+    const referralValueCents =
+      referralFrom != null && offer.referralValueCents != null ? offer.referralValueCents : null
+    const totalValueCents =
+      offer.valueCents != null ? offer.valueCents + (referralValueCents ?? 0) : null
+
     const business = businessId != null ? input.businesses.find((b) => b.id === businessId) : null
     const waitUntil =
       blocks.length > 0 && blocks.every((b) => b.waitUntil != null)
@@ -274,9 +304,12 @@ export function recommend(input: RecommendInput): PersonRecommendations[] {
       cashAmountCents: offer.cashAmountCents ?? null,
       currency: offer.currency ?? null,
       earnPct: offer.earnPct ?? null,
+      referralFrom,
+      referralValueCents,
+      totalValueCents,
       roiPct:
-        offer.valueCents != null && offer.minSpendCents != null && offer.minSpendCents > 0
-          ? (offer.valueCents / offer.minSpendCents) * 100
+        totalValueCents != null && offer.minSpendCents != null && offer.minSpendCents > 0
+          ? (totalValueCents / offer.minSpendCents) * 100
           : null,
       minSpendCents: offer.minSpendCents,
       windowMonths: offer.windowMonths,
@@ -296,13 +329,15 @@ export function recommend(input: RecommendInput): PersonRecommendations[] {
         candidates.push(evaluate(offer, person.id, null))
       }
     }
-    const byValue = (a: Candidate, b: Candidate) => (b.valueCents ?? 0) - (a.valueCents ?? 0)
+    // ROI first (offers without a computable ROI sink), household value as tiebreak.
+    const byRoi = (a: Candidate, b: Candidate) =>
+      (b.roiPct ?? -1) - (a.roiPct ?? -1) || (b.totalValueCents ?? 0) - (a.totalValueCents ?? 0)
     return {
       personId: person.id,
       name: person.name,
       atChase524: velocityByPerson.get(person.id)?.atChase524 ?? false,
-      recommended: candidates.filter((c) => c.blocks.length === 0).sort(byValue),
-      blocked: candidates.filter((c) => c.blocks.length > 0).sort(byValue)
+      recommended: candidates.filter((c) => c.blocks.length === 0).sort(byRoi),
+      blocked: candidates.filter((c) => c.blocks.length > 0).sort(byRoi)
     }
   })
 }

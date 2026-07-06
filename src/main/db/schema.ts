@@ -291,6 +291,9 @@ export const productOffer = sqliteTable(
     // The offer's own assumed valuation (cents/point) so its value is
     // self-contained, independent of which point programs the user tracks.
     pointValueCpp: real('point_value_cpp'),
+    // What the referrer earns when someone applies through their link —
+    // recommendations add this to household value when a referral is possible.
+    referralValueCents: integer('referral_value_cents'),
     minSpendCents: integer('min_spend_cents'),
     windowMonths: integer('window_months'), // months to meet the min spend
     expires: text('expires'), // offer end date, if any

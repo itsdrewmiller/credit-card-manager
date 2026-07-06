@@ -46,6 +46,10 @@ export function importOffersCsv(db: DB, text: string): OfferImportResult {
     throw new Error('CSV does not match the signup-bonus format')
   }
 
+  // Optional column: when the feed doesn't carry referral values, leave any
+  // manually-entered ones untouched on refresh.
+  const hasReferralColumn = rows.length > 0 && 'referral_value_usd' in rows[0]
+
   let created = 0
   let updated = 0
   db.transaction((h) => {
@@ -76,6 +80,7 @@ export function importOffersCsv(db: DB, text: string): OfferImportResult {
         pointsAmount: isCash ? null : amount != null ? Math.round(amount) : null,
         cashAmountCents: isCash && amount != null ? Math.round(amount * 100) : null,
         pointValueCpp: numOrNull(r.point_value_cpp),
+        ...(hasReferralColumn ? { referralValueCents: centsOrNull(r.referral_value_usd) } : {}),
         minSpendCents: centsOrNull(r.min_spend_usd),
         windowMonths: numOrNull(r.spend_window_months),
         notes: r.notes?.trim() || null

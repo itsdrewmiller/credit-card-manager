@@ -47,9 +47,10 @@ function base(over: Partial<RecommendInput> = {}): RecommendInput {
 describe('recommend', () => {
   it('recommends personal offers per person and business offers per business', () => {
     const [drew] = recommend(base())
+    // ROI order: CSP $900/$4k (22.5%) beats Spark $1200/$6k (20%).
     expect(drew.recommended.map((c) => [c.label, c.businessName])).toEqual([
-      ['Capital One Spark Cash Plus', 'Lambda'],
-      ['Chase Sapphire Preferred', null]
+      ['Chase Sapphire Preferred', null],
+      ['Capital One Spark Cash Plus', 'Lambda']
     ])
     expect(drew.blocked).toHaveLength(0)
   })
@@ -214,6 +215,72 @@ describe('recommend', () => {
     )
     expect(drew.recommended).toHaveLength(0)
     expect(drew.blocked.find((c) => c.label.includes('Spark'))!.blocks.some((b) => b.kind === 'expired')).toBe(true)
+  })
+
+  it('sorts recommendations by ROI on required spend', () => {
+    // CSP: $900/$4k = 22.5%; Spark: $1200/$6k = 20%.
+    const [drew] = recommend(base())
+    expect(drew.recommended.map((c) => c.label)).toEqual([
+      'Chase Sapphire Preferred',
+      'Capital One Spark Cash Plus'
+    ])
+    expect(Math.round(drew.recommended[0].roiPct!)).toBe(23)
+  })
+
+  it('adds referral value to household ROI when someone else holds the card', () => {
+    const people = [
+      { id: 1, name: 'Drew' },
+      { id: 2, name: 'Kathleen' }
+    ]
+    const kathleenHoldsCSP = {
+      id: 50,
+      cardProductId: 100,
+      ownerPersonId: 2,
+      businessId: null,
+      appliedDate: null,
+      openedDate: '2024-01-01',
+      status: 'open'
+    }
+    const [drew] = recommend(
+      base({
+        people,
+        offers: [{ ...CSR, referralValueCents: 20000 }],
+        cards: [kathleenHoldsCSP]
+      })
+    )
+    const csp = drew.recommended[0]
+    expect(csp.referralFrom).toBe('Kathleen')
+    expect(csp.referralValueCents).toBe(20000)
+    expect(csp.totalValueCents).toBe(110000) // $900 bonus + $200 referral
+    expect(Math.round(csp.roiPct!)).toBe(28) // 1100/4000
+
+    // Kathleen herself can't self-refer her own personal application.
+    const kathleen = recommend(
+      base({ people, offers: [{ ...CSR, referralValueCents: 20000 }], cards: [kathleenHoldsCSP] })
+    )[1]
+    const hers = [...kathleen.recommended, ...kathleen.blocked].find((c) => c.label.includes('Sapphire'))!
+    expect(hers.referralFrom).toBeNull()
+    expect(hers.totalValueCents).toBe(90000)
+  })
+
+  it('notes a possible referral even when its value is unknown', () => {
+    const people = [
+      { id: 1, name: 'Drew' },
+      { id: 2, name: 'Kathleen' }
+    ]
+    const [drew] = recommend(
+      base({
+        people,
+        offers: [CSR], // no referralValueCents
+        cards: [
+          { id: 50, cardProductId: 100, ownerPersonId: 2, businessId: null, appliedDate: null, openedDate: '2024-01-01', status: 'open' }
+        ]
+      })
+    )
+    const csp = drew.recommended[0]
+    expect(csp.referralFrom).toBe('Kathleen')
+    expect(csp.referralValueCents).toBeNull()
+    expect(csp.totalValueCents).toBe(90000)
   })
 
   it('ignores unknown rule kinds', () => {
