@@ -103,6 +103,20 @@ describe('recommend', () => {
     expect(drew.blocked[0].waitUntil).toBe('2026-08-20')
   })
 
+  it('ignores business applications when pacing personal ones', () => {
+    const [drew] = recommend(
+      base({
+        cards: [
+          { id: 1, cardProductId: 901, ownerPersonId: 1, businessId: 10, appliedDate: '2026-06-15', openedDate: null, status: 'applied' },
+          { id: 2, cardProductId: 902, ownerPersonId: 1, businessId: 10, appliedDate: '2026-05-20', openedDate: null, status: 'applied' }
+        ],
+        rules: [{ kind: 'max_recent_apps_person', params: { months: 3, max: 2 } }]
+      })
+    )
+    // Two recent BUSINESS apps must not block personal recommendations.
+    expect(drew.recommended.map((c) => c.label)).toContain('Chase Sapphire Preferred')
+  })
+
   it('paces applications per business without touching personal offers', () => {
     const [drew] = recommend(
       base({

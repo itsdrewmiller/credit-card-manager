@@ -71,7 +71,7 @@ function PersonSection({ r }: { r: PersonResult }): React.ReactElement {
         </Text>
       ) : (
         <div>
-          {r.recommended.slice(0, 6).map((c) => (
+          {r.recommended.map((c) => (
             <Card key={`${c.offerId}-${c.businessId ?? 'p'}`} withBorder radius="sm" padding="sm" mb={6}>
               <OfferLine c={c} />
             </Card>
@@ -88,7 +88,7 @@ function PersonSection({ r }: { r: PersonResult }): React.ReactElement {
               </Text>
             </Accordion.Control>
             <Accordion.Panel>
-              {r.blocked.slice(0, 12).map((c) => (
+              {r.blocked.map((c) => (
                 <Group key={`${c.offerId}-${c.businessId ?? 'p'}`} justify="space-between" mb={6} wrap="nowrap">
                   <div>
                     <OfferLine c={c} />

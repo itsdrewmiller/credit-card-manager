@@ -154,7 +154,8 @@ export function recommend(input: RecommendInput): PersonRecommendations[] {
         case 'max_recent_apps_person': {
           const months = Number(p.months ?? 3)
           const max = Number(p.max ?? 2)
-          const apps = recentApps(personCards, months)
+          // Personal applications only — business apps are paced per business.
+          const apps = recentApps(personCards.filter((c) => c.businessId == null), months)
           if (apps.length >= max) {
             blocks.push({
               kind: rule.kind,
