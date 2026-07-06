@@ -3,6 +3,7 @@ import {
   Table,
   Button,
   Checkbox,
+  Chip,
   Group,
   Badge,
   NumberInput,
@@ -10,14 +11,21 @@ import {
   Tooltip,
   SegmentedControl
 } from '@mantine/core'
-import { IconPlus, IconChevronUp, IconChevronDown } from '@tabler/icons-react'
-import { useNavigate } from 'react-router-dom'
+import {
+  IconPlus,
+  IconChevronUp,
+  IconChevronDown,
+  IconFileTypePdf,
+  IconBuildingStore
+} from '@tabler/icons-react'
 import { trpc } from '../trpc'
 import { PageHeader } from '../components/PageHeader'
 import { EmptyState } from '../components/EmptyState'
 import { QueryGate } from '../components/QueryGate'
 import { RowActionsMenu } from '../components/RowActionsMenu'
 import { CsvImportButton } from '../components/CsvImportButton'
+import { CreditReportImport } from '../components/CreditReportImport'
+import { BusinessCardWizard } from '../components/BusinessCardWizard'
 import { useCardEditor, cardLabel } from '../components/useCardEditor'
 import { useInvalidateCards, showSuccess } from '../lib/mutations'
 import { useInlineCommit } from '../lib/useInlineCommit'
@@ -92,13 +100,15 @@ function compare(a: string | number | null, b: string | number | null, dir: 'asc
 }
 
 export function Cards(): React.ReactElement {
-  const navigate = useNavigate()
   const cards = trpc.cards.list.useQuery()
   const editor = useCardEditor()
   const invalidate = useInvalidateCards()
 
   const [status, setStatus] = useState<string>('all')
+  const [needsOnly, setNeedsOnly] = useState(false)
   const [sort, setSort] = useState<Sort>({ field: 'opened', dir: 'desc' })
+  const [reportOpen, setReportOpen] = useState(false)
+  const [wizardOpen, setWizardOpen] = useState(false)
 
   const remove = trpc.cards.delete.useMutation({ onSuccess: invalidate })
   const setAutopay = trpc.cards.update.useMutation({ onSuccess: invalidate })
@@ -111,11 +121,15 @@ export function Cards(): React.ReactElement {
     }
   })
 
+  const needsCount = (cards.data ?? []).filter((c) => c.missingFields.length > 0).length
+
   const rows = useMemo(() => {
     const all = cards.data ?? []
-    const filtered = status === 'all' ? all : all.filter((c) => c.status === status)
+    const filtered = all
+      .filter((c) => status === 'all' || c.status === status)
+      .filter((c) => !needsOnly || c.missingFields.length > 0)
     return [...filtered].sort((a, b) => compare(value(a, sort.field), value(b, sort.field), sort.dir))
-  }, [cards.data, status, sort])
+  }, [cards.data, status, needsOnly, sort])
 
   const toggleSort = (field: SortField): void =>
     setSort((s) => ({ field, dir: s.field === field && s.dir === 'asc' ? 'desc' : 'asc' }))
@@ -134,8 +148,19 @@ export function Cards(): React.ReactElement {
     <>
       <PageHeader title="Cards">
         <CsvImportButton onText={(text) => importCsv.mutate({ text })} loading={importCsv.isPending} />
-        <Button variant="default" onClick={() => navigate('/add-cards')}>
-          Add cards…
+        <Button
+          variant="default"
+          leftSection={<IconFileTypePdf size={16} />}
+          onClick={() => setReportOpen(true)}
+        >
+          Import credit report
+        </Button>
+        <Button
+          variant="default"
+          leftSection={<IconBuildingStore size={16} />}
+          onClick={() => setWizardOpen(true)}
+        >
+          Add business card
         </Button>
         <Button leftSection={<IconPlus size={16} />} onClick={editor.openCreate}>
           Add card
@@ -154,6 +179,9 @@ export function Cards(): React.ReactElement {
             { label: 'Rejected', value: 'rejected' }
           ]}
         />
+        <Chip checked={needsOnly} onChange={setNeedsOnly} variant="light" color="orange">
+          Needs info{needsCount > 0 ? ` (${needsCount})` : ''}
+        </Chip>
         <Text size="sm" c="dimmed">
           {rows.length} card{rows.length === 1 ? '' : 's'}
         </Text>
@@ -257,6 +285,8 @@ export function Cards(): React.ReactElement {
       )}
       </QueryGate>
 
+      <CreditReportImport opened={reportOpen} onClose={() => setReportOpen(false)} />
+      <BusinessCardWizard opened={wizardOpen} onClose={() => setWizardOpen(false)} />
       {editor.element}
     </>
   )

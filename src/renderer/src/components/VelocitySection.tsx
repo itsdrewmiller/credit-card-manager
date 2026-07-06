@@ -12,10 +12,9 @@ import {
   Title
 } from '@mantine/core'
 import { trpc } from '../trpc'
-import { PageHeader } from '../components/PageHeader'
-import { EmptyState } from '../components/EmptyState'
-import { QueryGate } from '../components/QueryGate'
-import { cardLabel, cardSelectLabel } from '../components/useCardEditor'
+import { EmptyState } from './EmptyState'
+import { QueryGate } from './QueryGate'
+import { cardLabel, cardSelectLabel } from './useCardEditor'
 import { formatDate } from '@shared/dates'
 import type { RouterOutputs, VelocityRow, RejectedRow } from '../lib/types'
 
@@ -124,21 +123,17 @@ function VelocityCard({ v }: { v: VelocityRow }): React.ReactElement {
   )
 }
 
-export function Velocity(): React.ReactElement {
+/** 5/24 velocity per person, business application pace, and rejected apps. */
+export function VelocitySection(): React.ReactElement {
   const byPerson = trpc.velocity.byPerson.useQuery()
   const byBusiness = trpc.velocity.byBusiness.useQuery()
   const rejected = trpc.velocity.rejected.useQuery()
 
   return (
-    <>
-      <PageHeader title="Velocity (5/24)" />
-      <Text c="dimmed" mb="md">
-        Personal-reporting cards opened in the trailing 24 months, per person. Business cards are
-        excluded unless marked &quot;counts toward 5/24&quot; on the card (a few issuers report them
-        to the personal bureau).
-      </Text>
-
-      <QueryGate queries={[byPerson, byBusiness, rejected]}>
+    <QueryGate queries={[byPerson, byBusiness, rejected]}>
+      <Title order={3} mb="sm">
+        Velocity (5/24)
+      </Title>
       {byPerson.data && byPerson.data.length === 0 ? (
         <EmptyState title="No people yet" description="Add people to track their 5/24 status." />
       ) : (
@@ -151,7 +146,7 @@ export function Velocity(): React.ReactElement {
 
       {byBusiness.data && byBusiness.data.length > 0 && (
         <>
-          <Title order={3} mt="xl" mb="sm">
+          <Title order={4} mt="lg" mb="sm">
             Businesses
           </Title>
           <SimpleGrid cols={{ base: 1, md: 3 }}>
@@ -164,7 +159,7 @@ export function Velocity(): React.ReactElement {
 
       {rejected.data && rejected.data.length > 0 && (
         <>
-          <Title order={3} mt="xl" mb="sm">
+          <Title order={4} mt="lg" mb="sm">
             Rejected applications
           </Title>
           <Table withTableBorder>
@@ -195,7 +190,6 @@ export function Velocity(): React.ReactElement {
           </Table>
         </>
       )}
-      </QueryGate>
-    </>
+    </QueryGate>
   )
 }

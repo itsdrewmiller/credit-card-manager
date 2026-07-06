@@ -10,6 +10,7 @@ import { RowActionsMenu } from '../components/RowActionsMenu'
 import { useEntityEditor } from '../components/useEntityEditor'
 import { BonusForm, type BonusFormValue } from '../components/BonusForm'
 import { AvailableOffers } from './AvailableOffers'
+import { Points } from './Points'
 import { cardLabel } from '../components/useCardEditor'
 import { useInlineCommit } from '../lib/useInlineCommit'
 import { useCardOptions, useProgramOptions } from '../lib/options'
@@ -191,10 +192,15 @@ export function Bonuses(): React.ReactElement {
         <Tabs.List mb="md">
           <Tabs.Tab value="mine">My cards</Tabs.Tab>
           <Tabs.Tab value="available">Available offers</Tabs.Tab>
+          <Tabs.Tab value="points">Point values</Tabs.Tab>
         </Tabs.List>
 
         <Tabs.Panel value="available">
           <AvailableOffers />
+        </Tabs.Panel>
+
+        <Tabs.Panel value="points">
+          <Points />
         </Tabs.Panel>
 
         <Tabs.Panel value="mine">

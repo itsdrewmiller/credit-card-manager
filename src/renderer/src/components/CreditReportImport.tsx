@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import {
+  Modal,
   FileInput,
   Select,
   Button,
@@ -8,26 +9,15 @@ import {
   Checkbox,
   Badge,
   Text,
-  Title,
-  Card,
-  SimpleGrid,
   Alert,
-  Stack
+  Stack,
+  SimpleGrid
 } from '@mantine/core'
 import { notifications } from '@mantine/notifications'
-import {
-  IconFileTypePdf,
-  IconUpload,
-  IconInfoCircle,
-  IconCheck,
-  IconBuildingStore,
-  IconPlus
-} from '@tabler/icons-react'
+import { IconFileTypePdf, IconUpload, IconInfoCircle, IconCheck } from '@tabler/icons-react'
 import { trpc } from '../trpc'
-import { PageHeader } from '../components/PageHeader'
-import { BusinessCardWizard } from '../components/BusinessCardWizard'
-import { useCardEditor } from '../components/useCardEditor'
 import { useInvalidateCards } from '../lib/mutations'
+import { usePeopleOptions, useProductOptions } from '../lib/options'
 import { formatDate } from '@shared/dates'
 import type { ImportPreview, TradelineRow } from '../lib/types'
 
@@ -47,18 +37,36 @@ function ConfidenceBadge({ t }: { t: TradelineRow }): React.ReactElement {
   )
 }
 
-export function AddCards(): React.ReactElement {
+/** Equifax credit-report PDF import: parse, review tradelines, commit as cards. */
+export function CreditReportImport({
+  opened,
+  onClose
+}: {
+  opened: boolean
+  onClose: () => void
+}): React.ReactElement {
   const invalidate = useInvalidateCards()
-  const people = trpc.people.list.useQuery()
   const products = trpc.products.listForSelect.useQuery()
-  const editor = useCardEditor()
+  const peopleOptions = usePeopleOptions()
+  const productOptions = useProductOptions()
 
   const [file, setFile] = useState<File | null>(null)
   const [ownerPersonId, setOwnerPersonId] = useState<string>('')
   const [preview, setPreview] = useState<ImportPreview | null>(null)
   const [include, setInclude] = useState<Record<number, boolean>>({})
   const [productOverride, setProductOverride] = useState<Record<number, string>>({})
-  const [wizardOpen, setWizardOpen] = useState(false)
+
+  const reset = (): void => {
+    setPreview(null)
+    setFile(null)
+    setInclude({})
+    setProductOverride({})
+  }
+
+  const close = (): void => {
+    reset()
+    onClose()
+  }
 
   const parse = trpc.importer.parseEquifax.useMutation({
     onSuccess: (data) => {
@@ -77,10 +85,9 @@ export function AddCards(): React.ReactElement {
       notifications.show({
         color: 'green',
         icon: <IconCheck size={16} />,
-        message: `Imported ${res.created} cards. Fill in the rest under “Needs info”.`
+        message: `Imported ${res.created} cards. Fill in the rest with the "Needs info" filter.`
       })
-      setPreview(null)
-      setFile(null)
+      close()
     }
   })
 
@@ -93,12 +100,7 @@ export function AddCards(): React.ReactElement {
     parse.mutate({ base64: btoa(binary) })
   }
 
-  const productOptions = (products.data ?? []).map((p) => ({ value: String(p.id), label: p.label }))
-  const peopleOptions = (people.data ?? []).map((p) => ({ value: String(p.id), label: p.name }))
-
-  const selectedCount = preview
-    ? preview.tradelines.filter((_, i) => include[i]).length
-    : 0
+  const selectedCount = preview ? preview.tradelines.filter((_, i) => include[i]).length : 0
 
   const runCommit = (): void => {
     if (!preview) return
@@ -125,67 +127,43 @@ export function AddCards(): React.ReactElement {
   }
 
   return (
-    <>
-      <PageHeader title="Add cards">
-        <Button
-          variant="default"
-          leftSection={<IconBuildingStore size={16} />}
-          onClick={() => setWizardOpen(true)}
-        >
-          Add business card
-        </Button>
-        <Button leftSection={<IconPlus size={16} />} onClick={editor.openCreate}>
-          Add a card
-        </Button>
-      </PageHeader>
-      <Text c="dimmed" mb="lg">
-        Enter a card by hand, or import them from an Equifax credit report below. Business cards
-        aren&apos;t on a personal credit report, so add those with the guided wizard.
-      </Text>
-
-      <Title order={4} mb={4}>
-        Import from a credit report
-      </Title>
+    <Modal opened={opened} onClose={close} title="Import from a credit report" size="90%">
       <Text c="dimmed" size="sm" mb="md">
-        Upload an Equifax PDF to bootstrap your personal cards. Every tradeline becomes a card (a stub
-        if it can&apos;t be matched); finish the details afterward under “Needs info”.
+        Upload an Equifax PDF to bootstrap personal cards. Every tradeline becomes a card (a stub if
+        it can&apos;t be matched); finish the details afterward with the &quot;Needs info&quot;
+        filter. Business cards aren&apos;t on a personal report — add those with the wizard.
       </Text>
 
-      <Card withBorder radius="md" padding="lg" mb="lg">
-        <SimpleGrid cols={{ base: 1, sm: 2 }}>
-          <FileInput
-            label="Equifax PDF"
-            placeholder="Choose file…"
-            accept="application/pdf"
-            leftSection={<IconFileTypePdf size={18} />}
-            value={file}
-            onChange={setFile}
-            clearable
-          />
-          <Select
-            label="Whose report is this? (sets card owner)"
-            placeholder="Pick a person"
-            data={peopleOptions}
-            searchable
-            clearable
-            value={ownerPersonId}
-            onChange={(v) => setOwnerPersonId(v ?? '')}
-          />
-        </SimpleGrid>
-        <Group mt="md">
-          <Button
-            leftSection={<IconUpload size={16} />}
-            onClick={runParse}
-            disabled={!file}
-            loading={parse.isPending}
-          >
-            Parse report
-          </Button>
-        </Group>
-      </Card>
-
-      <BusinessCardWizard opened={wizardOpen} onClose={() => setWizardOpen(false)} />
-      {editor.element}
+      <SimpleGrid cols={{ base: 1, sm: 2 }} mb="md">
+        <FileInput
+          label="Equifax PDF"
+          placeholder="Choose file…"
+          accept="application/pdf"
+          leftSection={<IconFileTypePdf size={18} />}
+          value={file}
+          onChange={setFile}
+          clearable
+        />
+        <Select
+          label="Whose report is this? (sets card owner)"
+          placeholder="Pick a person"
+          data={peopleOptions}
+          searchable
+          clearable
+          value={ownerPersonId}
+          onChange={(v) => setOwnerPersonId(v ?? '')}
+        />
+      </SimpleGrid>
+      <Group mb="md">
+        <Button
+          leftSection={<IconUpload size={16} />}
+          onClick={runParse}
+          disabled={!file}
+          loading={parse.isPending}
+        >
+          Parse report
+        </Button>
+      </Group>
 
       {preview && (
         <>
@@ -218,9 +196,7 @@ export function AddCards(): React.ReactElement {
                   <Table.Td>
                     <Checkbox
                       checked={include[i] ?? false}
-                      onChange={(e) =>
-                        setInclude((s) => ({ ...s, [i]: e.currentTarget.checked }))
-                      }
+                      onChange={(e) => setInclude((s) => ({ ...s, [i]: e.currentTarget.checked }))}
                     />
                   </Table.Td>
                   <Table.Td>
@@ -262,9 +238,7 @@ export function AddCards(): React.ReactElement {
                       clearable
                       size="xs"
                       value={productOverride[i] ?? null}
-                      onChange={(v) =>
-                        setProductOverride((s) => ({ ...s, [i]: v ?? '' }))
-                      }
+                      onChange={(v) => setProductOverride((s) => ({ ...s, [i]: v ?? '' }))}
                     />
                   </Table.Td>
                 </Table.Tr>
@@ -274,11 +248,7 @@ export function AddCards(): React.ReactElement {
 
           <Group justify="flex-end">
             <Stack gap={2} align="flex-end">
-              <Button
-                onClick={runCommit}
-                disabled={selectedCount === 0}
-                loading={commit.isPending}
-              >
+              <Button onClick={runCommit} disabled={selectedCount === 0} loading={commit.isPending}>
                 Import {selectedCount} card{selectedCount === 1 ? '' : 's'}
               </Button>
               <Text size="xs" c="dimmed">
@@ -288,6 +258,6 @@ export function AddCards(): React.ReactElement {
           </Group>
         </>
       )}
-    </>
+    </Modal>
   )
 }

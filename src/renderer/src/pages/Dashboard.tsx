@@ -1,16 +1,18 @@
 import React from 'react'
 import {
-  Title,
   Text,
   SimpleGrid,
   Card,
   Group,
   Table,
+  Divider,
   useComputedColorScheme
 } from '@mantine/core'
 import { BarChart } from '@mantine/charts'
 import { trpc } from '../trpc'
+import { PageHeader } from '../components/PageHeader'
 import { QueryGate } from '../components/QueryGate'
+import { VelocitySection } from '../components/VelocitySection'
 import { formatCents } from '@shared/format'
 import type { RouterOutputs } from '../lib/types'
 
@@ -111,9 +113,7 @@ export function Dashboard(): React.ReactElement {
 
   return (
     <>
-      <Title order={2} mb="xs">
-        Dashboard
-      </Title>
+      <PageHeader title="Dashboard" />
       <Text c="dimmed" mb="lg">
         Tracked bonus spend against realized return — signup bonuses when received, referrals when
         paid, benefit credits when used, and baseline cash back on tracked spend.
@@ -139,6 +139,9 @@ export function Dashboard(): React.ReactElement {
             hint="Realized return ÷ tracked spend, all time"
           />
         </SimpleGrid>
+
+        <VelocitySection />
+        <Divider my="lg" />
 
         {overview.data && overview.data.months.length > 0 ? (
           <>

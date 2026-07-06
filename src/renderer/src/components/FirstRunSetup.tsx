@@ -21,7 +21,7 @@ const DONE_KEY = 'ccm.setupDone'
 
 /**
  * First-run setup: shown only when there are no people yet (a fresh install).
- * Walks through adding people, then businesses, then off to Add Cards.
+ * Walks through adding people, then businesses, then off to Cards.
  */
 export function FirstRunSetup(): React.ReactElement | null {
   const navigate = useNavigate()
@@ -74,7 +74,7 @@ export function FirstRunSetup(): React.ReactElement | null {
   const finish = (): void => {
     localStorage.setItem(DONE_KEY, '1')
     setOpen(false)
-    navigate('/add-cards')
+    navigate('/cards')
   }
   const dismiss = (): void => {
     localStorage.setItem(DONE_KEY, '1')

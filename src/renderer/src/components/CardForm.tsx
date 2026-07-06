@@ -6,6 +6,14 @@ import { CARD_STATUSES, CARD_STATUS_LABELS, NETWORKS, type CardStatus } from '@s
 import { centsToDollars, parseCents } from '@shared/format'
 import { isoToDate, dateToIso } from '@shared/dates'
 import { FormFooter } from './FormFooter'
+import {
+  SignupBonusFields,
+  EMPTY_BONUS_FIELDS,
+  applyOfferToBonusFields,
+  asBonusHost,
+  bonusPayloadFromFields,
+  syncDeadlineToOpened
+} from './SignupBonusFields'
 
 export interface CardFormValue {
   cardProductId: number | null
@@ -22,6 +30,8 @@ export interface CardFormValue {
   closedDate: string | null
   rawCreditorName: string | null
   notes: string | null
+  /** Signup bonus to create with the card (create mode only). */
+  bonus: ReturnType<typeof bonusPayloadFromFields>
 }
 
 interface Option {
@@ -34,6 +44,8 @@ export function CardForm({
   productOptions,
   peopleOptions,
   businessOptions,
+  programOptions,
+  offers,
   submitting,
   onSubmit,
   onCancel
@@ -42,10 +54,25 @@ export function CardForm({
   productOptions: Option[]
   peopleOptions: Option[]
   businessOptions: Option[]
+  programOptions: (Option & { valuationCpp: number | null })[]
+  /** Known offers, for prefilling the bonus when a product is picked. */
+  offers: {
+    cardProductId: number
+    rewardKind?: string | null
+    pointProgramId?: number | null
+    pointsAmount?: number | null
+    cashAmountCents?: number | null
+    minSpendCents?: number | null
+    windowMonths?: number | null
+  }[]
   submitting: boolean
   onSubmit: (value: CardFormValue) => void
   onCancel: () => void
 }): React.ReactElement {
+  // Bonuses live on the Bonuses page once the card exists; the section only
+  // appears when creating, to capture the bonus that comes with a new card.
+  const creating = initial == null
+
   const form = useForm({
     initialValues: {
       cardProductId: initial?.cardProductId != null ? String(initial.cardProductId) : '',
@@ -60,9 +87,20 @@ export function CardForm({
       appliedDate: isoToDate(initial?.appliedDate),
       openedDate: isoToDate(initial?.openedDate),
       closedDate: isoToDate(initial?.closedDate),
-      notes: initial?.notes ?? ''
+      notes: initial?.notes ?? '',
+      ...EMPTY_BONUS_FIELDS
     }
   })
+
+  // Picking a product pulls in its known signup offer (create mode).
+  const onProductChange = (value: string | null): void => {
+    form.setFieldValue('cardProductId', value ?? '')
+    if (!creating) return
+    applyOfferToBonusFields(
+      asBonusHost(form),
+      offers.find((o) => String(o.cardProductId) === value)
+    )
+  }
 
   const submit = form.onSubmit((v) => {
     onSubmit({
@@ -79,7 +117,8 @@ export function CardForm({
       openedDate: dateToIso(v.openedDate),
       closedDate: dateToIso(v.closedDate),
       rawCreditorName: initial?.rawCreditorName ?? null,
-      notes: v.notes || null
+      notes: v.notes || null,
+      bonus: creating ? bonusPayloadFromFields(v) : null
     })
   })
 
@@ -91,7 +130,9 @@ export function CardForm({
         data={productOptions}
         searchable
         clearable
-        {...form.getInputProps('cardProductId')}
+        value={form.values.cardProductId}
+        error={form.errors.cardProductId}
+        onChange={onProductChange}
         mb="sm"
       />
       <SimpleGrid cols={2} mb="sm">
@@ -148,7 +189,8 @@ export function CardForm({
           valueFormat="YYYY-MM-DD"
           clearable
           defaultDate={new Date()}
-          {...form.getInputProps('openedDate')}
+          value={form.values.openedDate}
+          onChange={(d) => syncDeadlineToOpened(asBonusHost(form), d)}
         />
         <DateInput
           label="Closed"
@@ -170,6 +212,9 @@ export function CardForm({
         {...form.getInputProps('reportsToPersonal', { type: 'checkbox' })}
         mb="sm"
       />
+
+      {creating && <SignupBonusFields form={asBonusHost(form)} programOptions={programOptions} />}
+
       <Textarea label="Notes" autosize minRows={2} {...form.getInputProps('notes')} mb="md" />
 
       <FormFooter editing={initial != null} submitting={submitting} onCancel={onCancel} />

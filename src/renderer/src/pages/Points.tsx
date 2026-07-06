@@ -1,8 +1,7 @@
 import React from 'react'
-import { Button, Text } from '@mantine/core'
+import { Button, Group, Text } from '@mantine/core'
 import { IconPlus } from '@tabler/icons-react'
 import { trpc } from '../trpc'
-import { PageHeader } from '../components/PageHeader'
 import { QueryGate } from '../components/QueryGate'
 import { DataTable, type Column } from '../components/DataTable'
 import { RowActionsMenu } from '../components/RowActionsMenu'
@@ -53,15 +52,15 @@ export function Points(): React.ReactElement {
 
   return (
     <>
-      <PageHeader title="Points">
+      <Group justify="space-between" mb="md">
+        <Text c="dimmed" size="sm">
+          Each program&apos;s valuation (cents per point) is what makes signup bonuses worth a real
+          dollar figure.
+        </Text>
         <Button leftSection={<IconPlus size={16} />} onClick={editor.openCreate}>
           Add program
         </Button>
-      </PageHeader>
-      <Text c="dimmed" mb="md">
-        Each program&apos;s valuation (cents per point) is what makes signup bonuses worth a real
-        dollar figure.
-      </Text>
+      </Group>
 
       <QueryGate queries={[programs]}>
         <DataTable

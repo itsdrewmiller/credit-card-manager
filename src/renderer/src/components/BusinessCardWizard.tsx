@@ -8,7 +8,6 @@ import {
   NumberInput,
   Switch,
   SimpleGrid,
-  Divider,
   Alert,
   Text
 } from '@mantine/core'
@@ -18,11 +17,21 @@ import { notifications } from '@mantine/notifications'
 import { IconAlertCircle, IconBuildingStore, IconCheck } from '@tabler/icons-react'
 import { trpc } from '../trpc'
 import { useInvalidateCards } from '../lib/mutations'
-import { NETWORKS, REWARD_KINDS, type RewardKind } from '@shared/constants'
-import { centsToDollars, parseCents, formatCents, bonusValueCents } from '@shared/format'
-import { addDays, dateToIso } from '@shared/dates'
+import { usePeopleOptions, useProgramOptions } from '../lib/options'
+import { NETWORKS } from '@shared/constants'
+import { centsToDollars, parseCents } from '@shared/format'
+import { dateToIso } from '@shared/dates'
+import {
+  SignupBonusFields,
+  EMPTY_BONUS_FIELDS,
+  type SignupBonusFormFields,
+  applyOfferToBonusFields,
+  asBonusHost,
+  bonusPayloadFromFields,
+  syncDeadlineToOpened
+} from './SignupBonusFields'
 
-interface FormValues {
+interface FormValues extends SignupBonusFormFields {
   businessId: string
   ownerPersonId: string
   cardProductId: string
@@ -31,14 +40,6 @@ interface FormValues {
   annualFeeDollars: number | ''
   openedDate: Date | null
   reportsToPersonal: boolean
-  hasBonus: boolean
-  rewardKind: RewardKind
-  pointProgramId: string
-  pointsAmount: number | ''
-  cashDollars: number | ''
-  targetSpendDollars: number | ''
-  deadline: Date | null
-  windowDays: number | ''
 }
 
 const initialValues: FormValues = {
@@ -50,14 +51,7 @@ const initialValues: FormValues = {
   annualFeeDollars: '',
   openedDate: null,
   reportsToPersonal: false,
-  hasBonus: false,
-  rewardKind: 'points',
-  pointProgramId: '',
-  pointsAmount: '',
-  cashDollars: '',
-  targetSpendDollars: '',
-  deadline: null,
-  windowDays: ''
+  ...EMPTY_BONUS_FIELDS
 }
 
 export function BusinessCardWizard({
@@ -70,10 +64,10 @@ export function BusinessCardWizard({
   const utils = trpc.useUtils()
   const invalidateCards = useInvalidateCards()
   const businesses = trpc.businesses.list.useQuery()
-  const people = trpc.people.list.useQuery()
   const products = trpc.products.listForSelect.useQuery()
-  const programs = trpc.points.listForSelect.useQuery()
   const offers = trpc.offers.list.useQuery()
+  const peopleOptions = usePeopleOptions()
+  const programOptions = useProgramOptions()
 
   const form = useForm<FormValues>({
     initialValues,
@@ -93,11 +87,9 @@ export function BusinessCardWizard({
     value: String(b.id),
     label: b.owner ? `${b.name} (${b.owner.name})` : b.name
   }))
-  const peopleOptions = (people.data ?? []).map((p) => ({ value: String(p.id), label: p.name }))
   const productOptions = (products.data ?? [])
     .filter((p) => p.isBusiness)
     .map((p) => ({ value: String(p.id), label: p.label }))
-  const programOptions = (programs.data ?? []).map((p) => ({ value: String(p.id), label: p.label }))
 
   // Default the owner to the business owner.
   const onBusinessChange = (value: string | null): void => {
@@ -114,42 +106,11 @@ export function BusinessCardWizard({
       form.setFieldValue('network', p.network ?? '')
       form.setFieldValue('annualFeeDollars', centsToDollars(p.defaultAnnualFeeCents))
     }
-    const offer = offers.data?.find((o) => String(o.cardProductId) === value)
-    if (offer) {
-      form.setFieldValue('hasBonus', true)
-      form.setFieldValue('rewardKind', (offer.rewardKind ?? 'points') as RewardKind)
-      form.setFieldValue('pointProgramId', offer.pointProgramId ? String(offer.pointProgramId) : '')
-      form.setFieldValue('pointsAmount', offer.pointsAmount ?? '')
-      form.setFieldValue('cashDollars', centsToDollars(offer.cashAmountCents))
-      form.setFieldValue('targetSpendDollars', centsToDollars(offer.minSpendCents))
-      // Offers store the window in months; the bonus deadline is tracked in days.
-      const days = offer.windowMonths != null ? offer.windowMonths * 30 : null
-      form.setFieldValue('windowDays', days ?? '')
-      form.setFieldValue('deadline', addDays(form.values.openedDate, days))
-    }
+    applyOfferToBonusFields(
+      asBonusHost(form),
+      offers.data?.find((o) => String(o.cardProductId) === value)
+    )
   }
-
-  // Opened date drives the min-spend deadline (open + the offer's window).
-  const onOpenedChange = (date: Date | null): void => {
-    form.setFieldValue('openedDate', date)
-    const days = form.values.windowDays
-    if (days !== '') form.setFieldValue('deadline', addDays(date, Number(days)))
-  }
-
-  // Let the user type a window in days; it sets the deadline from the open date.
-  const onWindowChange = (value: number | string): void => {
-    const days = value === '' ? '' : Number(value)
-    form.setFieldValue('windowDays', days)
-    if (days !== '') form.setFieldValue('deadline', addDays(form.values.openedDate, Number(days)))
-  }
-
-  const isCash = form.values.rewardKind === 'cash'
-  const selectedProgram = programs.data?.find((p) => String(p.id) === form.values.pointProgramId)
-  const bonusPreview = bonusValueCents({
-    cashAmountCents: isCash ? parseCents(form.values.cashDollars) : null,
-    pointsAmount: form.values.pointsAmount === '' ? null : Number(form.values.pointsAmount),
-    valuationCpp: selectedProgram?.valuationCpp ?? null
-  })
 
   const submitting = createCard.isPending || createBonus.isPending
 
@@ -180,21 +141,9 @@ export function BusinessCardWizard({
             })
             close()
           }
-          if (v.hasBonus) {
-            createBonus.mutate(
-              {
-                cardId: card.id,
-                rewardKind: v.rewardKind,
-                pointProgramId: !isCash && v.pointProgramId ? Number(v.pointProgramId) : null,
-                pointsAmount: !isCash && v.pointsAmount !== '' ? Number(v.pointsAmount) : null,
-                cashAmountCents: isCash ? parseCents(v.cashDollars) : null,
-                targetSpendCents: parseCents(v.targetSpendDollars),
-                deadline: dateToIso(v.deadline),
-                spendSoFarCents: 0,
-                received: false
-              },
-              { onSuccess: finish }
-            )
+          const bonus = bonusPayloadFromFields(v)
+          if (bonus) {
+            createBonus.mutate({ cardId: card.id, ...bonus }, { onSuccess: finish })
           } else {
             finish()
           }
@@ -269,7 +218,7 @@ export function BusinessCardWizard({
               clearable
               defaultDate={new Date()}
               value={form.values.openedDate}
-              onChange={onOpenedChange}
+              onChange={(d) => syncDeadlineToOpened(asBonusHost(form), d)}
             />
           </SimpleGrid>
 
@@ -280,79 +229,7 @@ export function BusinessCardWizard({
             mb="sm"
           />
 
-          <Divider
-            my="sm"
-            label={
-              <Switch
-                label="Signup bonus"
-                {...form.getInputProps('hasBonus', { type: 'checkbox' })}
-              />
-            }
-          />
-
-          {form.values.hasBonus && (
-            <>
-              <SimpleGrid cols={2} mb="sm">
-                <Select
-                  label="Reward kind"
-                  data={REWARD_KINDS as unknown as string[]}
-                  {...form.getInputProps('rewardKind')}
-                />
-                {isCash ? (
-                  <NumberInput
-                    label="Cash bonus ($)"
-                    min={0}
-                    decimalScale={2}
-                    thousandSeparator=","
-                    {...form.getInputProps('cashDollars')}
-                  />
-                ) : (
-                  <NumberInput
-                    label="Points / miles"
-                    min={0}
-                    thousandSeparator=","
-                    {...form.getInputProps('pointsAmount')}
-                  />
-                )}
-              </SimpleGrid>
-              {!isCash && (
-                <Select
-                  label="Point program (for value)"
-                  data={programOptions}
-                  searchable
-                  clearable
-                  {...form.getInputProps('pointProgramId')}
-                  mb="sm"
-                />
-              )}
-              <SimpleGrid cols={3} mb="sm">
-                <NumberInput
-                  label="Spend target ($)"
-                  min={0}
-                  decimalScale={2}
-                  thousandSeparator=","
-                  {...form.getInputProps('targetSpendDollars')}
-                />
-                <NumberInput
-                  label="Window (days)"
-                  description="Sets the deadline"
-                  min={0}
-                  value={form.values.windowDays}
-                  onChange={onWindowChange}
-                />
-                <DateInput
-                  label="Spend deadline"
-                  description="From open date + window"
-                  valueFormat="YYYY-MM-DD"
-                  clearable
-                  {...form.getInputProps('deadline')}
-                />
-              </SimpleGrid>
-              <Text size="sm" c="dimmed" mb="sm">
-                Estimated bonus value: <strong>{formatCents(bonusPreview)}</strong>
-              </Text>
-            </>
-          )}
+          <SignupBonusFields form={asBonusHost(form)} programOptions={programOptions} />
 
           <Group justify="flex-end" mt="md">
             <Button variant="default" onClick={close}>
