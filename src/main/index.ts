@@ -12,7 +12,7 @@ import { openDatabase, runMigrations, type DB } from './db'
 import { seedIssuers } from './db/issuers'
 import { seedPointPrograms } from './db/points'
 import { seedExtraProducts } from './db/products'
-import { seedCashbackRates, seedBureauReporting } from './db/cashback'
+import { seedCashbackRates, seedBureauReporting, seedReferralValues } from './db/cashback'
 import { generateUpcomingBenefits } from './db/generateBenefits'
 import { seedDefaultRules } from './db/rules'
 import { getSetting } from './db/settings'
@@ -78,6 +78,8 @@ function initDatabase(): void {
   if (rated) console.log(`[db] filled baseline earn rates for ${rated} products`)
   const flagged = seedBureauReporting(db)
   if (flagged) console.log(`[db] flagged ${flagged} business products as personal-reporting`)
+  const referrals = seedReferralValues(db)
+  if (referrals) console.log(`[db] filled typical referral values on ${referrals} offers`)
   const seededRules = seedDefaultRules(db, resourcePath(join('data', 'default_rules.json')))
   if (seededRules) console.log(`[db] seeded ${seededRules} default recommendation rules`)
   const gen = generateUpcomingBenefits(db)

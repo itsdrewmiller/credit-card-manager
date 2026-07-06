@@ -1,6 +1,6 @@
 import { eq, sql } from 'drizzle-orm'
 import type { DbLike } from './index'
-import { cardProduct, issuer } from './schema'
+import { cardProduct, issuer, productOffer } from './schema'
 
 /**
  * Baseline (non-category) earn rates by product, as a cash-back percent.
@@ -183,6 +183,99 @@ export function seedBureauReporting(db: DbLike): number {
     changed++
   }
   return changed
+}
+
+/**
+ * Typical refer-a-friend value per product, in cents at Drew's point
+ * valuations (UR 1.5¢, MR 1.1¢, …). Verified July 2026: Chase pays 15k UR on
+ * Sapphires, 40k UR on Inks, $50 on Freedoms, 20k Southwest, 10k United, 10k
+ * IHG/Hyatt, 40k on Boundless; Amex ~15k MR on Platinum/Gold families, 10k on
+ * the small MR cards, 10k Delta, 20k Hilton, 20k Bonvoy; Barclays JetBlue 10k
+ * (targeted); Discover $100. Citi has no US referral program and Capital One
+ * ended theirs — those stay null.
+ */
+const REFERRAL_VALUES: Record<string, number> = {
+  'Chase|Sapphire Preferred': 22500,
+  'Chase|Sapphire Reserve': 22500,
+  'Chase|Sapphire Reserve for Business': 22500,
+  'Chase|Freedom Flex': 5000,
+  'Chase|Freedom Unlimited': 5000,
+  'Chase|Ink Cash': 60000,
+  'Chase|Ink Unlimited': 60000,
+  'Chase|Ink Preferred': 60000,
+  'Chase|Ink Premier': 60000,
+  'Chase|Southwest Airlines Plus': 26000,
+  'Chase|Southwest Airlines Premier': 26000,
+  'Chase|Southwest Airlines Priority': 26000,
+  'Chase|Southwest Airlines Premier Business': 26000,
+  'Chase|Southwest Airlines Performance Business': 26000,
+  'Chase|United Explorer': 12000,
+  'Chase|United Quest': 12000,
+  'Chase|United Business': 12000,
+  'Chase|United Club Business': 12000,
+  'Chase|IHG Premier': 6000,
+  'Chase|IHG One Rewards Premier': 6000,
+  'Chase|IHG Traveler': 6000,
+  'Chase|World of Hyatt Business': 18000,
+  'Chase|Marriott Bonvoy Boundless': 32000,
+  'American Express|Platinum': 16500,
+  'American Express|Platinum Card': 16500,
+  'American Express|Platinum for Schwab': 16500,
+  'American Express|Platinum for Morgan Stanley': 16500,
+  'American Express|Business Platinum': 16500,
+  'American Express|Gold': 16500,
+  'American Express|Gold Card': 16500,
+  'American Express|Business Gold': 16500,
+  'American Express|Green Card': 11000,
+  'American Express|Blue Business Plus': 11000,
+  'American Express|Everyday Preferred': 11000,
+  'American Express|Delta Gold': 12000,
+  'American Express|Delta SkyMiles Gold': 12000,
+  'American Express|Delta SkyMiles Gold Business': 12000,
+  'American Express|Delta SkyMiles Platinum': 12000,
+  'American Express|Delta SkyMiles Platinum Business': 12000,
+  'American Express|Delta SkyMiles Reserve': 12000,
+  'American Express|Delta SkyMiles Reserve Business': 12000,
+  'American Express|Hilton Aspire': 8000,
+  'American Express|Hilton Honors Surpass': 8000,
+  'American Express|Marriott Bonvoy Brilliant': 16000,
+  'American Express|Marriott Bonvoy Bevy': 16000,
+  'American Express|Marriott Bonvoy Business': 16000,
+  'Barclays|JetBlue Plus': 14000,
+  'Barclays|JetBlue Business': 14000,
+  'Discover|it': 10000,
+  'Discover|it Cash Back': 10000
+}
+
+const referralLookup = new Map(
+  Object.entries(REFERRAL_VALUES).map(([k, v]) => [k.toLowerCase(), v] as const)
+)
+
+/** Fill typical referral values on offers where none is set. Idempotent;
+ *  user edits and feed-supplied values always win. */
+export function seedReferralValues(db: DbLike): number {
+  const rows = db
+    .select({
+      offerId: productOffer.id,
+      name: cardProduct.name,
+      issuerName: issuer.name
+    })
+    .from(productOffer)
+    .innerJoin(cardProduct, eq(cardProduct.id, productOffer.cardProductId))
+    .innerJoin(issuer, eq(issuer.id, cardProduct.issuerId))
+    .where(sql`${productOffer.referralValueCents} is null`)
+    .all()
+  let filled = 0
+  for (const r of rows) {
+    const cents = referralLookup.get(`${r.issuerName}|${r.name}`.toLowerCase())
+    if (cents == null) continue
+    db.update(productOffer)
+      .set({ referralValueCents: cents })
+      .where(eq(productOffer.id, r.offerId))
+      .run()
+    filled++
+  }
+  return filled
 }
 
 /** Fill known baseline earn rates where none is set. Idempotent; never
