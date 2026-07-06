@@ -118,7 +118,7 @@ export function Cards(): React.ReactElement {
   const editor = useCardEditor()
   const invalidate = useInvalidateCards()
 
-  const [status, setStatus] = useState<string>('open')
+  const [status, setStatus] = useState<string>('all')
   const [sort, setSort] = useState<Sort>({ field: 'opened', dir: 'desc' })
 
   const remove = trpc.cards.delete.useMutation({ onSuccess: invalidate })
@@ -184,11 +184,11 @@ export function Cards(): React.ReactElement {
           value={status}
           onChange={setStatus}
           data={[
+            { label: 'All', value: 'all' },
             { label: 'Open', value: 'open' },
             { label: 'Closed', value: 'closed' },
             { label: 'Applied', value: 'applied' },
-            { label: 'Rejected', value: 'rejected' },
-            { label: 'All', value: 'all' }
+            { label: 'Rejected', value: 'rejected' }
           ]}
         />
         <Text size="sm" c="dimmed">
