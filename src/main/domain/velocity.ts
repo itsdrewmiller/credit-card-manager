@@ -52,6 +52,32 @@ export interface PersonVelocity {
   under524Date: string | null
 }
 
+export interface BusinessVelocity {
+  /** Cards opened under this business in the trailing 12 months. */
+  count12mo: number
+  /** Most recent opened cards, newest first. */
+  recent: VelocityCardLike[]
+}
+
+/** Lighter-weight stats for businesses (no 5/24 — just application pace). */
+export function businessVelocity(
+  cards: VelocityCardLike[],
+  today = new Date(),
+  recentLimit = 3
+): BusinessVelocity {
+  const cutoff = (() => {
+    const d = new Date(today.getFullYear() - 1, today.getMonth(), today.getDate())
+    return d.toISOString().slice(0, 10)
+  })()
+  const opened = cards
+    .filter((c) => c.openedDate != null && COUNTABLE_STATUSES.has(c.status))
+    .sort((a, b) => (b.openedDate as string).localeCompare(a.openedDate as string))
+  return {
+    count12mo: opened.filter((c) => (c.openedDate as string) >= cutoff).length,
+    recent: opened.slice(0, recentLimit)
+  }
+}
+
 export function personVelocity(
   cards: VelocityCardLike[],
   today = new Date()

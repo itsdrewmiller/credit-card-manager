@@ -17,7 +17,41 @@ import { EmptyState } from '../components/EmptyState'
 import { QueryGate } from '../components/QueryGate'
 import { cardLabel } from '../components/useCardEditor'
 import { formatDate } from '@shared/format'
-import type { VelocityRow, RejectedRow } from '../lib/types'
+import type { RouterOutputs, VelocityRow, RejectedRow } from '../lib/types'
+
+type BusinessVelocityRow = RouterOutputs['velocity']['byBusiness'][number]
+
+function BusinessVelocityCard({ v }: { v: BusinessVelocityRow }): React.ReactElement {
+  return (
+    <Card withBorder radius="md" padding="md">
+      <Group justify="space-between" align="flex-start">
+        <div>
+          <Text fw={600}>{v.name}</Text>
+          {v.ownerName && (
+            <Text size="xs" c="dimmed">
+              {v.ownerName}
+            </Text>
+          )}
+        </div>
+        <Badge variant="light" color={v.count12mo >= 3 ? 'orange' : 'gray'}>
+          {v.count12mo} in 12 mo
+        </Badge>
+      </Group>
+      {v.recent.length > 0 && (
+        <Stack gap={2} mt="xs">
+          {v.recent.map((c) => (
+            <Group key={c.id} justify="space-between">
+              <Text size="sm">{cardLabel(c)}</Text>
+              <Text size="xs" c="dimmed">
+                {formatDate(c.openedDate)}
+              </Text>
+            </Group>
+          ))}
+        </Stack>
+      )}
+    </Card>
+  )
+}
 
 function VelocityCard({ v }: { v: VelocityRow }): React.ReactElement {
   const color = v.count >= 5 ? 'red' : v.count >= 4 ? 'orange' : 'green'
@@ -90,6 +124,7 @@ function VelocityCard({ v }: { v: VelocityRow }): React.ReactElement {
 
 export function Velocity(): React.ReactElement {
   const byPerson = trpc.velocity.byPerson.useQuery()
+  const byBusiness = trpc.velocity.byBusiness.useQuery()
   const rejected = trpc.velocity.rejected.useQuery()
 
   return (
@@ -101,7 +136,7 @@ export function Velocity(): React.ReactElement {
         to the personal bureau).
       </Text>
 
-      <QueryGate queries={[byPerson, rejected]}>
+      <QueryGate queries={[byPerson, byBusiness, rejected]}>
       {byPerson.data && byPerson.data.length === 0 ? (
         <EmptyState title="No people yet" description="Add people to track their 5/24 status." />
       ) : (
@@ -110,6 +145,19 @@ export function Velocity(): React.ReactElement {
             <VelocityCard key={v.personId} v={v} />
           ))}
         </SimpleGrid>
+      )}
+
+      {byBusiness.data && byBusiness.data.length > 0 && (
+        <>
+          <Title order={3} mt="xl" mb="sm">
+            Businesses
+          </Title>
+          <SimpleGrid cols={{ base: 1, md: 3 }}>
+            {byBusiness.data.map((v) => (
+              <BusinessVelocityCard key={v.businessId} v={v} />
+            ))}
+          </SimpleGrid>
+        </>
       )}
 
       {rejected.data && rejected.data.length > 0 && (
