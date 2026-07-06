@@ -65,6 +65,9 @@ export const cardProduct = sqliteTable(
     // Baseline earn rate as a percent (2 = 2%); counted as cash-back return
     // on tracked spend in Reports.
     defaultCashbackPct: real('default_cashback_pct'),
+    // Business products from a few issuers (notably Capital One) report to the
+    // personal bureaus, so their cards count toward 5/24. Seeded by rule.
+    reportsToPersonal: integer('reports_to_personal', { mode: 'boolean' }).notNull().default(false),
     notes: text('notes'),
     ...timestamps
   },

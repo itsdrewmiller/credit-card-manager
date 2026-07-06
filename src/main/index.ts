@@ -12,7 +12,7 @@ import { openDatabase, runMigrations, type DB } from './db'
 import { seedIssuers } from './db/issuers'
 import { seedPointPrograms } from './db/points'
 import { seedExtraProducts } from './db/products'
-import { seedCashbackRates } from './db/cashback'
+import { seedCashbackRates, seedBureauReporting } from './db/cashback'
 import { generateUpcomingBenefits } from './db/generateBenefits'
 import { dedupeCatalog } from './db/dedupe'
 import { productOffer } from './db/schema'
@@ -73,6 +73,8 @@ function initDatabase(): void {
   }
   const rated = seedCashbackRates(db)
   if (rated) console.log(`[db] filled baseline earn rates for ${rated} products`)
+  const flagged = seedBureauReporting(db)
+  if (flagged) console.log(`[db] flagged ${flagged} business products as personal-reporting`)
   const gen = generateUpcomingBenefits(db)
   if (gen.created || gen.dated) {
     console.log(`[db] recurring benefits: ${gen.created} generated, ${gen.dated} windows seeded`)

@@ -1,4 +1,4 @@
-import { sql } from 'drizzle-orm'
+import { and, eq, inArray, sql } from 'drizzle-orm'
 import type { DbLike } from './index'
 import { cardProduct, issuer } from './schema'
 
@@ -143,6 +143,33 @@ const RATES: Record<string, number> = {
 const lookup = new Map(
   Object.entries(RATES).map(([k, v]) => [k.toLowerCase(), v] as const)
 )
+
+/** Issuers whose business cards report to the personal bureaus and therefore
+ *  count toward 5/24. Applied by rule so newly imported products get flagged. */
+const PERSONAL_REPORTING_ISSUERS = ['Capital One', 'Discover', 'TD Bank']
+
+/** Flag business products from personal-reporting issuers. Idempotent. */
+export function seedBureauReporting(db: DbLike): number {
+  const rows = db
+    .select({ id: cardProduct.id })
+    .from(cardProduct)
+    .innerJoin(issuer, eq(issuer.id, cardProduct.issuerId))
+    .where(
+      and(
+        eq(cardProduct.isBusiness, true),
+        eq(cardProduct.reportsToPersonal, false),
+        inArray(issuer.name, PERSONAL_REPORTING_ISSUERS)
+      )
+    )
+    .all()
+  for (const p of rows) {
+    db.update(cardProduct)
+      .set({ reportsToPersonal: true })
+      .where(eq(cardProduct.id, p.id))
+      .run()
+  }
+  return rows.length
+}
 
 /** Fill known baseline earn rates where none is set. Idempotent; never
  *  overwrites a rate (seeded or user-edited). Returns how many were filled. */
