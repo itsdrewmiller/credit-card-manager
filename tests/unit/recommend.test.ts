@@ -378,6 +378,15 @@ describe('recommend', () => {
     expect(spark.feeWaivedFirstYear).toBe(true)
   })
 
+  it('counts baseline earn on the required spend in value and ROI', () => {
+    const [drew] = recommend(base({ offers: [{ ...CSR, earnPct: 2 }] }))
+    const csp = drew.recommended[0]
+    // $900 bonus + 2% of $4,000 spend ($80) = $980 -> 24.5%
+    expect(csp.earnOnSpendCents).toBe(8000)
+    expect(csp.totalValueCents).toBe(98000)
+    expect(Math.round(csp.roiPct!)).toBe(25)
+  })
+
   it('ignores unknown rule kinds', () => {
     const [drew] = recommend(base({ rules: [{ kind: 'not_a_rule', params: {} }] }))
     expect(drew.recommended).toHaveLength(2)

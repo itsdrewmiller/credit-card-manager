@@ -61,6 +61,11 @@ function ValueCell({ c }: { c: Candidate }): React.ReactElement {
             referral via {c.referralFrom} possible
           </Text>
         ))}
+      {c.earnOnSpendCents != null && c.earnOnSpendCents > 0 && (
+        <Text size="xs" c="dimmed">
+          incl. {formatCents(c.earnOnSpendCents)} earn on spend
+        </Text>
+      )}
       {c.annualFeeCents != null && c.annualFeeCents > 0 && (
         <Text size="xs" c={c.feeWaivedFirstYear ? 'dimmed' : 'orange'}>
           {c.feeWaivedFirstYear

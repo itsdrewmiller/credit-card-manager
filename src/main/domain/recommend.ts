@@ -84,7 +84,9 @@ export interface Candidate {
   referralValueCents: number | null
   annualFeeCents: number | null
   feeWaivedFirstYear: boolean
-  /** Bonus + referral − first-year fee: net household gain from applying. */
+  /** Baseline earn on the required min spend (minSpend × earn rate). */
+  earnOnSpendCents: number | null
+  /** Bonus + referral + earn on required spend − first-year fee. */
   totalValueCents: number | null
   /** Net household value as a percent of the required spend. */
   roiPct: number | null
@@ -293,8 +295,14 @@ export function recommend(input: RecommendInput): PersonRecommendations[] {
     const referralValueCents =
       referralFrom != null && offer.referralValueCents != null ? offer.referralValueCents : null
     const firstYearFee = offer.feeWaivedFirstYear ? 0 : (offer.annualFeeCents ?? 0)
+    const earnOnSpendCents =
+      offer.minSpendCents != null && offer.earnPct != null && offer.earnPct > 0
+        ? Math.round((offer.minSpendCents * offer.earnPct) / 100)
+        : null
     const totalValueCents =
-      offer.valueCents != null ? offer.valueCents + (referralValueCents ?? 0) - firstYearFee : null
+      offer.valueCents != null
+        ? offer.valueCents + (referralValueCents ?? 0) + (earnOnSpendCents ?? 0) - firstYearFee
+        : null
 
     const business = businessId != null ? input.businesses.find((b) => b.id === businessId) : null
     const waitUntil =
@@ -320,6 +328,7 @@ export function recommend(input: RecommendInput): PersonRecommendations[] {
       referralValueCents,
       annualFeeCents: offer.annualFeeCents ?? null,
       feeWaivedFirstYear: offer.feeWaivedFirstYear ?? false,
+      earnOnSpendCents,
       totalValueCents,
       roiPct:
         totalValueCents != null && offer.minSpendCents != null && offer.minSpendCents > 0
