@@ -134,6 +134,13 @@
       "when": 1783370209724,
       "tag": "0018_glossy_christian_walker",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "6",
+      "when": 1783371431325,
+      "tag": "0019_jittery_iron_patriot",
+      "breakpoints": true
     }
   ]
 }

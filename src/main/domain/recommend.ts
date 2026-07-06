@@ -36,6 +36,9 @@ export interface RecommendInput {
     earnPct?: number | null
     /** What a referrer earns when this application uses their link. */
     referralValueCents?: number | null
+    /** Product's annual fee; subtracted from first-year value unless waived. */
+    annualFeeCents?: number | null
+    feeWaivedFirstYear?: boolean
     valueCents: number | null
     minSpendCents: number | null
     windowMonths: number | null
@@ -77,9 +80,11 @@ export interface Candidate {
   referralFrom: string | null
   /** Referrer's bonus — counted in household value when a referral exists. */
   referralValueCents: number | null
-  /** Bonus + referral value: what the household gains from this application. */
+  annualFeeCents: number | null
+  feeWaivedFirstYear: boolean
+  /** Bonus + referral − first-year fee: net household gain from applying. */
   totalValueCents: number | null
-  /** Household value as a percent of the required spend. */
+  /** Net household value as a percent of the required spend. */
   roiPct: number | null
   minSpendCents: number | null
   windowMonths: number | null
@@ -281,8 +286,9 @@ export function recommend(input: RecommendInput): PersonRecommendations[] {
       : null
     const referralValueCents =
       referralFrom != null && offer.referralValueCents != null ? offer.referralValueCents : null
+    const firstYearFee = offer.feeWaivedFirstYear ? 0 : (offer.annualFeeCents ?? 0)
     const totalValueCents =
-      offer.valueCents != null ? offer.valueCents + (referralValueCents ?? 0) : null
+      offer.valueCents != null ? offer.valueCents + (referralValueCents ?? 0) - firstYearFee : null
 
     const business = businessId != null ? input.businesses.find((b) => b.id === businessId) : null
     const waitUntil =
@@ -306,6 +312,8 @@ export function recommend(input: RecommendInput): PersonRecommendations[] {
       earnPct: offer.earnPct ?? null,
       referralFrom,
       referralValueCents,
+      annualFeeCents: offer.annualFeeCents ?? null,
+      feeWaivedFirstYear: offer.feeWaivedFirstYear ?? false,
       totalValueCents,
       roiPct:
         totalValueCents != null && offer.minSpendCents != null && offer.minSpendCents > 0

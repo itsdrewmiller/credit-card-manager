@@ -294,6 +294,8 @@ export const productOffer = sqliteTable(
     // What the referrer earns when someone applies through their link —
     // recommendations add this to household value when a referral is possible.
     referralValueCents: integer('referral_value_cents'),
+    // Part of the offer: no annual fee in the first year.
+    feeWaivedFirstYear: integer('fee_waived_first_year', { mode: 'boolean' }).notNull().default(false),
     minSpendCents: integer('min_spend_cents'),
     windowMonths: integer('window_months'), // months to meet the min spend
     expires: text('expires'), // offer end date, if any

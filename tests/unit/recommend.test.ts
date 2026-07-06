@@ -283,6 +283,23 @@ describe('recommend', () => {
     expect(csp.totalValueCents).toBe(90000)
   })
 
+  it('nets the first-year annual fee out of value and ROI unless waived', () => {
+    const [drew] = recommend(
+      base({
+        offers: [
+          { ...CSR, annualFeeCents: 9500 }, // $900 - $95 = $805 -> 20.1% of $4k
+          { ...SPARK, annualFeeCents: 15000, feeWaivedFirstYear: true } // fee ignored
+        ]
+      })
+    )
+    const csp = drew.recommended.find((c) => c.label.includes('Sapphire'))!
+    expect(csp.totalValueCents).toBe(80500)
+    expect(Math.round(csp.roiPct!)).toBe(20)
+    const spark = drew.recommended.find((c) => c.label.includes('Spark'))!
+    expect(spark.totalValueCents).toBe(120000)
+    expect(spark.feeWaivedFirstYear).toBe(true)
+  })
+
   it('ignores unknown rule kinds', () => {
     const [drew] = recommend(base({ rules: [{ kind: 'not_a_rule', params: {} }] }))
     expect(drew.recommended).toHaveLength(2)

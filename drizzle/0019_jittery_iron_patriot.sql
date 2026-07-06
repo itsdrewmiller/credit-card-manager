@@ -1,0 +1,1 @@
+ALTER TABLE `product_offer` ADD `fee_waived_first_year` integer DEFAULT false NOT NULL;

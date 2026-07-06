@@ -81,6 +81,7 @@ export function importOffersCsv(db: DB, text: string): OfferImportResult {
         cashAmountCents: isCash && amount != null ? Math.round(amount * 100) : null,
         pointValueCpp: numOrNull(r.point_value_cpp),
         ...(hasReferralColumn ? { referralValueCents: centsOrNull(r.referral_value_usd) } : {}),
+        feeWaivedFirstYear: r.annual_fee_waived_y1?.trim().toLowerCase() === 'true',
         minSpendCents: centsOrNull(r.min_spend_usd),
         windowMonths: numOrNull(r.spend_window_months),
         notes: r.notes?.trim() || null
