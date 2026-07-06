@@ -20,12 +20,18 @@ import { DataTable, type Column } from '../components/DataTable'
 import { RowActionsMenu } from '../components/RowActionsMenu'
 import { useEntityEditor } from '../components/useEntityEditor'
 import { RuleForm, type RuleFormValue } from '../components/RuleForm'
-import { formatCents, formatDate } from '@shared/format'
+import { formatCents, formatDate, formatPoints } from '@shared/format'
 import { showSuccess } from '../lib/mutations'
 import type { RecommendationOverview, RecommendationRuleRow } from '../lib/types'
 
 type PersonResult = RecommendationOverview['results'][number]
 type Candidate = PersonResult['recommended'][number]
+
+function bonusText(c: Candidate): string {
+  if (c.cashAmountCents != null) return formatCents(c.cashAmountCents)
+  if (c.pointsAmount != null) return `${formatPoints(c.pointsAmount)} ${c.currency ?? 'pts'}`
+  return '—'
+}
 
 function OfferLine({ c }: { c: Candidate }): React.ReactElement {
   return (
@@ -42,12 +48,65 @@ function OfferLine({ c }: { c: Candidate }): React.ReactElement {
           )}
         </Group>
         <Text size="xs" c="dimmed">
-          {c.minSpendCents != null ? `${formatCents(c.minSpendCents)} min spend` : 'no min spend'}
-          {c.windowMonths != null ? ` · ${c.windowMonths} mo window` : ''}
+          {bonusText(c)}
+          {c.minSpendCents != null ? ` · ${formatCents(c.minSpendCents)} min spend` : ''}
+          {c.windowMonths != null ? ` · ${c.windowMonths} mo` : ''}
         </Text>
       </div>
       <Text fw={600}>{formatCents(c.valueCents)}</Text>
     </Group>
+  )
+}
+
+function RecommendedTable({ rows }: { rows: Candidate[] }): React.ReactElement {
+  return (
+    <Table withTableBorder highlightOnHover verticalSpacing="xs">
+      <Table.Thead>
+        <Table.Tr>
+          <Table.Th>Card</Table.Th>
+          <Table.Th>Bonus</Table.Th>
+          <Table.Th ta="right">Value</Table.Th>
+          <Table.Th ta="right">Earn %</Table.Th>
+          <Table.Th ta="right">ROI on spend</Table.Th>
+        </Table.Tr>
+      </Table.Thead>
+      <Table.Tbody>
+        {rows.map((c) => (
+          <Table.Tr key={`${c.offerId}-${c.businessId ?? 'p'}`}>
+            <Table.Td>
+              <Group gap={6} wrap="nowrap">
+                <Text size="sm" fw={500}>
+                  {c.label}
+                </Text>
+                {c.isBusiness && (
+                  <Badge size="xs" variant="light" color="grape">
+                    {c.businessName ?? 'business'}
+                  </Badge>
+                )}
+              </Group>
+            </Table.Td>
+            <Table.Td>
+              <Text size="sm">{bonusText(c)}</Text>
+              <Text size="xs" c="dimmed">
+                {c.minSpendCents != null ? `${formatCents(c.minSpendCents)} spend` : 'no min spend'}
+                {c.windowMonths != null ? ` in ${c.windowMonths} mo` : ''}
+              </Text>
+            </Table.Td>
+            <Table.Td ta="right">
+              <Text fw={600}>{formatCents(c.valueCents)}</Text>
+            </Table.Td>
+            <Table.Td ta="right">
+              <Text size="sm">{c.earnPct != null ? `${c.earnPct}%` : '—'}</Text>
+            </Table.Td>
+            <Table.Td ta="right">
+              <Text size="sm" fw={500}>
+                {c.roiPct != null ? `${Math.round(c.roiPct)}%` : '—'}
+              </Text>
+            </Table.Td>
+          </Table.Tr>
+        ))}
+      </Table.Tbody>
+    </Table>
   )
 }
 
@@ -70,13 +129,7 @@ function PersonSection({ r }: { r: PersonResult }): React.ReactElement {
           Nothing recommended right now — see below for what's blocked and why.
         </Text>
       ) : (
-        <div>
-          {r.recommended.map((c) => (
-            <Card key={`${c.offerId}-${c.businessId ?? 'p'}`} withBorder radius="sm" padding="sm" mb={6}>
-              <OfferLine c={c} />
-            </Card>
-          ))}
-        </div>
+        <RecommendedTable rows={r.recommended} />
       )}
 
       {r.blocked.length > 0 && (

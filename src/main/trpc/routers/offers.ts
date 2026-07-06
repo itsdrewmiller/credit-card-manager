@@ -24,7 +24,7 @@ const withRelations = {
   pointProgram: true
 } as const
 
-/** value = cash, else points × the offer's cpp (falling back to a linked program). */
+/** value = cash, else points × your program valuation (feed cpp as fallback). */
 function enrich<
   T extends {
     cashAmountCents: number | null
@@ -36,7 +36,7 @@ function enrich<
   let valueCents: number | null = null
   if (o.cashAmountCents != null) valueCents = o.cashAmountCents
   else {
-    const cpp = o.pointValueCpp ?? o.pointProgram?.valuationCpp ?? null
+    const cpp = o.pointProgram?.valuationCpp ?? o.pointValueCpp ?? null
     if (o.pointsAmount != null && cpp != null) valueCents = Math.round(o.pointsAmount * cpp)
   }
   return { ...o, valueCents }

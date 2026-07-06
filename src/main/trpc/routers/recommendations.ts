@@ -66,9 +66,13 @@ export const recommendationsRouter = router({
         reportsToPersonal: o.product?.reportsToPersonal ?? false,
         valueCents:
           o.cashAmountCents ??
-          (o.pointsAmount != null && (o.pointValueCpp ?? o.pointProgram?.valuationCpp) != null
-            ? Math.round(o.pointsAmount * (o.pointValueCpp ?? o.pointProgram!.valuationCpp!))
+          (o.pointsAmount != null && (o.pointProgram?.valuationCpp ?? o.pointValueCpp) != null
+            ? Math.round(o.pointsAmount * (o.pointProgram?.valuationCpp ?? o.pointValueCpp!))
             : null),
+        pointsAmount: o.pointsAmount,
+        cashAmountCents: o.cashAmountCents,
+        currency: o.pointProgram?.name ?? o.currency,
+        earnPct: o.product?.defaultCashbackPct ?? null,
         minSpendCents: o.minSpendCents,
         windowMonths: o.windowMonths,
         expires: o.expires

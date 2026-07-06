@@ -29,6 +29,11 @@ export interface RecommendInput {
     isBusiness: boolean
     /** Business products from a few issuers count toward 5/24. */
     reportsToPersonal?: boolean
+    pointsAmount?: number | null
+    cashAmountCents?: number | null
+    currency?: string | null
+    /** Product's baseline earn rate (percent). */
+    earnPct?: number | null
     valueCents: number | null
     minSpendCents: number | null
     windowMonths: number | null
@@ -62,6 +67,12 @@ export interface Candidate {
   businessId: number | null
   businessName: string | null
   valueCents: number | null
+  pointsAmount: number | null
+  cashAmountCents: number | null
+  currency: string | null
+  earnPct: number | null
+  /** Bonus value as a percent of the required spend. */
+  roiPct: number | null
   minSpendCents: number | null
   windowMonths: number | null
   blocks: Block[]
@@ -259,6 +270,14 @@ export function recommend(input: RecommendInput): PersonRecommendations[] {
       businessId,
       businessName: business?.name ?? null,
       valueCents: offer.valueCents,
+      pointsAmount: offer.pointsAmount ?? null,
+      cashAmountCents: offer.cashAmountCents ?? null,
+      currency: offer.currency ?? null,
+      earnPct: offer.earnPct ?? null,
+      roiPct:
+        offer.valueCents != null && offer.minSpendCents != null && offer.minSpendCents > 0
+          ? (offer.valueCents / offer.minSpendCents) * 100
+          : null,
       minSpendCents: offer.minSpendCents,
       windowMonths: offer.windowMonths,
       blocks,
