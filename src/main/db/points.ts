@@ -3,27 +3,30 @@ import { pointProgram } from './schema'
 
 /** Common churning currencies with default valuations (cents/point) + kind. */
 export const POINT_PROGRAMS: { name: string; kind: string; cpp: number }[] = [
-  { name: 'Amex MR', kind: 'transferable', cpp: 1.6 },
-  { name: 'Chase UR', kind: 'transferable', cpp: 1.6 },
-  { name: 'Capital One miles', kind: 'transferable', cpp: 1.6 },
-  { name: 'Citi TY', kind: 'transferable', cpp: 1.6 },
+  { name: 'Amex MR', kind: 'transferable', cpp: 1.1 },
+  { name: 'Chase UR', kind: 'transferable', cpp: 1.5 },
+  { name: 'Capital One miles', kind: 'transferable', cpp: 1.0 },
+  { name: 'Citi TY', kind: 'transferable', cpp: 1.0 },
   { name: 'Bilt points', kind: 'transferable', cpp: 1.6 },
   { name: 'Wells Fargo points', kind: 'transferable', cpp: 1.0 },
   { name: 'Bank of America points', kind: 'cashback', cpp: 1.0 },
-  { name: 'United miles', kind: 'airline', cpp: 1.4 },
-  { name: 'American miles', kind: 'airline', cpp: 1.4 },
-  { name: 'Alaska miles', kind: 'airline', cpp: 1.4 },
+  { name: 'United miles', kind: 'airline', cpp: 1.2 },
+  { name: 'American miles', kind: 'airline', cpp: 1.3 },
+  { name: 'Alaska miles', kind: 'airline', cpp: 1.2 }, // Atmos
   { name: 'Delta miles', kind: 'airline', cpp: 1.2 },
-  { name: 'Southwest miles', kind: 'airline', cpp: 1.4 },
-  { name: 'JetBlue points', kind: 'airline', cpp: 1.3 },
+  { name: 'Southwest miles', kind: 'airline', cpp: 1.3 },
+  { name: 'JetBlue points', kind: 'airline', cpp: 1.4 },
   { name: 'Avios', kind: 'airline', cpp: 1.3 },
   { name: 'Virgin points', kind: 'airline', cpp: 1.3 },
-  { name: 'Aeroplan miles', kind: 'airline', cpp: 1.4 },
-  { name: 'Hyatt points', kind: 'hotel', cpp: 1.7 },
-  { name: 'Marriott points', kind: 'hotel', cpp: 0.7 },
-  { name: 'Hilton points', kind: 'hotel', cpp: 0.5 },
-  { name: 'IHG points', kind: 'hotel', cpp: 0.5 },
-  { name: 'Wyndham points', kind: 'hotel', cpp: 0.9 }
+  { name: 'Aeroplan miles', kind: 'airline', cpp: 1.1 },
+  { name: 'Sun Country points', kind: 'airline', cpp: 1.0 },
+  { name: 'Hyatt points', kind: 'hotel', cpp: 1.8 },
+  { name: 'Marriott points', kind: 'hotel', cpp: 0.8 },
+  { name: 'Hilton points', kind: 'hotel', cpp: 0.4 },
+  { name: 'IHG points', kind: 'hotel', cpp: 0.6 },
+  { name: 'Wyndham points', kind: 'hotel', cpp: 0.7 },
+  { name: 'Choice points', kind: 'hotel', cpp: 0.8 },
+  { name: 'Accor points', kind: 'hotel', cpp: 2.2 }
 ]
 
 /**
