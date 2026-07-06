@@ -3,6 +3,7 @@ import { eq, desc } from 'drizzle-orm'
 import { router, publicProcedure } from '../trpc'
 import { productOffer } from '../../db/schema'
 import { REWARD_KINDS } from '@shared/constants'
+import { offerValueCents } from '@shared/format'
 import { importOffersCsv } from '../../import/offers'
 
 const upsert = z.object({
@@ -25,7 +26,6 @@ const withRelations = {
   pointProgram: true
 } as const
 
-/** value = cash, else points × your program valuation (feed cpp as fallback). */
 function enrich<
   T extends {
     cashAmountCents: number | null
@@ -34,13 +34,7 @@ function enrich<
     pointProgram?: { valuationCpp: number | null } | null
   }
 >(o: T): T & { valueCents: number | null } {
-  let valueCents: number | null = null
-  if (o.cashAmountCents != null) valueCents = o.cashAmountCents
-  else {
-    const cpp = o.pointProgram?.valuationCpp ?? o.pointValueCpp ?? null
-    if (o.pointsAmount != null && cpp != null) valueCents = Math.round(o.pointsAmount * cpp)
-  }
-  return { ...o, valueCents }
+  return { ...o, valueCents: offerValueCents(o) }
 }
 
 export const offersRouter = router({

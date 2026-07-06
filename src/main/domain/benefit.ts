@@ -1,4 +1,4 @@
-import { daysUntil } from '@shared/format'
+import { daysUntil } from '@shared/dates'
 
 export type BenefitStatus = 'used' | 'available' | 'upcoming' | 'expired'
 
@@ -24,6 +24,49 @@ export function benefitStatus(b: BenefitLike, today = new Date()): BenefitStatus
   return 'available'
 }
 
-export function computeBenefit(b: BenefitLike): { status: BenefitStatus } {
-  return { status: benefitStatus(b) }
+/**
+ * Closing a card sweeps its pending benefits: anything unused (no full or
+ * partial use) whose window hasn't expired. Used, partially used, and
+ * already-expired benefits stay as history.
+ */
+export function sweptOnClose(
+  b: { used: boolean; usedAmountCents: number | null; useBy: string | null },
+  today: string
+): boolean {
+  return (
+    !b.used &&
+    (b.usedAmountCents == null || b.usedAmountCents <= 0) &&
+    (b.useBy == null || b.useBy >= today)
+  )
+}
+
+export interface UsedState {
+  used: boolean
+  usedDate: string | null
+  usedAmountCents: number | null
+}
+
+export interface UsedPatch {
+  used?: boolean
+  usedDate?: string | null
+  usedAmountCents?: number | null
+}
+
+/**
+ * The one used/usedDate/usedAmount rule for every mutation path (full edit,
+ * inline toggle, inline partial amount). usedDate records FIRST use and
+ * drives the return timeline: stamped once any use appears (the flag or a
+ * positive partial amount), preserved while any use remains, and cleared
+ * when none does. An explicit usedDate in the patch wins. Non-positive
+ * partial amounts normalize to null.
+ */
+export function applyUsedStamp(current: UsedState, patch: UsedPatch, today: string): UsedState {
+  const used = patch.used ?? current.used
+  const rawAmount =
+    patch.usedAmountCents !== undefined ? patch.usedAmountCents : current.usedAmountCents
+  const usedAmountCents = rawAmount != null && rawAmount > 0 ? rawAmount : null
+  const anyUse = used || usedAmountCents != null
+  const usedDate =
+    patch.usedDate !== undefined ? patch.usedDate : anyUse ? (current.usedDate ?? today) : null
+  return { used, usedDate, usedAmountCents }
 }

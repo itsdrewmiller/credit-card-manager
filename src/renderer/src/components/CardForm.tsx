@@ -14,7 +14,7 @@ import { DateInput } from '@mantine/dates'
 import { useForm } from '@mantine/form'
 import { CARD_STATUSES, CARD_STATUS_LABELS, NETWORKS, type CardStatus } from '@shared/constants'
 import { centsToDollars, parseCents } from '@shared/format'
-import { isoToDate, dateToIso } from '../lib/dates'
+import { isoToDate, dateToIso } from '@shared/dates'
 
 export interface CardFormValue {
   cardProductId: number | null

@@ -7,19 +7,11 @@
  * payment should probably move — the UI flags those.
  */
 
+import { isBonusOpen, type BonusSpendLike } from './bonus'
+
 export type CardSpendStatus = 'working' | 'no_bonus' | 'bonus_done'
 
-interface BonusLike {
-  received: boolean
-  targetSpendCents: number | null
-  spendSoFarCents: number
-}
-
-export function cardSpendStatus(bonuses: BonusLike[]): CardSpendStatus {
+export function cardSpendStatus(bonuses: BonusSpendLike[], today?: string): CardSpendStatus {
   if (bonuses.length === 0) return 'no_bonus'
-  const feedable = bonuses.some(
-    (b) =>
-      !b.received && !(b.targetSpendCents != null && b.spendSoFarCents >= b.targetSpendCents)
-  )
-  return feedable ? 'working' : 'bonus_done'
+  return bonuses.some((b) => isBonusOpen(b, today)) ? 'working' : 'bonus_done'
 }

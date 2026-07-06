@@ -9,7 +9,7 @@ import { DataTable, type Column } from '../components/DataTable'
 import { RowActionsMenu } from '../components/RowActionsMenu'
 import { useEntityEditor } from '../components/useEntityEditor'
 import { ReferralForm, type ReferralFormValue } from '../components/ReferralForm'
-import { formatDate } from '@shared/format'
+import { formatDate } from '@shared/dates'
 import type { ReferralRow } from '../lib/types'
 
 const STATUS_COLOR: Record<string, string> = {

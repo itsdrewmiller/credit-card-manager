@@ -35,4 +35,19 @@ describe('cardSpendStatus', () => {
       ])
     ).toBe('working')
   })
+
+  it('a bonus past its deadline no longer keeps the card working', () => {
+    expect(
+      cardSpendStatus(
+        [{ received: false, targetSpendCents: 400000, spendSoFarCents: 100000, deadline: '2026-06-01' }],
+        '2026-07-06'
+      )
+    ).toBe('bonus_done')
+    // Without today, deadlines are not evaluated (caller opts in).
+    expect(
+      cardSpendStatus([
+        { received: false, targetSpendCents: 400000, spendSoFarCents: 100000, deadline: '2026-06-01' }
+      ])
+    ).toBe('working')
+  })
 })

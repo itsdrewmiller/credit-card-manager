@@ -16,6 +16,8 @@
  * the remaining ones (or delete every instance of that name on the card).
  */
 
+import { addMonthsIso } from '@shared/dates'
+
 export interface BenefitInstance {
   id: number
   cardId: number
@@ -60,17 +62,6 @@ const iso = (y: number, m0: number, d: number): string =>
   `${y}-${String(m0 + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`
 
 const lastDayOf = (y: number, m0: number): number => new Date(y, m0 + 1, 0).getDate()
-
-/** iso + n months; a month-end day stays month-end (Apr 30 + 1mo = May 31). */
-export function addMonthsIso(isoDate: string, months: number): string {
-  const [y, m, d] = isoDate.split('-').map(Number)
-  const wasEom = d === lastDayOf(y, m - 1)
-  const total = m - 1 + months
-  const ny = y + Math.floor(total / 12)
-  const nm0 = ((total % 12) + 12) % 12
-  const day = wasEom ? lastDayOf(ny, nm0) : Math.min(d, lastDayOf(ny, nm0))
-  return iso(ny, nm0, day)
-}
 
 /** Calendar window containing `today` for a period (monthly -> this month, …). */
 function currentWindow(period: string, today: Date): { useAfter: string; useBy: string } | null {

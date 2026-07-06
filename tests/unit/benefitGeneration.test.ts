@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { addMonthsIso, planBenefitGeneration, type BenefitInstance } from '../../src/main/domain/benefitGeneration'
+import { addMonthsIso } from '../../src/shared/dates'
+import { planBenefitGeneration, type BenefitInstance } from '../../src/main/domain/benefitGeneration'
 
 const today = new Date('2026-07-05T12:00:00')
 

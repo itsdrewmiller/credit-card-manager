@@ -16,7 +16,7 @@ import { PageHeader } from '../components/PageHeader'
 import { EmptyState } from '../components/EmptyState'
 import { QueryGate } from '../components/QueryGate'
 import { cardLabel, cardSelectLabel } from '../components/useCardEditor'
-import { formatDate } from '@shared/format'
+import { formatDate } from '@shared/dates'
 import type { RouterOutputs, VelocityRow, RejectedRow } from '../lib/types'
 
 type BusinessVelocityRow = RouterOutputs['velocity']['byBusiness'][number]

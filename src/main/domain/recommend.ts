@@ -1,3 +1,5 @@
+import { addMonthsIso, monthsAgoIso, toIsoDate, todayIso } from '@shared/dates'
+import { bonusRemainingCents, isBonusOpen } from './bonus'
 import { personVelocity, type VelocityCardLike } from './velocity'
 
 /**
@@ -114,18 +116,6 @@ export interface PersonRecommendations {
   atChase524: boolean
   recommended: Candidate[]
   blocked: Candidate[]
-}
-
-const toIso = (d: Date): string =>
-  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-
-function monthsAgoIso(months: number, from: Date): string {
-  return toIso(new Date(from.getFullYear(), from.getMonth() - months, from.getDate()))
-}
-
-function addMonthsIso(iso: string, months: number): string {
-  const [y, m, d] = iso.split('-').map(Number)
-  return toIso(new Date(y, m - 1 + months, d))
 }
 
 const dollars = (cents: number): string => `$${Math.round(cents / 100).toLocaleString('en-US')}`
@@ -268,14 +258,11 @@ export function recommend(input: RecommendInput): PersonRecommendations[] {
         case 'finish_open_bonuses': {
           const maxOpenMonths = Number(p.maxOpenMonths ?? 2)
           const lookback = Number(p.lookbackMonths ?? 3)
-          const todayIso = toIso(today)
-          // Open = unreceived, unfinished, and still winnable (deadline ahead).
+          // Open per the shared predicate; only quantifiable (targeted)
+          // remaining spend counts toward the gate.
           const open = input.bonuses
-            .filter((b) => !b.received && (b.deadline == null || b.deadline >= todayIso))
-            .map((b) => ({
-              remaining: Math.max(0, (b.targetSpendCents ?? 0) - b.spendSoFarCents),
-              deadline: b.deadline
-            }))
+            .filter((b) => isBonusOpen(b, todayIso(today)))
+            .map((b) => ({ remaining: bonusRemainingCents(b) ?? 0, deadline: b.deadline }))
             .filter((b) => b.remaining > 0)
           const remaining = open.reduce((n, b) => n + b.remaining, 0)
           const rate = spendRate(lookback)
@@ -285,7 +272,7 @@ export function recommend(input: RecommendInput): PersonRecommendations[] {
           // by deadlines expiring bonuses out of the open set, whichever first.
           const paceDate =
             rate > 0
-              ? toIso(
+              ? toIsoDate(
                   new Date(
                     today.getFullYear(),
                     today.getMonth(),
@@ -337,7 +324,7 @@ export function recommend(input: RecommendInput): PersonRecommendations[] {
     }
 
     // Expired offers never qualify.
-    if (offer.expires && offer.expires < toIso(today)) {
+    if (offer.expires && offer.expires < todayIso(today)) {
       blocks.push({ kind: 'expired', reason: `offer expired ${offer.expires}`, waitUntil: null })
     }
 

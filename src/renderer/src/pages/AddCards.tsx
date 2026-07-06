@@ -28,7 +28,7 @@ import { PageHeader } from '../components/PageHeader'
 import { BusinessCardWizard } from '../components/BusinessCardWizard'
 import { useCardEditor } from '../components/useCardEditor'
 import { useInvalidateCards } from '../lib/mutations'
-import { formatDate } from '@shared/format'
+import { formatDate } from '@shared/dates'
 import type { ImportPreview, TradelineRow } from '../lib/types'
 
 function ConfidenceBadge({ t }: { t: TradelineRow }): React.ReactElement {

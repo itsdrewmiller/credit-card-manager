@@ -2,6 +2,8 @@ import { z } from 'zod'
 import { eq, asc } from 'drizzle-orm'
 import { router, publicProcedure } from '../trpc'
 import type { DbLike } from '../../db'
+import { offerValueCents } from '@shared/format'
+import { ruleParamsError } from '@shared/rules'
 import { recommendationRule, spendEntry } from '../../db/schema'
 import { recommend } from '../../domain/recommend'
 import { importOffersCsv } from '../../import/offers'
@@ -15,19 +17,15 @@ export const FEED_REFRESHED_KEY = 'offer_feed_refreshed_at'
 const ruleUpsert = z.object({
   kind: z.string().min(1),
   enabled: z.boolean().default(true),
-  params: z.string().refine(
-    (s) => {
-      try {
-        const v = JSON.parse(s)
-        return typeof v === 'object' && v != null && !Array.isArray(v)
-      } catch {
-        return false
-      }
-    },
-    { message: 'Params must be a JSON object' }
-  ),
+  params: z.string(),
   notes: z.string().nullish()
 })
+
+/** Enforce the per-kind params contract (shared/rules.ts) before any write. */
+function assertRuleParams(kind: string, params: string): void {
+  const err = ruleParamsError(kind, params)
+  if (err) throw new Error(`Invalid rule params: ${err}`)
+}
 
 function enabledRules(db: DbLike): { kind: string; params: Record<string, unknown> }[] {
   return db
@@ -64,11 +62,7 @@ export const recommendationsRouter = router({
         issuerName: o.product?.issuer?.name ?? null,
         isBusiness: o.product?.isBusiness ?? false,
         reportsToPersonal: o.product?.reportsToPersonal ?? false,
-        valueCents:
-          o.cashAmountCents ??
-          (o.pointsAmount != null && (o.pointProgram?.valuationCpp ?? o.pointValueCpp) != null
-            ? Math.round(o.pointsAmount * (o.pointProgram?.valuationCpp ?? o.pointValueCpp!))
-            : null),
+        valueCents: offerValueCents(o),
         pointsAmount: o.pointsAmount,
         cashAmountCents: o.cashAmountCents,
         currency: o.pointProgram?.name ?? o.currency,
@@ -122,14 +116,23 @@ export const recommendationsRouter = router({
 
   createRule: publicProcedure
     .input(ruleUpsert)
-    .mutation(({ ctx, input }) =>
-      ctx.db.insert(recommendationRule).values(input).returning().get()
-    ),
+    .mutation(({ ctx, input }) => {
+      assertRuleParams(input.kind, input.params)
+      return ctx.db.insert(recommendationRule).values(input).returning().get()
+    }),
 
   updateRule: publicProcedure
     .input(ruleUpsert.partial().extend({ id: z.number().int() }))
     .mutation(({ ctx, input }) => {
       const { id, ...rest } = input
+      if (rest.kind != null || rest.params != null) {
+        const current = ctx.db
+          .select({ kind: recommendationRule.kind, params: recommendationRule.params })
+          .from(recommendationRule)
+          .where(eq(recommendationRule.id, id))
+          .get()
+        assertRuleParams(rest.kind ?? current?.kind ?? '', rest.params ?? current?.params ?? '{}')
+      }
       return ctx.db
         .update(recommendationRule)
         .set({ ...rest, updatedAt: Date.now() })

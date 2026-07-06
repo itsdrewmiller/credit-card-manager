@@ -15,10 +15,9 @@ import {
   centsToDollars,
   parseCents,
   formatCents,
-  formatPoints,
-  formatDate,
-  daysUntil
+  formatPoints
 } from '@shared/format'
+import { formatDate, daysUntil } from '@shared/dates'
 import type { BonusRow } from '../lib/types'
 
 function rewardText(b: BonusRow): string {

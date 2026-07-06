@@ -7,6 +7,8 @@
  * Only actually-opened cards count (openedDate present, not rejected/applied).
  */
 
+import { addMonthsIso, monthsAgoIso } from '@shared/dates'
+
 export interface VelocityCardLike {
   id: number
   openedDate: string | null
@@ -20,12 +22,6 @@ export interface VelocityCardLike {
 }
 
 const COUNTABLE_STATUSES = new Set(['open', 'closed', 'product_changed'])
-
-function addMonthsIso(iso: string, months: number): string {
-  const d = new Date(iso + 'T00:00:00')
-  d.setMonth(d.getMonth() + months)
-  return d.toISOString().slice(0, 10)
-}
 
 function countsTowardVelocity(c: VelocityCardLike): boolean {
   const personalReporting = c.businessId == null || c.reportsToPersonal === true
@@ -58,10 +54,7 @@ export function businessVelocity(
   today = new Date(),
   recentLimit = 3
 ): BusinessVelocity {
-  const cutoff = (() => {
-    const d = new Date(today.getFullYear() - 1, today.getMonth(), today.getDate())
-    return d.toISOString().slice(0, 10)
-  })()
+  const cutoff = monthsAgoIso(12, today)
   const opened = cards
     .filter((c) => c.openedDate != null && COUNTABLE_STATUSES.has(c.status))
     .sort((a, b) => (b.openedDate as string).localeCompare(a.openedDate as string))
@@ -75,10 +68,7 @@ export function personVelocity(
   cards: VelocityCardLike[],
   today = new Date()
 ): PersonVelocity {
-  const cutoff = (() => {
-    const d = new Date(today.getFullYear(), today.getMonth() - 24, today.getDate())
-    return d.toISOString().slice(0, 10)
-  })()
+  const cutoff = monthsAgoIso(24, today)
 
   const contributing = cards
     .filter(countsTowardVelocity)

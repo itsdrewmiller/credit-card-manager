@@ -1,54 +1,17 @@
 import { z } from 'zod'
-import { and, eq, desc, gte, isNull, lte, or } from 'drizzle-orm'
+import { eq, desc, inArray } from 'drizzle-orm'
 import { router, publicProcedure } from '../trpc'
-import type { DB } from '../../db'
-import { card, cardProduct, productBenefit, benefit } from '../../db/schema'
+import { card, benefit } from '../../db/schema'
 import { CARD_STATUSES } from '@shared/constants'
+import { todayIso } from '@shared/dates'
 import { cardMissingFields } from '../../domain/needsInfo'
-import { applyProductDefaults } from '../../domain/product'
+import { sweptOnClose } from '../../domain/benefit'
+import {
+  applyProductBenefits,
+  applyProductDefaults,
+  productReportsToPersonal
+} from '../../domain/product'
 import { importCardsCsv } from '../../import/cards'
-
-/**
- * Copy a product's benefit templates onto a card. Idempotent by benefit name,
- * so it won't duplicate benefits already present on the card.
- */
-/** Products seed the card-level 5/24 flag when first assigned; the card value
- *  stays the single source of truth afterward (velocity never reads products). */
-function productReportsToPersonal(db: DB, cardProductId: number): boolean {
-  return (
-    db
-      .select({ r: cardProduct.reportsToPersonal })
-      .from(cardProduct)
-      .where(eq(cardProduct.id, cardProductId))
-      .get()?.r ?? false
-  )
-}
-
-function applyProductBenefits(db: DB, cardId: number, cardProductId: number): void {
-  const templates = db
-    .select()
-    .from(productBenefit)
-    .where(eq(productBenefit.cardProductId, cardProductId))
-    .all()
-  if (templates.length === 0) return
-  const have = new Set(
-    db.select({ name: benefit.name }).from(benefit).where(eq(benefit.cardId, cardId)).all().map((b) => b.name)
-  )
-  for (const t of templates) {
-    if (have.has(t.name)) continue
-    db.insert(benefit)
-      .values({
-        cardId,
-        name: t.name,
-        category: t.category,
-        amountCents: t.amountCents,
-        valuePct: t.valuePct,
-        period: t.period,
-        notes: t.notes
-      })
-      .run()
-  }
-}
 
 const upsert = z.object({
   cardProductId: z.number().int().nullish(),
@@ -135,22 +98,23 @@ export const cardsRouter = router({
         .where(eq(card.id, id))
         .returning()
         .get()
-      // Closing a card sweeps its pending benefits: anything unused (no full
-      // or partial use) whose window hasn't expired. Used, partially used,
-      // and already-expired benefits stay as history.
+      // Closing a card sweeps its pending benefits (see sweptOnClose).
       if (rest.status === 'closed' && before?.status !== 'closed') {
-        const today = new Date().toISOString().slice(0, 10)
-        ctx.db
-          .delete(benefit)
-          .where(
-            and(
-              eq(benefit.cardId, id),
-              eq(benefit.used, false),
-              or(isNull(benefit.usedAmountCents), lte(benefit.usedAmountCents, 0)),
-              or(isNull(benefit.useBy), gte(benefit.useBy, today))
-            )
-          )
-          .run()
+        const today = todayIso()
+        const swept = ctx.db
+          .select({
+            id: benefit.id,
+            used: benefit.used,
+            usedAmountCents: benefit.usedAmountCents,
+            useBy: benefit.useBy
+          })
+          .from(benefit)
+          .where(eq(benefit.cardId, id))
+          .all()
+          .filter((b) => sweptOnClose(b, today))
+        if (swept.length > 0) {
+          ctx.db.delete(benefit).where(inArray(benefit.id, swept.map((b) => b.id))).run()
+        }
       }
 
       // When a product is newly assigned, seed its benefit templates and its

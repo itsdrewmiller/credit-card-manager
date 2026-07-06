@@ -4,10 +4,10 @@ import { router, publicProcedure } from '../trpc'
 import type { DbLike } from '../../db'
 import { signupBonus, spendEntry } from '../../db/schema'
 import { REWARD_KINDS } from '@shared/constants'
-import { toIsoDate } from '@shared/format'
+import { todayIso } from '@shared/dates'
 import { computeBonus } from '../../domain/bonus'
 
-const today = (): string => toIsoDate(new Date()) as string
+const today = (): string => todayIso()
 
 /** Every change to spendSoFarCents flows through a dated ledger entry. */
 function recordSpendDelta(db: DbLike, bonusId: number, deltaCents: number, date: string): void {
@@ -28,7 +28,6 @@ const upsert = z.object({
   referralBonus: z.string().nullish(),
   received: z.boolean().default(false),
   receivedDate: z.string().nullish(),
-  amountUsedCents: z.number().int().nullish(),
   notes: z.string().nullish()
 })
 

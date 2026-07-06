@@ -2,6 +2,7 @@ import { z } from 'zod'
 import { eq, asc } from 'drizzle-orm'
 import { router, publicProcedure } from '../trpc'
 import { recurringPayment } from '../../db/schema'
+import { todayIso } from '@shared/dates'
 import { cardSpendStatus, type CardSpendStatus } from '../../domain/recurring'
 
 const upsert = z.object({
@@ -22,7 +23,7 @@ export const recurringPaymentsRouter = router({
     // Derive whether the assigned card is still earning a bonus; null when unassigned.
     return rows.map((r) => ({
       ...r,
-      cardStatus: (r.card ? cardSpendStatus(r.card.bonuses) : null) as CardSpendStatus | null
+      cardStatus: (r.card ? cardSpendStatus(r.card.bonuses, todayIso()) : null) as CardSpendStatus | null
     }))
   }),
 

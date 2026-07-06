@@ -1,4 +1,5 @@
-/** Pure formatting/parsing helpers shared across processes. */
+/** Money/points formatting and parsing shared across processes.
+ *  Date helpers live in @shared/dates. */
 
 /** Integer cents -> "$1,234.56". null/undefined -> "—". */
 export function formatCents(cents: number | null | undefined): string {
@@ -43,47 +44,18 @@ export function bonusValueCents(args: {
   return pointsValueCents(args.pointsAmount, args.valuationCpp)
 }
 
-export function formatDate(iso: string | null | undefined): string {
-  if (!iso) return '—'
-  const d = new Date(iso + 'T00:00:00')
-  if (Number.isNaN(d.getTime())) return iso
-  return d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
+/**
+ * The cash value of an OFFER: explicit cash, else points × cpp. Unlike a held
+ * bonus, an offer carries its own cpp estimate from the feed (pointValueCpp),
+ * used as the fallback when the household doesn't track the program.
+ */
+export function offerValueCents(o: {
+  cashAmountCents?: number | null
+  pointsAmount?: number | null
+  pointValueCpp?: number | null
+  pointProgram?: { valuationCpp: number | null } | null
+}): number | null {
+  if (o.cashAmountCents != null) return o.cashAmountCents
+  return pointsValueCents(o.pointsAmount, o.pointProgram?.valuationCpp ?? o.pointValueCpp)
 }
 
-/** Days from today (negative = past). null if no date. */
-export function daysUntil(iso: string | null | undefined, today = new Date()): number | null {
-  if (!iso) return null
-  const d = new Date(iso + 'T00:00:00')
-  if (Number.isNaN(d.getTime())) return null
-  const base = new Date(today.getFullYear(), today.getMonth(), today.getDate())
-  return Math.round((d.getTime() - base.getTime()) / 86_400_000)
-}
-
-/** ISO date 'YYYY-MM-DD' for `n` months before `from`. */
-export function isoMonthsAgo(months: number, from = new Date()): string {
-  const d = new Date(from.getFullYear(), from.getMonth() - months, from.getDate())
-  return d.toISOString().slice(0, 10)
-}
-
-export function toIsoDate(d: Date | null | undefined): string | null {
-  if (!d || Number.isNaN(d.getTime())) return null
-  return d.toISOString().slice(0, 10)
-}
-
-/** date + n days; null-safe for optional form values. */
-export function addDays(d: Date | null | undefined, days: number | null | undefined): Date | null {
-  if (!d || days == null) return null
-  const r = new Date(d)
-  r.setDate(r.getDate() + days)
-  return r
-}
-
-/** Whole days between start and deadline; null if either is missing or the span is negative. */
-export function daysBetween(
-  start: Date | null | undefined,
-  deadline: Date | null | undefined
-): number | null {
-  if (!start || !deadline) return null
-  const d = Math.round((deadline.getTime() - start.getTime()) / 86_400_000)
-  return d >= 0 ? d : null
-}

@@ -1,6 +1,7 @@
 import React from 'react'
 import { Select, Switch, Textarea, TextInput, Group, Button, Text } from '@mantine/core'
 import { useForm } from '@mantine/form'
+import { ruleParamsError } from '@shared/rules'
 import type { RecommendationRuleRow } from '../lib/types'
 
 export interface RuleFormValue {
@@ -81,16 +82,7 @@ export function RuleForm({
       notes: initial?.notes ?? ''
     },
     validate: {
-      params: (v) => {
-        try {
-          const parsed = JSON.parse(v)
-          return typeof parsed === 'object' && parsed != null && !Array.isArray(parsed)
-            ? null
-            : 'Must be a JSON object'
-        } catch {
-          return 'Invalid JSON'
-        }
-      }
+      params: (v, values) => ruleParamsError(values.kind, v)
     }
   })
 

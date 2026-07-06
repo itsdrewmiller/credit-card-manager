@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { computeBonus } from '../../src/main/domain/bonus'
+import { bonusRemainingCents, computeBonus, isBonusOpen } from '../../src/main/domain/bonus'
 
 describe('computeBonus', () => {
   it('values a points bonus at points × cpp and tracks remaining spend', () => {
@@ -73,5 +73,31 @@ describe('computeBonus pace', () => {
         today
       ).pace
     ).toBe('unknown')
+  })
+})
+
+describe('isBonusOpen / bonusRemainingCents', () => {
+  const TODAY = '2026-07-06'
+
+  it('remaining clamps at zero and is null without a target', () => {
+    expect(bonusRemainingCents({ targetSpendCents: 400000, spendSoFarCents: 100000 })).toBe(300000)
+    expect(bonusRemainingCents({ targetSpendCents: 400000, spendSoFarCents: 500000 })).toBe(0)
+    expect(bonusRemainingCents({ targetSpendCents: null, spendSoFarCents: 100000 })).toBeNull()
+  })
+
+  it('open = unreceived, unmet, deadline (when checked) not passed', () => {
+    const b = { received: false, targetSpendCents: 400000, spendSoFarCents: 100000 }
+    expect(isBonusOpen(b, TODAY)).toBe(true)
+    expect(isBonusOpen({ ...b, received: true }, TODAY)).toBe(false)
+    expect(isBonusOpen({ ...b, spendSoFarCents: 400000 }, TODAY)).toBe(false)
+    expect(isBonusOpen({ ...b, deadline: '2026-06-30' }, TODAY)).toBe(false)
+    expect(isBonusOpen({ ...b, deadline: '2026-07-06' }, TODAY)).toBe(true)
+    // Without today, deadlines are not evaluated.
+    expect(isBonusOpen({ ...b, deadline: '2026-06-30' })).toBe(true)
+  })
+
+  it('a null-target bonus stays open until received', () => {
+    expect(isBonusOpen({ received: false, targetSpendCents: null, spendSoFarCents: 999999 }, TODAY)).toBe(true)
+    expect(isBonusOpen({ received: true, targetSpendCents: null, spendSoFarCents: 0 }, TODAY)).toBe(false)
   })
 })

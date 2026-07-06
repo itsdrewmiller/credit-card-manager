@@ -1,4 +1,5 @@
-import { bonusValueCents, daysUntil } from '@shared/format'
+import { bonusValueCents } from '@shared/format'
+import { daysUntil, isoToDate } from '@shared/dates'
 
 /**
  * Where a bonus stands against its spend window:
@@ -36,13 +37,44 @@ function paceOf(b: BonusLike, spendMet: boolean, today: Date): BonusPace {
   const daysLeft = daysUntil(b.deadline, today)
   if (daysLeft == null) return 'unknown'
   if (daysLeft < 0) return 'overdue'
-  if (!b.startDate || !b.deadline) return 'unknown'
-  const start = new Date(b.startDate + 'T00:00:00').getTime()
-  const end = new Date(b.deadline + 'T00:00:00').getTime()
+  const startDate = isoToDate(b.startDate)
+  const endDate = isoToDate(b.deadline)
+  if (!startDate || !endDate) return 'unknown'
+  const start = startDate.getTime()
+  const end = endDate.getTime()
   if (!(end > start)) return 'unknown'
   const timeFraction = Math.min(1, Math.max(0, (today.getTime() - start) / (end - start)))
   const spendFraction = (b.spendSoFarCents ?? 0) / target
   return spendFraction >= timeFraction ? 'on_track' : 'behind'
+}
+
+export interface BonusSpendLike {
+  received: boolean
+  targetSpendCents: number | null
+  spendSoFarCents: number
+  deadline?: string | null
+}
+
+/** target − spendSoFar, clamped at 0. null when there is no target. */
+export function bonusRemainingCents(
+  b: Pick<BonusSpendLike, 'targetSpendCents' | 'spendSoFarCents'>
+): number | null {
+  return b.targetSpendCents == null ? null : Math.max(0, b.targetSpendCents - b.spendSoFarCents)
+}
+
+/**
+ * THE definition of a bonus that can still be earned — every consumer
+ * (recurring-payment steering, the finish-open-bonuses gate, progress views)
+ * shares it: not received, min spend not met, and its deadline (when it has
+ * one and `today` is supplied) not passed. A null target can't be "met", so
+ * such bonuses stay open until marked received.
+ */
+export function isBonusOpen(b: BonusSpendLike, today?: string): boolean {
+  if (b.received) return false
+  const remaining = bonusRemainingCents(b)
+  if (remaining != null && remaining <= 0) return false
+  if (today != null && b.deadline != null && b.deadline < today) return false
+  return true
 }
 
 /** Derive value + spend progress for a bonus given its program's valuation. */
@@ -57,10 +89,11 @@ export function computeBonus(
     valuationCpp
   })
 
-  const target = b.targetSpendCents ?? null
-  const soFar = b.spendSoFarCents ?? 0
-  const remainingSpendCents = target == null ? null : Math.max(0, target - soFar)
-  const spendMet = target == null ? false : soFar >= target
+  const remainingSpendCents = bonusRemainingCents({
+    targetSpendCents: b.targetSpendCents ?? null,
+    spendSoFarCents: b.spendSoFarCents ?? 0
+  })
+  const spendMet = remainingSpendCents != null && remainingSpendCents <= 0
 
   return { valueCents, remainingSpendCents, spendMet, pace: paceOf(b, spendMet, today) }
 }

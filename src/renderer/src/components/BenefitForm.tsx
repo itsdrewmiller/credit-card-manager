@@ -15,7 +15,7 @@ import { DateInput } from '@mantine/dates'
 import { useForm } from '@mantine/form'
 import { BENEFIT_PERIODS, type BenefitPeriod } from '@shared/constants'
 import { centsToDollars, parseCents } from '@shared/format'
-import { isoToDate, dateToIso } from '../lib/dates'
+import { isoToDate, dateToIso } from '@shared/dates'
 import type { BenefitRow } from '../lib/types'
 
 export interface BenefitFormValue {

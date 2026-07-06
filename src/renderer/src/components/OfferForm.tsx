@@ -14,7 +14,7 @@ import { DateInput } from '@mantine/dates'
 import { useForm } from '@mantine/form'
 import { REWARD_KINDS, type RewardKind } from '@shared/constants'
 import { centsToDollars, parseCents, formatCents, pointsValueCents } from '@shared/format'
-import { isoToDate, dateToIso } from '../lib/dates'
+import { isoToDate, dateToIso } from '@shared/dates'
 import type { OfferRow } from '../lib/types'
 
 export interface OfferFormValue {

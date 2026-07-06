@@ -4,7 +4,7 @@ import { DateInput } from '@mantine/dates'
 import { useForm } from '@mantine/form'
 import { REFERRAL_STATUSES, type ReferralStatus } from '@shared/constants'
 import { centsToDollars, parseCents } from '@shared/format'
-import { isoToDate, dateToIso } from '../lib/dates'
+import { isoToDate, dateToIso } from '@shared/dates'
 import type { ReferralRow } from '../lib/types'
 
 export interface ReferralFormValue {
