@@ -99,6 +99,14 @@ export function App(): React.ReactElement {
         </ScrollArea>
       </AppShell.Navbar>
 
+      <Text
+        size="xs"
+        c="dimmed"
+        style={{ position: 'fixed', bottom: 6, right: 10, zIndex: 1, pointerEvents: 'none', opacity: 0.7 }}
+      >
+        v{__APP_VERSION__}
+      </Text>
+
       <AppShell.Main>
         <Routes>
           <Route path="/" element={<Dashboard />} />
