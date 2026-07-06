@@ -186,7 +186,6 @@ export const signupBonus = sqliteTable(
     received: integer('received', { mode: 'boolean' }).notNull().default(false),
     // When the bonus actually posted — drives the return timeline in reports.
     receivedDate: text('received_date'),
-    amountUsedCents: integer('amount_used_cents'),
     notes: text('notes'),
     ...timestamps
   },
