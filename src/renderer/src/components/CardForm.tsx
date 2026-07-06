@@ -25,6 +25,7 @@ export interface CardFormValue {
   annualFeeCents: number | null
   status: CardStatus
   autopay: boolean
+  reportsToPersonal: boolean
   appliedDate: string | null
   openedDate: string | null
   closedDate: string | null
@@ -64,6 +65,7 @@ export function CardForm({
       annualFeeDollars: centsToDollars(initial?.annualFeeCents),
       status: initial?.status ?? 'open',
       autopay: initial?.autopay ?? false,
+      reportsToPersonal: initial?.reportsToPersonal ?? false,
       appliedDate: isoToDate(initial?.appliedDate),
       openedDate: isoToDate(initial?.openedDate),
       closedDate: isoToDate(initial?.closedDate),
@@ -81,6 +83,7 @@ export function CardForm({
       annualFeeCents: parseCents(v.annualFeeDollars),
       status: v.status as CardStatus,
       autopay: v.autopay,
+      reportsToPersonal: v.reportsToPersonal,
       appliedDate: dateToIso(v.appliedDate),
       openedDate: dateToIso(v.openedDate),
       closedDate: dateToIso(v.closedDate),
@@ -170,6 +173,14 @@ export function CardForm({
         {...form.getInputProps('autopay', { type: 'checkbox' })}
         mb="sm"
       />
+      {form.values.businessId && (
+        <Switch
+          label="Counts toward 5/24"
+          description="This business card reports to the personal bureaus (Capital One, Discover, TD…)"
+          {...form.getInputProps('reportsToPersonal', { type: 'checkbox' })}
+          mb="sm"
+        />
+      )}
       <Textarea label="Notes" autosize minRows={2} {...form.getInputProps('notes')} mb="md" />
 
       <Group justify="flex-end">

@@ -50,6 +50,7 @@ const upsert = z.object({
   annualFeeCents: z.number().int().nullish(),
   status: z.enum(CARD_STATUSES).default('open'),
   autopay: z.boolean().default(false),
+  reportsToPersonal: z.boolean().default(false),
   appliedDate: z.string().nullish(),
   openedDate: z.string().nullish(),
   closedDate: z.string().nullish(),

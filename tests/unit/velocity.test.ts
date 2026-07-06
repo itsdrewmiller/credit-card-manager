@@ -31,6 +31,50 @@ describe('personVelocity', () => {
     expect(v.nextFreeDate).toBe('2027-06-01')
   })
 
+  it('counts business cards marked as reporting to the personal bureau', () => {
+    const v = personVelocity(
+      [
+        { id: 1, openedDate: '2026-01-10', businessId: null, status: 'open' },
+        { id: 2, openedDate: '2025-06-01', businessId: 7, reportsToPersonal: true, status: 'open' }, // counts
+        { id: 3, openedDate: '2025-03-01', businessId: 7, reportsToPersonal: false, status: 'open' } // excluded
+      ],
+      now
+    )
+    expect(v.count).toBe(2)
+    expect(v.contributing.map((c) => c.id)).toEqual([1, 2])
+  })
+
+  it('reports when an over-5/24 person gets back under', () => {
+    const v = personVelocity(
+      [
+        { id: 1, openedDate: '2026-02-01', businessId: null, status: 'open' },
+        { id: 2, openedDate: '2026-01-01', businessId: null, status: 'open' },
+        { id: 3, openedDate: '2025-12-01', businessId: null, status: 'open' },
+        { id: 4, openedDate: '2025-06-01', businessId: null, status: 'open' },
+        { id: 5, openedDate: '2025-03-01', businessId: null, status: 'open' },
+        { id: 6, openedDate: '2024-09-01', businessId: null, status: 'open' }
+      ],
+      now
+    )
+    expect(v.count).toBe(6)
+    expect(v.atChase524).toBe(true)
+    // Six counting: two must age out. Second-oldest opened 2025-03-01 -> under on 2027-03-01.
+    expect(v.under524Date).toBe('2027-03-01')
+
+    const five = personVelocity(
+      Array.from({ length: 5 }, (_, i) => ({
+        id: i,
+        openedDate: i === 4 ? '2025-03-01' : '2026-02-01',
+        businessId: null,
+        status: 'open'
+      })),
+      now
+    )
+    // Exactly five: under as soon as the oldest ages out.
+    expect(five.under524Date).toBe('2027-03-01')
+    expect(five.nextFreeDate).toBe('2027-03-01')
+  })
+
   it('flags 5/24 at five personal cards in 24 months', () => {
     const heavy = personVelocity(
       Array.from({ length: 5 }, (_, i) => ({
@@ -49,5 +93,6 @@ describe('personVelocity', () => {
     expect(v.count).toBe(0)
     expect(v.nextFreeDate).toBeNull()
     expect(v.atChase524).toBe(false)
+    expect(v.under524Date).toBeNull()
   })
 })

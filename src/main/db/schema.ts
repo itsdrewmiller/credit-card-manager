@@ -120,6 +120,11 @@ export const card = sqliteTable(
     // (a missed payment can claw back a bonus and ding the bureau).
     autopay: integer('autopay', { mode: 'boolean' }).notNull().default(false),
 
+    // Business cards from a few issuers (Capital One, Discover, TD…) report to
+    // the personal bureaus and therefore count toward 5/24 despite being
+    // business cards. Irrelevant for personal cards (they always count).
+    reportsToPersonal: integer('reports_to_personal', { mode: 'boolean' }).notNull().default(false),
+
     appliedDate: text('applied_date'),
     openedDate: text('opened_date'),
     closedDate: text('closed_date'),

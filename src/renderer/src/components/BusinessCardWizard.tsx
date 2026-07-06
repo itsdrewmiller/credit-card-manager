@@ -30,6 +30,7 @@ interface FormValues {
   last4: string
   annualFeeDollars: number | ''
   openedDate: Date | null
+  reportsToPersonal: boolean
   hasBonus: boolean
   rewardKind: RewardKind
   pointProgramId: string
@@ -48,6 +49,7 @@ const initialValues: FormValues = {
   last4: '',
   annualFeeDollars: '',
   openedDate: null,
+  reportsToPersonal: false,
   hasBonus: false,
   rewardKind: 'points',
   pointProgramId: '',
@@ -161,6 +163,7 @@ export function BusinessCardWizard({
         last4: v.last4 || null,
         annualFeeCents: parseCents(v.annualFeeDollars),
         openedDate: dateToIso(v.openedDate),
+        reportsToPersonal: v.reportsToPersonal,
         status: 'open',
         source: 'manual'
       },
@@ -269,6 +272,13 @@ export function BusinessCardWizard({
               onChange={onOpenedChange}
             />
           </SimpleGrid>
+
+          <Switch
+            label="Counts toward 5/24"
+            description="Reports to the personal bureaus (Capital One, Discover, TD…)"
+            {...form.getInputProps('reportsToPersonal', { type: 'checkbox' })}
+            mb="sm"
+          />
 
           <Divider
             my="sm"

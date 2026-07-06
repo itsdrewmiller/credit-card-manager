@@ -57,10 +57,16 @@ function VelocityCard({ v }: { v: VelocityRow }): React.ReactElement {
         )}
       </Group>
 
-      {v.nextFreeDate && (
-        <Text size="sm" c="dimmed" mt={4}>
-          Next slot frees {formatDate(v.nextFreeDate)}
+      {v.atChase524 && v.under524Date ? (
+        <Text size="sm" fw={600} c="red" mt={4}>
+          Back under 5/24 on {formatDate(v.under524Date)}
         </Text>
+      ) : (
+        v.nextFreeDate && (
+          <Text size="sm" c="dimmed" mt={4}>
+            Next slot frees {formatDate(v.nextFreeDate)}
+          </Text>
+        )
       )}
 
       {v.contributing.length > 0 && (
@@ -90,8 +96,9 @@ export function Velocity(): React.ReactElement {
     <>
       <PageHeader title="Velocity (5/24)" />
       <Text c="dimmed" mb="md">
-        Personal cards opened in the trailing 24 months, per person. Business cards are excluded
-        (they don&apos;t report to the personal bureau).
+        Personal-reporting cards opened in the trailing 24 months, per person. Business cards are
+        excluded unless marked &quot;counts toward 5/24&quot; on the card (a few issuers report them
+        to the personal bureau).
       </Text>
 
       <QueryGate queries={[byPerson, rejected]}>

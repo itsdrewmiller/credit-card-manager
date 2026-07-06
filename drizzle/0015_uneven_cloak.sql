@@ -1,0 +1,1 @@
+ALTER TABLE `card` ADD `reports_to_personal` integer DEFAULT false NOT NULL;
