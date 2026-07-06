@@ -20,7 +20,10 @@ import { RowActionsMenu } from '../components/RowActionsMenu'
 import { useEntityEditor } from '../components/useEntityEditor'
 import { BenefitForm, type BenefitFormValue } from '../components/BenefitForm'
 import { CardBenefits } from './CardBenefits'
-import { cardLabel, cardSelectLabel } from '../components/useCardEditor'
+import { cardLabel } from '../components/useCardEditor'
+import { useInlineCommit } from '../lib/useInlineCommit'
+import { useCardOptions } from '../lib/options'
+import { BENEFIT_STATUS_BADGE } from '../lib/statusColors'
 import { centsToDollars, parseCents, formatCents } from '@shared/format'
 import { formatDate, daysUntil } from '@shared/dates'
 import type { BenefitRow } from '../lib/types'
@@ -36,18 +39,13 @@ function UsedCell({
   onToggle: (used: boolean) => void
   onAmount: (usedAmountCents: number | null) => void
 }): React.ReactElement {
-  const [value, setValue] = React.useState<number | string>(centsToDollars(b.usedAmountCents))
-  const focused = React.useRef(false)
-
-  React.useEffect(() => {
-    if (!focused.current) setValue(centsToDollars(b.usedAmountCents))
-  }, [b.usedAmountCents])
-
-  const commit = (): void => {
-    focused.current = false
-    const cents = value === '' ? null : parseCents(value)
-    if (cents !== (b.usedAmountCents ?? null)) onAmount(cents)
-  }
+  const { value, setValue, focusProps } = useInlineCommit<number | string>(
+    centsToDollars(b.usedAmountCents),
+    (v) => {
+      const cents = v === '' ? null : parseCents(v)
+      if (cents !== (b.usedAmountCents ?? null)) onAmount(cents)
+    }
+  )
 
   return (
     <Group gap={6} wrap="nowrap">
@@ -67,26 +65,13 @@ function UsedCell({
         aria-label="Amount used so far"
         value={value}
         onChange={setValue}
-        onFocus={() => {
-          focused.current = true
-        }}
-        onBlur={commit}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter') e.currentTarget.blur()
-        }}
+        {...focusProps}
       />
     </Group>
   )
 }
 
 type StatusFilter = 'all' | 'available' | 'upcoming' | 'used' | 'expired'
-
-const STATUS_BADGE: Record<string, { color: string; label: string }> = {
-  available: { color: 'green', label: 'Available' },
-  upcoming: { color: 'blue', label: 'Upcoming' },
-  used: { color: 'gray', label: 'Used' },
-  expired: { color: 'red', label: 'Expired' }
-}
 
 export function Benefits(): React.ReactElement {
   const utils = trpc.useUtils()
@@ -103,7 +88,7 @@ export function Benefits(): React.ReactElement {
   const setUsedAmount = trpc.benefits.setUsedAmount.useMutation({ onSuccess: invalidate })
   const remove = trpc.benefits.delete.useMutation({ onSuccess: invalidate })
 
-  const cardOptions = (cards.data ?? []).map((c) => ({ value: String(c.id), label: cardSelectLabel(c) }))
+  const cardOptions = useCardOptions()
 
   const filtered = useMemo(() => {
     let rows = benefits.data ?? []
@@ -222,8 +207,8 @@ export function Benefits(): React.ReactElement {
     {
       header: 'Status',
       render: (b) => (
-        <Badge color={STATUS_BADGE[b.status]?.color ?? 'gray'} variant="light">
-          {STATUS_BADGE[b.status]?.label ?? b.status}
+        <Badge color={BENEFIT_STATUS_BADGE[b.status]?.color ?? 'gray'} variant="light">
+          {BENEFIT_STATUS_BADGE[b.status]?.label ?? b.status}
         </Badge>
       )
     }

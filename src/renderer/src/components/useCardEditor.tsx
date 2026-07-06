@@ -3,6 +3,7 @@ import { trpc } from '../trpc'
 import { CardForm, type CardFormValue } from './CardForm'
 import { useEntityEditor } from './useEntityEditor'
 import { useInvalidateCards } from '../lib/mutations'
+import { useBusinessOptions, usePeopleOptions, useProductOptions } from '../lib/options'
 import type { CardRow } from '../lib/types'
 
 export function cardLabel(c: { product?: { issuer?: { name: string } | null; name: string } | null; rawCreditorName?: string | null }): string {
@@ -24,18 +25,14 @@ export function useCardEditor(): {
   openEdit: (c: CardRow) => void
   element: React.ReactElement
 } {
-  const productOpts = trpc.products.listForSelect.useQuery()
-  const people = trpc.people.list.useQuery()
-  const businesses = trpc.businesses.list.useQuery()
-
   const invalidate = useInvalidateCards()
 
   const create = trpc.cards.create.useMutation({ onSuccess: invalidate })
   const update = trpc.cards.update.useMutation({ onSuccess: invalidate })
 
-  const productOptions = (productOpts.data ?? []).map((p) => ({ value: String(p.id), label: p.label }))
-  const peopleOptions = (people.data ?? []).map((p) => ({ value: String(p.id), label: p.name }))
-  const businessOptions = (businesses.data ?? []).map((b) => ({ value: String(b.id), label: b.name }))
+  const productOptions = useProductOptions()
+  const peopleOptions = usePeopleOptions()
+  const businessOptions = useBusinessOptions()
 
   return useEntityEditor<CardRow, CardFormValue>({
     entityLabel: 'card',

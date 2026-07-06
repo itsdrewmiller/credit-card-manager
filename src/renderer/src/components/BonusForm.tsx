@@ -1,23 +1,12 @@
 import React from 'react'
-import {
-  Select,
-  NumberInput,
-  TextInput,
-  Textarea,
-  Switch,
-  SimpleGrid,
-  Group,
-  Button,
-  Divider,
-  Alert,
-  Text
-} from '@mantine/core'
+import { Select, NumberInput, TextInput, Textarea, Switch, SimpleGrid, Group, Divider, Alert, Text } from '@mantine/core'
 import { DateInput } from '@mantine/dates'
 import { useForm } from '@mantine/form'
 import { REWARD_KINDS, type RewardKind } from '@shared/constants'
 import { centsToDollars, parseCents, formatCents, bonusValueCents } from '@shared/format'
 import { addDays, daysBetween, isoToDate, dateToIso } from '@shared/dates'
 import type { BonusRow } from '../lib/types'
+import { FormFooter } from './FormFooter'
 
 export interface BonusFormValue {
   cardId: number
@@ -243,14 +232,7 @@ export function BonusForm({
       </Group>
       <Textarea label="Notes" autosize minRows={2} {...form.getInputProps('notes')} mb="md" />
 
-      <Group justify="flex-end">
-        <Button variant="default" onClick={onCancel}>
-          Cancel
-        </Button>
-        <Button type="submit" loading={submitting}>
-          Save bonus
-        </Button>
-      </Group>
+      <FormFooter editing={initial != null} submitting={submitting} onCancel={onCancel} />
     </form>
   )
 }

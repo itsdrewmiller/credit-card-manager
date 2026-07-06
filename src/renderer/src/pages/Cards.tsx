@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useRef } from 'react'
+import React, { useState, useMemo } from 'react'
 import {
   Table,
   Button,
@@ -8,31 +8,24 @@ import {
   NumberInput,
   Text,
   Tooltip,
-  SegmentedControl,
-  FileButton
+  SegmentedControl
 } from '@mantine/core'
-import { IconPlus, IconChevronUp, IconChevronDown, IconUpload } from '@tabler/icons-react'
+import { IconPlus, IconChevronUp, IconChevronDown } from '@tabler/icons-react'
 import { useNavigate } from 'react-router-dom'
 import { trpc } from '../trpc'
 import { PageHeader } from '../components/PageHeader'
 import { EmptyState } from '../components/EmptyState'
 import { QueryGate } from '../components/QueryGate'
 import { RowActionsMenu } from '../components/RowActionsMenu'
+import { CsvImportButton } from '../components/CsvImportButton'
 import { useCardEditor, cardLabel } from '../components/useCardEditor'
 import { useInvalidateCards, showSuccess } from '../lib/mutations'
+import { useInlineCommit } from '../lib/useInlineCommit'
+import { CARD_STATUS_COLOR } from '../lib/statusColors'
 import { CARD_STATUS_LABELS, CARD_FIELD_LABELS, type CardStatus } from '@shared/constants'
 import { formatCents } from '@shared/format'
 import { formatDate } from '@shared/dates'
-import { readTextFile } from '../lib/download'
 import type { CardRow } from '../lib/types'
-
-const STATUS_COLOR: Record<CardStatus, string> = {
-  applied: 'blue',
-  open: 'green',
-  closed: 'gray',
-  product_changed: 'grape',
-  rejected: 'red'
-}
 
 /** Product-level baseline earn rate, edited inline; feeds cash-back return in Reports. */
 function EarnRateCell({
@@ -43,21 +36,12 @@ function EarnRateCell({
   onCommit: (productId: number, pct: number | null) => void
 }): React.ReactElement {
   const current = c.product?.defaultCashbackPct ?? null
-  const [value, setValue] = useState<number | string>(current ?? '')
-  const focused = useRef(false)
-
-  useEffect(() => {
-    if (!focused.current) setValue(current ?? '')
-  }, [current])
+  const { value, setValue, focusProps } = useInlineCommit<number | string>(current ?? '', (v) => {
+    const pct = v === '' ? null : Number(v)
+    if (c.product && pct !== current) onCommit(c.product.id, pct)
+  })
 
   if (!c.product) return <Text c="dimmed">—</Text>
-  const productId = c.product.id
-
-  const commit = (): void => {
-    focused.current = false
-    const pct = value === '' ? null : Number(value)
-    if (pct !== current) onCommit(productId, pct)
-  }
 
   return (
     <NumberInput
@@ -71,13 +55,7 @@ function EarnRateCell({
       aria-label="Default cash back percent"
       value={value}
       onChange={setValue}
-      onFocus={() => {
-        focused.current = true
-      }}
-      onBlur={commit}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter') e.currentTarget.blur()
-      }}
+      {...focusProps}
     />
   )
 }
@@ -133,11 +111,6 @@ export function Cards(): React.ReactElement {
     }
   })
 
-  const onPickFile = async (file: File | null): Promise<void> => {
-    if (!file) return
-    importCsv.mutate({ text: await readTextFile(file) })
-  }
-
   const rows = useMemo(() => {
     const all = cards.data ?? []
     const filtered = status === 'all' ? all : all.filter((c) => c.status === status)
@@ -160,18 +133,7 @@ export function Cards(): React.ReactElement {
   return (
     <>
       <PageHeader title="Cards">
-        <FileButton onChange={onPickFile} accept="text/csv,.csv">
-          {(props) => (
-            <Button
-              {...props}
-              variant="default"
-              leftSection={<IconUpload size={16} />}
-              loading={importCsv.isPending}
-            >
-              Import CSV
-            </Button>
-          )}
-        </FileButton>
+        <CsvImportButton onText={(text) => importCsv.mutate({ text })} loading={importCsv.isPending} />
         <Button variant="default" onClick={() => navigate('/add-cards')}>
           Add cards…
         </Button>
@@ -237,7 +199,7 @@ export function Cards(): React.ReactElement {
                   {c.business ? c.business.name : <Text c="dimmed">Personal</Text>}
                 </Table.Td>
                 <Table.Td>
-                  <Badge color={STATUS_COLOR[c.status as CardStatus] ?? 'gray'} variant="light">
+                  <Badge color={CARD_STATUS_COLOR[c.status as CardStatus] ?? 'gray'} variant="light">
                     {CARD_STATUS_LABELS[c.status as CardStatus] ?? c.status}
                   </Badge>
                 </Table.Td>

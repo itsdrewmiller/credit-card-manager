@@ -9,15 +9,10 @@ import { DataTable, type Column } from '../components/DataTable'
 import { RowActionsMenu } from '../components/RowActionsMenu'
 import { useEntityEditor } from '../components/useEntityEditor'
 import { ReferralForm, type ReferralFormValue } from '../components/ReferralForm'
+import { usePeopleOptions, useProductOptions } from '../lib/options'
+import { REFERRAL_STATUS_COLOR } from '../lib/statusColors'
 import { formatDate } from '@shared/dates'
 import type { ReferralRow } from '../lib/types'
-
-const STATUS_COLOR: Record<string, string> = {
-  pending: 'gray',
-  clicked: 'blue',
-  approved: 'teal',
-  paid: 'green'
-}
 
 const COLUMNS: Column<ReferralRow>[] = [
   { header: 'From', render: (r) => <Text fw={500}>{r.from?.name}</Text> },
@@ -32,7 +27,7 @@ const COLUMNS: Column<ReferralRow>[] = [
     header: 'Status',
     render: (r) =>
       r.status ? (
-        <Badge color={STATUS_COLOR[r.status] ?? 'gray'} variant="light">
+        <Badge color={REFERRAL_STATUS_COLOR[r.status] ?? 'gray'} variant="light">
           {r.status}
         </Badge>
       ) : (
@@ -56,7 +51,6 @@ export function Referrals(): React.ReactElement {
   const utils = trpc.useUtils()
   const referrals = trpc.referrals.list.useQuery()
   const people = trpc.people.list.useQuery()
-  const products = trpc.products.listForSelect.useQuery()
 
   const invalidate = (): void => void utils.referrals.list.invalidate()
 
@@ -64,8 +58,8 @@ export function Referrals(): React.ReactElement {
   const update = trpc.referrals.update.useMutation({ onSuccess: invalidate })
   const remove = trpc.referrals.delete.useMutation({ onSuccess: invalidate })
 
-  const peopleOptions = (people.data ?? []).map((p) => ({ value: String(p.id), label: p.name }))
-  const productOptions = (products.data ?? []).map((p) => ({ value: String(p.id), label: p.label }))
+  const peopleOptions = usePeopleOptions()
+  const productOptions = useProductOptions()
 
   const editor = useEntityEditor<ReferralRow, ReferralFormValue>({
     entityLabel: 'referral',

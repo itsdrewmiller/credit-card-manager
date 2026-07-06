@@ -1,8 +1,9 @@
 import React from 'react'
-import { TextInput, NumberInput, Select, Textarea, Group, Button } from '@mantine/core'
+import { TextInput, NumberInput, Select, Textarea } from '@mantine/core'
 import { useForm } from '@mantine/form'
 import { POINT_PROGRAM_KINDS } from '@shared/constants'
 import type { PointProgramRow } from '../lib/types'
+import { FormFooter } from './FormFooter'
 
 export interface PointProgramFormValue {
   name: string
@@ -89,14 +90,7 @@ export function PointProgramForm({
         mb="sm"
       />
       <Textarea label="Notes" autosize minRows={2} {...form.getInputProps('notes')} mb="md" />
-      <Group justify="flex-end">
-        <Button variant="default" onClick={onCancel}>
-          Cancel
-        </Button>
-        <Button type="submit" loading={submitting}>
-          {initial ? 'Save' : 'Add'}
-        </Button>
-      </Group>
+      <FormFooter editing={initial != null} submitting={submitting} onCancel={onCancel} />
     </form>
   )
 }

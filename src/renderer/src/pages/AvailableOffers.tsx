@@ -1,6 +1,6 @@
 import React from 'react'
-import { Button, Group, Text, FileButton } from '@mantine/core'
-import { IconPlus, IconUpload } from '@tabler/icons-react'
+import { Button, Group, Text } from '@mantine/core'
+import { IconPlus } from '@tabler/icons-react'
 import { trpc } from '../trpc'
 import { QueryGate } from '../components/QueryGate'
 import { DataTable, type Column } from '../components/DataTable'
@@ -10,7 +10,8 @@ import { OfferForm, type OfferFormValue } from '../components/OfferForm'
 import { formatCents, formatPoints } from '@shared/format'
 import { formatDate } from '@shared/dates'
 import { showSuccess } from '../lib/mutations'
-import { readTextFile } from '../lib/download'
+import { CsvImportButton } from '../components/CsvImportButton'
+import { useProductOptions } from '../lib/options'
 import type { OfferRow } from '../lib/types'
 
 const COLUMNS: Column<OfferRow>[] = [
@@ -57,12 +58,7 @@ export function AvailableOffers(): React.ReactElement {
       showSuccess(`Imported ${res.total} offers (${res.created} new, ${res.updated} updated)`)
     }
   })
-  const onPickFile = async (file: File | null): Promise<void> => {
-    if (!file) return
-    importCsv.mutate({ text: await readTextFile(file) })
-  }
-
-  const productOptions = (products.data ?? []).map((p) => ({ value: String(p.id), label: p.label }))
+  const productOptions = useProductOptions()
 
   const editor = useEntityEditor<OfferRow, OfferFormValue>({
     entityLabel: 'offer',
@@ -81,18 +77,7 @@ export function AvailableOffers(): React.ReactElement {
           Track signup-bonus offers available on card types — what you could go get.
         </Text>
         <Group gap="xs">
-          <FileButton onChange={onPickFile} accept="text/csv,.csv">
-            {(props) => (
-              <Button
-                {...props}
-                variant="default"
-                leftSection={<IconUpload size={16} />}
-                loading={importCsv.isPending}
-              >
-                Import CSV
-              </Button>
-            )}
-          </FileButton>
+          <CsvImportButton onText={(text) => importCsv.mutate({ text })} loading={importCsv.isPending} />
           <Button
             leftSection={<IconPlus size={16} />}
             onClick={editor.openCreate}

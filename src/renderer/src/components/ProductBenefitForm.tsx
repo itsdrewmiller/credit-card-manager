@@ -1,9 +1,10 @@
 import React from 'react'
-import { Select, TextInput, NumberInput, Textarea, Group, Button } from '@mantine/core'
+import { Select, TextInput, NumberInput, Textarea, Group } from '@mantine/core'
 import { useForm } from '@mantine/form'
 import { BENEFIT_PERIODS, type BenefitPeriod } from '@shared/constants'
 import { centsToDollars, parseCents } from '@shared/format'
 import type { ProductBenefitRow } from '../lib/types'
+import { FormFooter } from './FormFooter'
 
 export interface ProductBenefitFormValue {
   cardProductId: number
@@ -102,14 +103,7 @@ export function ProductBenefitForm({
         />
       </Group>
       <Textarea label="Notes" autosize minRows={2} {...form.getInputProps('notes')} mb="md" />
-      <Group justify="flex-end">
-        <Button variant="default" onClick={onCancel}>
-          Cancel
-        </Button>
-        <Button type="submit" loading={submitting}>
-          {initial ? 'Save' : 'Add'}
-        </Button>
-      </Group>
+      <FormFooter editing={initial != null} submitting={submitting} onCancel={onCancel} />
     </form>
   )
 }

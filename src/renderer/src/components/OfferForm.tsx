@@ -1,21 +1,12 @@
 import React from 'react'
-import {
-  Select,
-  NumberInput,
-  TextInput,
-  Textarea,
-  Group,
-  Button,
-  SimpleGrid,
-  Alert,
-  Text
-} from '@mantine/core'
+import { Select, NumberInput, TextInput, Textarea, SimpleGrid, Alert, Text } from '@mantine/core'
 import { DateInput } from '@mantine/dates'
 import { useForm } from '@mantine/form'
 import { REWARD_KINDS, type RewardKind } from '@shared/constants'
 import { centsToDollars, parseCents, formatCents, pointsValueCents } from '@shared/format'
 import { isoToDate, dateToIso } from '@shared/dates'
 import type { OfferRow } from '../lib/types'
+import { FormFooter } from './FormFooter'
 
 export interface OfferFormValue {
   cardProductId: number
@@ -179,14 +170,7 @@ export function OfferForm({
         />
       </SimpleGrid>
       <Textarea label="Notes" autosize minRows={2} {...form.getInputProps('notes')} mb="md" />
-      <Group justify="flex-end">
-        <Button variant="default" onClick={onCancel}>
-          Cancel
-        </Button>
-        <Button type="submit" loading={submitting}>
-          {initial ? 'Save' : 'Add'}
-        </Button>
-      </Group>
+      <FormFooter editing={initial != null} submitting={submitting} onCancel={onCancel} />
     </form>
   )
 }

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react'
+import React from 'react'
 import { Button, Badge, NumberInput, Text, Progress, Stack, Group, Tabs } from '@mantine/core'
 import { IconPlus } from '@tabler/icons-react'
 import { trpc } from '../trpc'
@@ -10,13 +10,11 @@ import { RowActionsMenu } from '../components/RowActionsMenu'
 import { useEntityEditor } from '../components/useEntityEditor'
 import { BonusForm, type BonusFormValue } from '../components/BonusForm'
 import { AvailableOffers } from './AvailableOffers'
-import { cardLabel, cardSelectLabel } from '../components/useCardEditor'
-import {
-  centsToDollars,
-  parseCents,
-  formatCents,
-  formatPoints
-} from '@shared/format'
+import { cardLabel } from '../components/useCardEditor'
+import { useInlineCommit } from '../lib/useInlineCommit'
+import { useCardOptions, useProgramOptions } from '../lib/options'
+import { BONUS_PACE_COLOR } from '../lib/statusColors'
+import { centsToDollars, parseCents, formatCents, formatPoints } from '@shared/format'
 import { formatDate, daysUntil } from '@shared/dates'
 import type { BonusRow } from '../lib/types'
 
@@ -28,15 +26,6 @@ function rewardText(b: BonusRow): string {
   return '—'
 }
 
-/** Bar color signals pace: green met, blue on track, orange behind, red overdue. */
-const PACE_COLOR: Record<BonusRow['pace'], string> = {
-  met: 'green',
-  on_track: 'blue',
-  behind: 'orange',
-  overdue: 'red',
-  unknown: 'blue'
-}
-
 /** Spend-so-far edited right in the table; Enter or blur commits. */
 function SpendCell({
   bonus,
@@ -45,19 +34,13 @@ function SpendCell({
   bonus: BonusRow
   onCommit: (bonus: BonusRow, spendSoFarCents: number) => void
 }): React.ReactElement {
-  const [value, setValue] = useState<number | string>(centsToDollars(bonus.spendSoFarCents) || 0)
-  const focused = useRef(false)
-
-  // Pick up outside changes (drawer edit, refetch) unless the user is typing.
-  useEffect(() => {
-    if (!focused.current) setValue(centsToDollars(bonus.spendSoFarCents) || 0)
-  }, [bonus.spendSoFarCents])
-
-  const commit = (): void => {
-    focused.current = false
-    const cents = parseCents(value) ?? 0
-    if (cents !== bonus.spendSoFarCents) onCommit(bonus, cents)
-  }
+  const { value, setValue, focusProps } = useInlineCommit<number | string>(
+    centsToDollars(bonus.spendSoFarCents) || 0,
+    (v) => {
+      const cents = parseCents(v) ?? 0
+      if (cents !== bonus.spendSoFarCents) onCommit(bonus, cents)
+    }
+  )
 
   const pct =
     bonus.targetSpendCents && bonus.targetSpendCents > 0
@@ -67,7 +50,7 @@ function SpendCell({
   return (
     <Stack gap={4}>
       {bonus.targetSpendCents != null && (
-        <Progress value={pct} color={PACE_COLOR[bonus.pace]} size="sm" />
+        <Progress value={pct} color={BONUS_PACE_COLOR[bonus.pace]} size="sm" />
       )}
       <Group gap={6} wrap="nowrap">
         <NumberInput
@@ -81,13 +64,7 @@ function SpendCell({
           aria-label="Spent so far"
           value={value}
           onChange={setValue}
-          onFocus={() => {
-            focused.current = true
-          }}
-          onBlur={commit}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') e.currentTarget.blur()
-          }}
+          {...focusProps}
         />
         <Text size="xs" c="dimmed" style={{ whiteSpace: 'nowrap' }}>
           {bonus.targetSpendCents != null ? (
@@ -165,7 +142,6 @@ export function Bonuses(): React.ReactElement {
   const utils = trpc.useUtils()
   const bonuses = trpc.bonuses.list.useQuery()
   const cards = trpc.cards.list.useQuery()
-  const programs = trpc.points.listForSelect.useQuery()
 
   const invalidate = (): void => void utils.bonuses.list.invalidate()
 
@@ -173,12 +149,8 @@ export function Bonuses(): React.ReactElement {
   const update = trpc.bonuses.update.useMutation({ onSuccess: invalidate })
   const remove = trpc.bonuses.delete.useMutation({ onSuccess: invalidate })
 
-  const cardOptions = (cards.data ?? []).map((c) => ({ value: String(c.id), label: cardSelectLabel(c) }))
-  const programOptions = (programs.data ?? []).map((p) => ({
-    value: String(p.id),
-    label: p.label,
-    valuationCpp: p.valuationCpp
-  }))
+  const cardOptions = useCardOptions()
+  const programOptions = useProgramOptions()
 
   const editor = useEntityEditor<BonusRow, BonusFormValue>({
     entityLabel: 'bonus',

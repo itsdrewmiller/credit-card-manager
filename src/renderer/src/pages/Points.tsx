@@ -9,6 +9,7 @@ import { RowActionsMenu } from '../components/RowActionsMenu'
 import { useEntityEditor } from '../components/useEntityEditor'
 import { PointProgramForm, type PointProgramFormValue } from '../components/PointProgramForm'
 import { formatCents, formatPoints, pointsValueCents } from '@shared/format'
+import { usePeopleOptions } from '../lib/options'
 import type { PointProgramRow } from '../lib/types'
 
 const COLUMNS: Column<PointProgramRow>[] = [
@@ -30,7 +31,6 @@ const COLUMNS: Column<PointProgramRow>[] = [
 export function Points(): React.ReactElement {
   const utils = trpc.useUtils()
   const programs = trpc.points.list.useQuery()
-  const people = trpc.people.list.useQuery()
 
   // Valuations feed bonus values, so refresh those too.
   const invalidate = (): void => {
@@ -43,8 +43,7 @@ export function Points(): React.ReactElement {
   const update = trpc.points.update.useMutation({ onSuccess: invalidate })
   const remove = trpc.points.delete.useMutation({ onSuccess: invalidate })
 
-  const peopleOptions = (people.data ?? []).map((p) => ({ value: String(p.id), label: p.name }))
-
+  const peopleOptions = usePeopleOptions()
   const editor = useEntityEditor<PointProgramRow, PointProgramFormValue>({
     entityLabel: 'program',
     create,

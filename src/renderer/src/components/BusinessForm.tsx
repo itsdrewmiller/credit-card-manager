@@ -1,8 +1,9 @@
 import React from 'react'
-import { TextInput, Textarea, Select, Group, Button } from '@mantine/core'
+import { TextInput, Textarea, Select } from '@mantine/core'
 import { useForm } from '@mantine/form'
 import { BUSINESS_TYPES } from '@shared/constants'
 import type { BusinessRow } from '../lib/types'
+import { FormFooter } from './FormFooter'
 
 export interface BusinessFormValue {
   name: string
@@ -70,14 +71,7 @@ export function BusinessForm({
         mb="sm"
       />
       <Textarea label="Notes" autosize minRows={2} {...form.getInputProps('notes')} mb="md" />
-      <Group justify="flex-end">
-        <Button variant="default" onClick={onCancel}>
-          Cancel
-        </Button>
-        <Button type="submit" loading={submitting}>
-          {initial ? 'Save' : 'Add'}
-        </Button>
-      </Group>
+      <FormFooter editing={initial != null} submitting={submitting} onCancel={onCancel} />
     </form>
   )
 }

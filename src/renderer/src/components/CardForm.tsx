@@ -1,20 +1,11 @@
 import React from 'react'
-import {
-  TextInput,
-  NumberInput,
-  Select,
-  Switch,
-  Textarea,
-  Group,
-  Button,
-  SimpleGrid,
-  Divider
-} from '@mantine/core'
+import { TextInput, NumberInput, Select, Switch, Textarea, SimpleGrid, Divider } from '@mantine/core'
 import { DateInput } from '@mantine/dates'
 import { useForm } from '@mantine/form'
 import { CARD_STATUSES, CARD_STATUS_LABELS, NETWORKS, type CardStatus } from '@shared/constants'
 import { centsToDollars, parseCents } from '@shared/format'
 import { isoToDate, dateToIso } from '@shared/dates'
+import { FormFooter } from './FormFooter'
 
 export interface CardFormValue {
   cardProductId: number | null
@@ -181,14 +172,7 @@ export function CardForm({
       />
       <Textarea label="Notes" autosize minRows={2} {...form.getInputProps('notes')} mb="md" />
 
-      <Group justify="flex-end">
-        <Button variant="default" onClick={onCancel}>
-          Cancel
-        </Button>
-        <Button type="submit" loading={submitting}>
-          Save card
-        </Button>
-      </Group>
+      <FormFooter editing={initial != null} submitting={submitting} onCancel={onCancel} />
     </form>
   )
 }

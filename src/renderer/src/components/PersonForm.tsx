@@ -1,7 +1,8 @@
 import React from 'react'
-import { TextInput, Textarea, Group, Button } from '@mantine/core'
+import { TextInput, Textarea } from '@mantine/core'
 import { useForm } from '@mantine/form'
 import type { PersonRow } from '../lib/types'
+import { FormFooter } from './FormFooter'
 
 export interface PersonFormValue {
   name: string
@@ -30,14 +31,7 @@ export function PersonForm({
     <form onSubmit={submit}>
       <TextInput label="Name" withAsterisk {...form.getInputProps('name')} mb="sm" />
       <Textarea label="Notes" autosize minRows={2} {...form.getInputProps('notes')} mb="md" />
-      <Group justify="flex-end">
-        <Button variant="default" onClick={onCancel}>
-          Cancel
-        </Button>
-        <Button type="submit" loading={submitting}>
-          {initial ? 'Save' : 'Add'}
-        </Button>
-      </Group>
+      <FormFooter editing={initial != null} submitting={submitting} onCancel={onCancel} />
     </form>
   )
 }

@@ -1,11 +1,12 @@
 import React from 'react'
-import { TextInput, NumberInput, Select, Textarea, Group, Button, SimpleGrid } from '@mantine/core'
+import { TextInput, NumberInput, Select, Textarea, SimpleGrid } from '@mantine/core'
 import { DateInput } from '@mantine/dates'
 import { useForm } from '@mantine/form'
 import { REFERRAL_STATUSES, type ReferralStatus } from '@shared/constants'
 import { centsToDollars, parseCents } from '@shared/format'
 import { isoToDate, dateToIso } from '@shared/dates'
 import type { ReferralRow } from '../lib/types'
+import { FormFooter } from './FormFooter'
 
 export interface ReferralFormValue {
   fromPersonId: number
@@ -124,14 +125,7 @@ export function ReferralForm({
         mb="sm"
       />
       <Textarea label="Notes" autosize minRows={2} {...form.getInputProps('notes')} mb="md" />
-      <Group justify="flex-end">
-        <Button variant="default" onClick={onCancel}>
-          Cancel
-        </Button>
-        <Button type="submit" loading={submitting}>
-          {initial ? 'Save' : 'Add'}
-        </Button>
-      </Group>
+      <FormFooter editing={initial != null} submitting={submitting} onCancel={onCancel} />
     </form>
   )
 }

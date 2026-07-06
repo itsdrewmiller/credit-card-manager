@@ -1,8 +1,9 @@
 import React from 'react'
-import { Select, Switch, Textarea, TextInput, Group, Button, Text } from '@mantine/core'
+import { Select, Switch, Textarea, TextInput, Text } from '@mantine/core'
 import { useForm } from '@mantine/form'
 import { ruleParamsError } from '@shared/rules'
 import type { RecommendationRuleRow } from '../lib/types'
+import { FormFooter } from './FormFooter'
 
 export interface RuleFormValue {
   kind: string
@@ -120,14 +121,7 @@ export function RuleForm({
       />
       <Switch label="Enabled" {...form.getInputProps('enabled', { type: 'checkbox' })} mb="sm" />
       <Textarea label="Notes" autosize minRows={2} {...form.getInputProps('notes')} mb="md" />
-      <Group justify="flex-end">
-        <Button variant="default" onClick={onCancel}>
-          Cancel
-        </Button>
-        <Button type="submit" loading={submitting}>
-          {initial ? 'Save' : 'Add'}
-        </Button>
-      </Group>
+      <FormFooter editing={initial != null} submitting={submitting} onCancel={onCancel} />
     </form>
   )
 }
