@@ -77,15 +77,10 @@ export function App(): React.ReactElement {
             />
           ))}
         </ScrollArea>
+        <Text size="xs" c="dimmed" mt="auto" px="xs" pt="xs">
+          v{__APP_VERSION__}
+        </Text>
       </AppShell.Navbar>
-
-      <Text
-        size="xs"
-        c="dimmed"
-        style={{ position: 'fixed', bottom: 6, left: 10, zIndex: 1, pointerEvents: 'none', opacity: 0.7 }}
-      >
-        v{__APP_VERSION__}
-      </Text>
 
       <AppShell.Main>
         <Routes>
