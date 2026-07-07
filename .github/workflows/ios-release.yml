@@ -40,12 +40,12 @@ jobs:
           mkdir -p ~/.appstoreconnect/private_keys
           printf '%s' "$ASC_KEY_P8" > ~/.appstoreconnect/private_keys/AuthKey_${ASC_KEY_ID}.p8
 
-      # Build number must be unique per upload; the run number does that.
-      # Marketing version tracks package.json.
-      - name: Archive
-        env:
-          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
-          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+      # Archive UNSIGNED: automatic signing at archive time wants a development
+      # profile, which requires registered devices (we have none). Export does
+      # all the signing with an App Store distribution profile instead, which
+      # needs no devices. Build number must be unique per upload; the run
+      # number does that. Marketing version tracks package.json.
+      - name: Archive (unsigned)
         run: |
           VERSION=$(node -p "require('./package.json').version")
           xcodebuild \
@@ -54,12 +54,10 @@ jobs:
             -destination 'generic/platform=iOS' \
             -archivePath build/App.xcarchive \
             archive \
-            -allowProvisioningUpdates \
-            -authenticationKeyPath ~/.appstoreconnect/private_keys/AuthKey_${ASC_KEY_ID}.p8 \
-            -authenticationKeyID "$ASC_KEY_ID" \
-            -authenticationKeyIssuerID "$ASC_ISSUER_ID" \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
             DEVELOPMENT_TEAM=B676HVHBWG \
-            CODE_SIGN_STYLE=Automatic \
             MARKETING_VERSION="$VERSION" \
             CURRENT_PROJECT_VERSION="${{ github.run_number }}"
 
