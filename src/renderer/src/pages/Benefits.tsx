@@ -7,6 +7,7 @@ import {
   TextInput,
   Checkbox,
   SegmentedControl,
+  Select,
   Group,
   Tabs
 } from '@mantine/core'
@@ -20,7 +21,7 @@ import { RowActionsMenu } from '../components/RowActionsMenu'
 import { useEntityEditor } from '../components/useEntityEditor'
 import { BenefitForm, type BenefitFormValue } from '../components/BenefitForm'
 import { CardBenefits } from './CardBenefits'
-import { cardLabel } from '../components/useCardEditor'
+import { cardLabel, cardSelectLabel } from '../components/useCardEditor'
 import { useInlineCommit } from '../lib/useInlineCommit'
 import { useCardOptions } from '../lib/options'
 import { BENEFIT_STATUS_BADGE } from '../lib/statusColors'
@@ -79,6 +80,7 @@ export function Benefits(): React.ReactElement {
   const cards = trpc.cards.list.useQuery()
   const [filter, setFilter] = useState<StatusFilter>('all')
   const [search, setSearch] = useState('')
+  const [cardFilter, setCardFilter] = useState<string | null>(null)
 
   const invalidate = (): void => void utils.benefits.list.invalidate()
 
@@ -90,9 +92,21 @@ export function Benefits(): React.ReactElement {
 
   const cardOptions = useCardOptions()
 
+  // Only cards that actually have benefits, labeled last-4 first.
+  const cardFilterOptions = useMemo(() => {
+    const seen = new Map<number, string>()
+    for (const b of benefits.data ?? []) {
+      if (b.card && !seen.has(b.card.id)) seen.set(b.card.id, cardSelectLabel(b.card))
+    }
+    return [...seen]
+      .map(([id, label]) => ({ value: String(id), label }))
+      .sort((a, b) => a.label.localeCompare(b.label))
+  }, [benefits.data])
+
   const filtered = useMemo(() => {
     let rows = benefits.data ?? []
     if (filter !== 'all') rows = rows.filter((b) => b.status === filter)
+    if (cardFilter) rows = rows.filter((b) => String(b.card?.id) === cardFilter)
     const q = search.trim().toLowerCase()
     if (q) {
       rows = rows.filter((b) =>
@@ -102,7 +116,7 @@ export function Benefits(): React.ReactElement {
       )
     }
     return rows
-  }, [benefits.data, filter, search])
+  }, [benefits.data, filter, cardFilter, search])
 
   const editor = useEntityEditor<BenefitRow, BenefitFormValue>({
     entityLabel: 'benefit',
@@ -240,6 +254,16 @@ export function Benefits(): React.ReactElement {
                   { label: 'Used', value: 'used' },
                   { label: 'Expired', value: 'expired' }
                 ]}
+              />
+              <Select
+                placeholder="All cards"
+                aria-label="Filter by card"
+                data={cardFilterOptions}
+                value={cardFilter}
+                onChange={setCardFilter}
+                clearable
+                searchable
+                w={260}
               />
               <TextInput
                 placeholder="Search benefits…"
