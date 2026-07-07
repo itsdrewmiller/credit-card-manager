@@ -35,3 +35,9 @@ release/
 # Root icon source drops (canonical copies live in build/icon.*)
 /credit-card-stack-mac-icon.*
 sample benefits.tsv
+
+# App Store Connect API keys — never commit credentials
+*.p8
+
+# iOS build output
+ios/build/
