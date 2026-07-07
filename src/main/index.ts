@@ -7,20 +7,10 @@ import { is } from '@electron-toolkit/utils'
 import electronUpdater from 'electron-updater'
 
 const { autoUpdater } = electronUpdater
-import { sql } from 'drizzle-orm'
 import { openDatabase, runMigrations, type DB } from './db'
-import { seedIssuers } from './db/issuers'
-import { seedPointPrograms } from './db/points'
-import { seedExtraProducts } from './db/products'
-import { seedCashbackRates, seedBureauReporting, seedReferralValues } from './db/cashback'
-import { generateUpcomingBenefits } from './db/generateBenefits'
-import { seedDefaultRules } from './db/rules'
-import { seedReferralLinks } from './db/referralLinks'
+import { seedAll } from './db/seedAll'
 import { getSetting } from './db/settings'
 import { refreshOfferFeed, FEED_REFRESHED_KEY } from './trpc/routers/recommendations'
-import { dedupeCatalog } from './db/dedupe'
-import { productOffer } from './db/schema'
-import { importOffersCsv } from './import/offers'
 import { appRouter } from './trpc/router'
 import { createCallerFactory } from './trpc/trpc'
 import type { TrpcRequest } from '../preload'
@@ -48,18 +38,10 @@ function resourcePath(rel: string): string {
   return app.isPackaged ? join(process.resourcesPath, rel) : join(app.getAppPath(), rel)
 }
 
-/** On first run (no offers yet), seed the bundled signup-bonus offers snapshot. */
-function seedOffersIfEmpty(): void {
-  const count = db.select({ n: sql<number>`count(*)` }).from(productOffer).get()?.n ?? 0
-  if (count > 0) return
-  const csvPath = resourcePath(join('data', 'signup_bonuses.csv'))
-  if (!existsSync(csvPath)) return
-  try {
-    const res = importOffersCsv(db, readFileSync(csvPath, 'utf8'))
-    console.log(`[db] seeded ${res.total} available offers from bundled CSV`)
-  } catch (err) {
-    console.warn('[db] could not seed offers:', err)
-  }
+/** Bundled resource file contents, or null when absent. */
+function resourceText(rel: string): string | null {
+  const p = resourcePath(rel)
+  return existsSync(p) ? readFileSync(p, 'utf8') : null
 }
 
 function initDatabase(): void {
@@ -67,29 +49,11 @@ function initDatabase(): void {
   const handle = openDatabase(dbPath)
   db = handle.db
   runMigrations(db, resourcePath('drizzle'))
-  const seeded = seedIssuers(db)
-  seedPointPrograms(db)
-  seedOffersIfEmpty()
-  seedExtraProducts(db)
-  const cleaned = dedupeCatalog(db)
-  if (cleaned.renamed || cleaned.merged) {
-    console.log(`[db] catalog cleanup: ${cleaned.renamed} renamed, ${cleaned.merged} merged`)
-  }
-  const rated = seedCashbackRates(db)
-  if (rated) console.log(`[db] filled baseline earn rates for ${rated} products`)
-  const flagged = seedBureauReporting(db)
-  if (flagged) console.log(`[db] flagged ${flagged} business products as personal-reporting`)
-  const referrals = seedReferralValues(db)
-  if (referrals) console.log(`[db] filled typical referral values on ${referrals} offers`)
-  const seededRules = seedDefaultRules(db, resourcePath(join('data', 'default_rules.json')))
-  if (seededRules) console.log(`[db] seeded ${seededRules} default recommendation rules`)
-  const seededLinks = seedReferralLinks(db)
-  if (seededLinks) console.log(`[db] seeded ${seededLinks} referral links`)
-  const gen = generateUpcomingBenefits(db)
-  if (gen.created || gen.dated) {
-    console.log(`[db] recurring benefits: ${gen.created} generated, ${gen.dated} windows seeded`)
-  }
-  console.log(`[db] ready at ${dbPath}`, seeded.issuers ? `(seeded ${seeded.issuers} issuers)` : '')
+  seedAll(db, {
+    offersCsv: resourceText(join('data', 'signup_bonuses.csv')),
+    defaultRulesJson: resourceText(join('data', 'default_rules.json'))
+  })
+  console.log(`[db] ready at ${dbPath}`)
 }
 
 function createWindow(): BrowserWindow {
