@@ -65,13 +65,15 @@ export function App(): React.ReactElement {
     <AppShell
       // The header exists only below sm, to host the burger; the navbar
       // becomes an overlay drawer there and closes after navigating.
-      header={{ height: 48, collapsed: !isMobile }}
+      // Safe-area padding keeps the burger row clear of the iOS status bar;
+      // env() is 0 everywhere else, so desktop is unaffected.
+      header={{ height: 'calc(48px + env(safe-area-inset-top, 0px))', collapsed: !isMobile }}
       navbar={{ width: 240, breakpoint: 'sm', collapsed: { mobile: !navOpened } }}
       padding="md"
     >
       <FirstRunSetup />
-      <AppShell.Header hiddenFrom="sm">
-        <Group h="100%" px="md" gap="sm">
+      <AppShell.Header hiddenFrom="sm" style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}>
+        <Group h={48} px="md" gap="sm">
           <Burger opened={navOpened} onClick={nav.toggle} size="sm" aria-label="Toggle navigation" />
           <IconCreditCard size={20} />
           <Text fw={700}>Card Manager</Text>
