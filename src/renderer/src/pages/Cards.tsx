@@ -11,13 +11,7 @@ import {
   Tooltip,
   SegmentedControl
 } from '@mantine/core'
-import {
-  IconPlus,
-  IconChevronUp,
-  IconChevronDown,
-  IconFileTypePdf,
-  IconBuildingStore
-} from '@tabler/icons-react'
+import { IconPlus, IconChevronUp, IconChevronDown, IconFileTypePdf } from '@tabler/icons-react'
 import { trpc } from '../trpc'
 import { PageHeader } from '../components/PageHeader'
 import { EmptyState } from '../components/EmptyState'
@@ -25,7 +19,6 @@ import { QueryGate } from '../components/QueryGate'
 import { RowActionsMenu } from '../components/RowActionsMenu'
 import { CsvImportButton } from '../components/CsvImportButton'
 import { CreditReportImport } from '../components/CreditReportImport'
-import { BusinessCardWizard } from '../components/BusinessCardWizard'
 import { useCardEditor, cardLabel } from '../components/useCardEditor'
 import { useInvalidateCards, showSuccess } from '../lib/mutations'
 import { useInlineCommit } from '../lib/useInlineCommit'
@@ -108,7 +101,6 @@ export function Cards(): React.ReactElement {
   const [needsOnly, setNeedsOnly] = useState(false)
   const [sort, setSort] = useState<Sort>({ field: 'opened', dir: 'desc' })
   const [reportOpen, setReportOpen] = useState(false)
-  const [wizardOpen, setWizardOpen] = useState(false)
 
   const remove = trpc.cards.delete.useMutation({ onSuccess: invalidate })
   const setAutopay = trpc.cards.update.useMutation({ onSuccess: invalidate })
@@ -154,13 +146,6 @@ export function Cards(): React.ReactElement {
           onClick={() => setReportOpen(true)}
         >
           Import credit report
-        </Button>
-        <Button
-          variant="default"
-          leftSection={<IconBuildingStore size={16} />}
-          onClick={() => setWizardOpen(true)}
-        >
-          Add business card
         </Button>
         <Button leftSection={<IconPlus size={16} />} onClick={editor.openCreate}>
           Add card
@@ -286,7 +271,6 @@ export function Cards(): React.ReactElement {
       </QueryGate>
 
       <CreditReportImport opened={reportOpen} onClose={() => setReportOpen(false)} />
-      <BusinessCardWizard opened={wizardOpen} onClose={() => setWizardOpen(false)} />
       {editor.element}
     </>
   )

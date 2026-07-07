@@ -131,7 +131,8 @@ export function CreditReportImport({
       <Text c="dimmed" size="sm" mb="md">
         Upload an Equifax PDF to bootstrap personal cards. Every tradeline becomes a card (a stub if
         it can&apos;t be matched); finish the details afterward with the &quot;Needs info&quot;
-        filter. Business cards aren&apos;t on a personal report — add those with the wizard.
+        filter. Business cards aren&apos;t on a personal report — add those with &quot;Add
+        card&quot;.
       </Text>
 
       <SimpleGrid cols={{ base: 1, sm: 2 }} mb="md">
