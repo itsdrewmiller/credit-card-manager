@@ -1,6 +1,6 @@
 {
   "name": "credit-card-manager",
-  "version": "0.1.52",
+  "version": "0.1.53",
   "description": "Local-first credit-card churning tracker",
   "type": "module",
   "main": "./out/main/index.js",
