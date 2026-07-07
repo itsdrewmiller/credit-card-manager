@@ -28,7 +28,8 @@
     "dist": "electron-vite build && electron-builder --config electron-builder.config.cjs",
     "dist:mas": "electron-vite build && electron-builder --config electron-builder.config.cjs --mac mas",
     "dev:web": "vite --config vite.web.config.ts",
-    "build:web": "vite build --config vite.web.config.ts"
+    "build:web": "vite build --config vite.web.config.ts",
+    "ios": "npm run build:web && cap sync ios && cap run ios"
   },
   "dependencies": {
     "better-sqlite3": "^12.11.1",
