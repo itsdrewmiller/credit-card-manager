@@ -29,7 +29,7 @@ const hasMacCert = !!process.env.CSC_LINK || hasLocalDeveloperId()
 
 /** @type {import('electron-builder').Configuration} */
 module.exports = {
-  appId: 'com.searchlight.cardmanager',
+  appId: 'dev.searchlight.cardmanager',
   productName: 'Credit Card Manager',
   directories: { output: 'release', buildResources: 'build' },
   afterPack: 'build/afterPack.cjs',
@@ -90,7 +90,7 @@ module.exports = {
   // Developer portal and App Store Connect:
   //   - "Apple Distribution" and "Mac Installer Distribution" certs in the
   //     login keychain
-  //   - a Mac App Store provisioning profile for com.searchlight.cardmanager,
+  //   - a Mac App Store provisioning profile for dev.searchlight.cardmanager,
   //     saved as build/embedded.provisionprofile
   // Output is release/Credit Card Manager-<version>.pkg — upload with the
   // Transporter app.

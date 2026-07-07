@@ -7,7 +7,7 @@ import type { CapacitorConfig } from '@capacitor/cli'
  * persistence and add the paid sync feature behind the same seam.
  */
 const config: CapacitorConfig = {
-  appId: 'com.searchlight.cardmanager',
+  appId: 'dev.searchlight.cardmanager',
   appName: 'Credit Card Manager',
   webDir: 'out/web',
   ios: {

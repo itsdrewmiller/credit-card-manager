@@ -15,7 +15,7 @@
     <!-- Lets the Electron helper processes share the sandbox container. -->
     <key>com.apple.security.application-groups</key>
     <array>
-      <string>B676HVHBWG.com.searchlight.cardmanager</string>
+      <string>B676HVHBWG.dev.searchlight.cardmanager</string>
     </array>
   </dict>
 </plist>
