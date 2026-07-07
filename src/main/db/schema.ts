@@ -351,6 +351,27 @@ export const referral = sqliteTable('referral', {
   ...timestamps
 })
 
+// --- Referral links (stored per product, reused across applications) ---------
+// A link's beneficiary is either a saved person/business (source 'user') or
+// the app author (source 'seeded' — ships with the app; applying through it
+// supports the developer, not the household). Only user links count toward
+// recommendation ROI; any link marks the product as referral-capable.
+
+export const referralLink = sqliteTable('referral_link', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  cardProductId: integer('card_product_id')
+    .notNull()
+    .references(() => cardProduct.id, { onDelete: 'cascade' }),
+  url: text('url').notNull(),
+  ownerPersonId: integer('owner_person_id').references(() => person.id, { onDelete: 'cascade' }),
+  ownerBusinessId: integer('owner_business_id').references(() => business.id, {
+    onDelete: 'cascade'
+  }),
+  source: text('source').notNull().default('user'), // 'seeded' | 'user'
+  notes: text('notes'),
+  ...timestamps
+})
+
 // --- Recommendation rules (the dynamic rules engine) -------------------------
 // Each row is one rule: a kind from the fixed vocabulary implemented in
 // domain/recommend.ts plus JSON params. Defaults ship in data/default_rules.json
@@ -459,6 +480,15 @@ export const referralRelations = relations(referral, ({ one }) => ({
   product: one(cardProduct, { fields: [referral.cardProductId], references: [cardProduct.id] })
 }))
 
+export const referralLinkRelations = relations(referralLink, ({ one }) => ({
+  product: one(cardProduct, { fields: [referralLink.cardProductId], references: [cardProduct.id] }),
+  ownerPerson: one(person, { fields: [referralLink.ownerPersonId], references: [person.id] }),
+  ownerBusiness: one(business, {
+    fields: [referralLink.ownerBusinessId],
+    references: [business.id]
+  })
+}))
+
 export const schema = {
   person,
   business,
@@ -473,6 +503,7 @@ export const schema = {
   productOffer,
   productBenefit,
   referral,
+  referralLink,
   recurringPayment,
   recommendationRule,
   appSetting,
@@ -489,5 +520,6 @@ export const schema = {
   productOfferRelations,
   productBenefitRelations,
   referralRelations,
+  referralLinkRelations,
   recurringPaymentRelations
 }

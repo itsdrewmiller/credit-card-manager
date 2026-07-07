@@ -90,6 +90,16 @@ export const recommendationsRouter = router({
         deadline: b.deadline,
         received: b.received
       }))
+    const referralLinks = ctx.db.query.referralLink
+      .findMany({ with: { ownerPerson: true, ownerBusiness: true } })
+      .sync()
+      .map((l) => ({
+        cardProductId: l.cardProductId,
+        url: l.url,
+        source: l.source,
+        ownerPersonId: l.ownerPersonId ?? l.ownerBusiness?.ownerPersonId ?? null,
+        ownerName: l.ownerPerson?.name ?? l.ownerBusiness?.name ?? null
+      }))
 
     return {
       results: recommend({
@@ -99,6 +109,7 @@ export const recommendationsRouter = router({
         cards,
         spendEntries,
         bonuses,
+        referralLinks,
         rules: enabledRules(ctx.db),
         today: new Date()
       }),

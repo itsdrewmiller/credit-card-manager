@@ -15,6 +15,7 @@ import { seedExtraProducts } from './db/products'
 import { seedCashbackRates, seedBureauReporting, seedReferralValues } from './db/cashback'
 import { generateUpcomingBenefits } from './db/generateBenefits'
 import { seedDefaultRules } from './db/rules'
+import { seedReferralLinks } from './db/referralLinks'
 import { getSetting } from './db/settings'
 import { refreshOfferFeed, FEED_REFRESHED_KEY } from './trpc/routers/recommendations'
 import { dedupeCatalog } from './db/dedupe'
@@ -82,6 +83,8 @@ function initDatabase(): void {
   if (referrals) console.log(`[db] filled typical referral values on ${referrals} offers`)
   const seededRules = seedDefaultRules(db, resourcePath(join('data', 'default_rules.json')))
   if (seededRules) console.log(`[db] seeded ${seededRules} default recommendation rules`)
+  const seededLinks = seedReferralLinks(db)
+  if (seededLinks) console.log(`[db] seeded ${seededLinks} referral links`)
   const gen = generateUpcomingBenefits(db)
   if (gen.created || gen.dated) {
     console.log(`[db] recurring benefits: ${gen.created} generated, ${gen.dated} windows seeded`)
@@ -166,7 +169,9 @@ function maybeRefreshOfferFeed(): void {
  * an update has downloaded; it installs on quit.
  */
 function setupAutoUpdate(): void {
-  if (!app.isPackaged) return
+  // Mac App Store builds update through the App Store; electron-updater is
+  // neither allowed nor functional there.
+  if (!app.isPackaged || process.mas) return
   const logFile = join(app.getPath('logs'), 'updater.log')
   const logLine = (level: string, args: unknown[]): void => {
     const text = args.map((a) => (a instanceof Error ? a.stack || a.message : String(a))).join(' ')

@@ -39,6 +39,7 @@ function base(over: Partial<RecommendInput> = {}): RecommendInput {
       { amountCents: 200000, date: '2026-07-01' }
     ],
     bonuses: [],
+    referralLinks: [],
     rules: [],
     today,
     ...over
@@ -243,43 +244,56 @@ describe('recommend', () => {
     expect(Math.round(drew.recommended[0].roiPct!)).toBe(23)
   })
 
-  it('adds referral value to household ROI when someone else holds the card', () => {
+  it('adds referral value to household ROI only when a saved person owns the link', () => {
     const people = [
       { id: 1, name: 'Drew' },
       { id: 2, name: 'Kathleen' }
     ]
-    const kathleenHoldsCSP = {
-      id: 50,
+    const kathleensLink = {
       cardProductId: 100,
+      url: 'https://refer.example/kathleen',
+      source: 'user',
       ownerPersonId: 2,
-      businessId: null,
-      appliedDate: null,
-      openedDate: '2024-01-01',
-      status: 'open'
+      ownerName: 'Kathleen'
     }
     const [drew] = recommend(
       base({
         people,
         offers: [{ ...CSR, referralValueCents: 20000 }],
-        cards: [kathleenHoldsCSP]
+        referralLinks: [kathleensLink]
       })
     )
     const csp = drew.recommended[0]
     expect(csp.referralFrom).toBe('Kathleen')
     expect(csp.referralValueCents).toBe(20000)
+    expect(csp.referralLinkUrl).toBe('https://refer.example/kathleen')
+    expect(csp.referralLinkSeeded).toBe(false)
     expect(csp.totalValueCents).toBe(110000) // $900 bonus + $200 referral
     expect(Math.round(csp.roiPct!)).toBe(28) // 1100/4000
 
-    // Kathleen herself can't self-refer her own personal application.
+    // Without any stored link, another person merely holding the card is not enough.
+    const [drewNoLink] = recommend(
+      base({
+        people,
+        offers: [{ ...CSR, referralValueCents: 20000 }],
+        cards: [
+          { id: 50, cardProductId: 100, ownerPersonId: 2, businessId: null, appliedDate: null, openedDate: '2024-01-01', status: 'open' }
+        ]
+      })
+    )
+    expect(drewNoLink.recommended[0].referralFrom).toBeNull()
+    expect(drewNoLink.recommended[0].totalValueCents).toBe(90000)
+
+    // Kathleen herself can't self-refer through her own link.
     const kathleen = recommend(
-      base({ people, offers: [{ ...CSR, referralValueCents: 20000 }], cards: [kathleenHoldsCSP] })
+      base({ people, offers: [{ ...CSR, referralValueCents: 20000 }], referralLinks: [kathleensLink] })
     )[1]
     const hers = [...kathleen.recommended, ...kathleen.blocked].find((c) => c.label.includes('Sapphire'))!
     expect(hers.referralFrom).toBeNull()
     expect(hers.totalValueCents).toBe(90000)
   })
 
-  it('never counts referrals between accounts owned by the same person', () => {
+  it('never counts a link owned by the applicant, even through their business', () => {
     const people = [
       { id: 1, name: 'Drew' },
       { id: 2, name: 'Kathleen' }
@@ -288,53 +302,45 @@ describe('recommend', () => {
       { id: 10, name: 'Lambda', ownerPersonId: 1 },
       { id: 11, name: 'Searchlight', ownerPersonId: 1 }
     ]
-    // Drew's Searchlight business holds the Spark product.
-    const searchlightSpark = {
-      id: 60,
+    // Drew's Searchlight business owns the Spark referral link (ownerPersonId
+    // resolves through the business to Drew).
+    const searchlightLink = {
       cardProductId: 200,
+      url: 'https://refer.example/searchlight',
+      source: 'user',
       ownerPersonId: 1,
-      businessId: 11,
-      appliedDate: null,
-      openedDate: '2024-01-01',
-      status: 'open'
+      ownerName: 'Searchlight'
     }
     const [drew, kathleen] = recommend(
       base({
         people,
         businesses,
         offers: [{ ...SPARK, referralValueCents: 20000 }],
-        cards: [searchlightSpark]
+        referralLinks: [searchlightLink]
       })
     )
-    // Drew applying via Lambda: same person owns the would-be referrer -> no referral.
+    // Drew applying via Lambda: same person behind the link -> no referral value.
     const lambda = [...drew.recommended, ...drew.blocked].find((c) => c.businessName === 'Lambda')!
     expect(lambda.referralFrom).toBeNull()
-    // Kathleen has no businesses here, so no business candidates for her —
-    // but if she held one, Drew's card could refer it (different person).
+    // The link still surfaces for applying (someone benefits), just no value.
+    expect(lambda.hasReferralLink).toBe(true)
     expect(kathleen.recommended).toHaveLength(0)
   })
 
-  it('lets a different person refer a business application', () => {
+  it('lets a different person\'s link refer a business application', () => {
     const people = [
       { id: 1, name: 'Drew' },
       { id: 2, name: 'Kathleen' }
     ]
     const businesses = [{ id: 12, name: 'Kath Sole', ownerPersonId: 2 }]
-    const drewsSpark = {
-      id: 61,
-      cardProductId: 200,
-      ownerPersonId: 1,
-      businessId: null,
-      appliedDate: null,
-      openedDate: '2024-01-01',
-      status: 'open'
-    }
     const kathleen = recommend(
       base({
         people,
         businesses,
         offers: [{ ...SPARK, referralValueCents: 20000 }],
-        cards: [drewsSpark]
+        referralLinks: [
+          { cardProductId: 200, url: 'https://refer.example/drew', source: 'user', ownerPersonId: 1, ownerName: 'Drew' }
+        ]
       })
     )[1]
     const cand = [...kathleen.recommended, ...kathleen.blocked].find((c) => c.businessName === 'Kath Sole')!
@@ -342,24 +348,33 @@ describe('recommend', () => {
     expect(cand.referralValueCents).toBe(20000)
   })
 
-  it('notes a possible referral even when its value is unknown', () => {
-    const people = [
-      { id: 1, name: 'Drew' },
-      { id: 2, name: 'Kathleen' }
-    ]
+  it('surfaces seeded links without counting their value, and breaks ROI ties toward links', () => {
+    const seeded = {
+      cardProductId: 100,
+      url: 'https://refer.example/app-author',
+      source: 'seeded',
+      ownerPersonId: null,
+      ownerName: null
+    }
+    // Identical economics; only product 100 has a (seeded) link.
+    const TWIN = { ...CSR, id: 9, cardProductId: 900, productName: 'Twin Card' }
     const [drew] = recommend(
       base({
-        people,
-        offers: [CSR], // no referralValueCents
-        cards: [
-          { id: 50, cardProductId: 100, ownerPersonId: 2, businessId: null, appliedDate: null, openedDate: '2024-01-01', status: 'open' }
-        ]
+        offers: [TWIN, { ...CSR, referralValueCents: 20000 }],
+        referralLinks: [seeded]
       })
     )
-    const csp = drew.recommended[0]
-    expect(csp.referralFrom).toBe('Kathleen')
+    const csp = drew.recommended.find((c) => c.label.includes('Sapphire'))!
+    // Seeded link: usable but worth nothing to the household.
     expect(csp.referralValueCents).toBeNull()
     expect(csp.totalValueCents).toBe(90000)
+    expect(csp.referralLinkUrl).toBe('https://refer.example/app-author')
+    expect(csp.referralLinkSeeded).toBe(true)
+    // Equal ROI: the linked product ranks first.
+    expect(drew.recommended.map((c) => c.label)).toEqual([
+      'Chase Sapphire Preferred',
+      'Chase Twin Card'
+    ])
   })
 
   it('nets the first-year annual fee out of value and ROI unless waived', () => {

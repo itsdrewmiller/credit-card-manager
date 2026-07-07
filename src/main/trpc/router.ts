@@ -11,6 +11,7 @@ import { benefitsRouter } from './routers/benefits'
 import { productBenefitsRouter } from './routers/productBenefits'
 import { velocityRouter } from './routers/velocity'
 import { referralsRouter } from './routers/referrals'
+import { referralLinksRouter } from './routers/referralLinks'
 import { importerRouter } from './routers/importer'
 import { exporterRouter } from './routers/exporter'
 import { reportsRouter } from './routers/reports'
@@ -31,6 +32,7 @@ export const appRouter = router({
   productBenefits: productBenefitsRouter,
   velocity: velocityRouter,
   referrals: referralsRouter,
+  referralLinks: referralLinksRouter,
   importer: importerRouter,
   exporter: exporterRouter,
   reports: reportsRouter,

@@ -1,4 +1,5 @@
 import React from 'react'
+import { notifications } from '@mantine/notifications'
 import { trpc } from '../trpc'
 import { CardForm, type CardFormValue } from './CardForm'
 import { useEntityEditor } from './useEntityEditor'
@@ -28,6 +29,37 @@ export function useCardEditor(): {
 } {
   const utils = trpc.useUtils()
   const invalidate = useInvalidateCards()
+  const referralLinks = trpc.referralLinks.list.useQuery()
+
+  // Products with a referral program (any stored link) are worth a nudge when
+  // a card is added: once it's active the holder can store their OWN link, so
+  // future household applications earn them the referral instead of nobody —
+  // or instead of the app author, if only the seeded link exists.
+  const remindAboutReferralLink = (card: {
+    cardProductId: number | null
+    ownerPersonId: number | null
+    businessId: number | null
+  }): void => {
+    if (card.cardProductId == null) return
+    const forProduct = (referralLinks.data ?? []).filter(
+      (l) => l.cardProductId === card.cardProductId
+    )
+    if (forProduct.length === 0) return
+    const alreadyTheirs = forProduct.some(
+      (l) =>
+        l.source === 'user' &&
+        ((card.ownerPersonId != null && l.ownerPersonId === card.ownerPersonId) ||
+          (card.businessId != null && l.ownerBusinessId === card.businessId))
+    )
+    if (alreadyTheirs) return
+    notifications.show({
+      color: 'blue',
+      autoClose: 12000,
+      title: 'This card has a referral program',
+      message:
+        'Once the card is active, add your referral link under Referrals → Referral links so future applications earn you the bonus.'
+    })
+  }
 
   const create = trpc.cards.create.useMutation({ onSuccess: invalidate })
   const update = trpc.cards.update.useMutation({ onSuccess: invalidate })
@@ -52,6 +84,7 @@ export function useCardEditor(): {
           { ...v, source: 'manual' },
           {
             onSuccess: (card) => {
+              remindAboutReferralLink(card)
               if (bonus) createBonus.mutate({ cardId: card.id, ...bonus }, o)
               else o?.onSuccess?.()
             }

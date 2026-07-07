@@ -67,6 +67,21 @@ export interface RecommendInput {
     deadline: string | null
     received: boolean
   }[]
+  /**
+   * Stored referral links per product. Only 'user' links (owned by a saved
+   * person/business) count referral value toward household ROI; 'seeded'
+   * links ship with the app and credit its author, so they surface for
+   * applying but add nothing to the math.
+   */
+  referralLinks: {
+    cardProductId: number
+    url: string
+    source: string // 'seeded' | 'user'
+    /** Beneficiary person (business links resolve to the business owner); null for seeded. */
+    ownerPersonId: number | null
+    /** Beneficiary display name; null for seeded links. */
+    ownerName: string | null
+  }[]
   rules: { kind: string; params: Record<string, unknown> }[]
   today: Date
 }
@@ -91,10 +106,16 @@ export interface Candidate {
   cashAmountCents: number | null
   currency: string | null
   earnPct: number | null
-  /** Who in the household can refer this application (holds the card). */
+  /** Beneficiary of the stored referral link this application would use. */
   referralFrom: string | null
-  /** Referrer's bonus — counted in household value when a referral exists. */
+  /** Referrer's bonus — counted only when a saved person/business owns the link. */
   referralValueCents: number | null
+  /** Any stored link (user or seeded) — ROI ties break in its favor. */
+  hasReferralLink: boolean
+  /** Link to apply through: the household's own if stored, else the seeded one. */
+  referralLinkUrl: string | null
+  /** True when the surfaced link is the seeded one (credits the app author). */
+  referralLinkSeeded: boolean
   annualFeeCents: number | null
   feeWaivedFirstYear: boolean
   /** Baseline earn on the required min spend (minSpend × earn rate). */
@@ -328,22 +349,19 @@ export function recommend(input: RecommendInput): PersonRecommendations[] {
       blocks.push({ kind: 'expired', reason: `offer expired ${offer.expires}`, waitUntil: null })
     }
 
-    // A referral is possible only when a DIFFERENT PERSON holds an open card
-    // of this product — issuers attribute referrals to the person, so a
-    // person's own cards (personal or via any of their businesses) can never
-    // refer their own application.
-    const referrerCard = input.cards.find(
-      (c) =>
-        c.cardProductId === offer.cardProductId &&
-        c.status === 'open' &&
-        c.ownerPersonId != null &&
-        c.ownerPersonId !== personId
+    // Referral value needs a STORED LINK owned by a saved person/business —
+    // and not by the applicant, since issuers attribute referrals per person
+    // and a person's own link (personal or via their businesses) can never
+    // refer their own application. Seeded links (shipped with the app,
+    // crediting its author) surface for applying but add no household value.
+    const links = input.referralLinks.filter((l) => l.cardProductId === offer.cardProductId)
+    const userLink = links.find(
+      (l) => l.source === 'user' && l.ownerPersonId != null && l.ownerPersonId !== personId
     )
-    const referralFrom = referrerCard
-      ? (input.people.find((pp) => pp.id === referrerCard.ownerPersonId)?.name ?? 'someone')
-      : null
+    const surfacedLink = userLink ?? links.find((l) => l.source === 'seeded') ?? null
+    const referralFrom = userLink?.ownerName ?? null
     const referralValueCents =
-      referralFrom != null && offer.referralValueCents != null ? offer.referralValueCents : null
+      userLink != null && offer.referralValueCents != null ? offer.referralValueCents : null
     const firstYearFee = offer.feeWaivedFirstYear ? 0 : (offer.annualFeeCents ?? 0)
     const earnOnSpendCents =
       offer.minSpendCents != null && offer.earnPct != null && offer.earnPct > 0
@@ -376,6 +394,9 @@ export function recommend(input: RecommendInput): PersonRecommendations[] {
       earnPct: offer.earnPct ?? null,
       referralFrom,
       referralValueCents,
+      hasReferralLink: links.length > 0,
+      referralLinkUrl: surfacedLink?.url ?? null,
+      referralLinkSeeded: surfacedLink?.source === 'seeded',
       annualFeeCents: offer.annualFeeCents ?? null,
       feeWaivedFirstYear: offer.feeWaivedFirstYear ?? false,
       earnOnSpendCents,
@@ -402,9 +423,13 @@ export function recommend(input: RecommendInput): PersonRecommendations[] {
         candidates.push(evaluate(offer, person.id, null))
       }
     }
-    // ROI first (offers without a computable ROI sink), household value as tiebreak.
+    // ROI first (offers without a computable ROI sink); ties prefer products
+    // with a stored referral link (someone benefits from the application),
+    // then household value.
     const byRoi = (a: Candidate, b: Candidate) =>
-      (b.roiPct ?? -1) - (a.roiPct ?? -1) || (b.totalValueCents ?? 0) - (a.totalValueCents ?? 0)
+      (b.roiPct ?? -1) - (a.roiPct ?? -1) ||
+      Number(b.hasReferralLink) - Number(a.hasReferralLink) ||
+      (b.totalValueCents ?? 0) - (a.totalValueCents ?? 0)
     return {
       personId: person.id,
       name: person.name,

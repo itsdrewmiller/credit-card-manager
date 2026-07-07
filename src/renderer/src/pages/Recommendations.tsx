@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react'
 import {
   Accordion,
+  Anchor,
   Badge,
   Button,
   Checkbox,
@@ -118,6 +119,18 @@ function RecommendedTable({ rows }: { rows: Candidate[] }): React.ReactElement {
               <Text size="sm" fw={500}>
                 {c.label}
               </Text>
+              {c.referralLinkUrl && (
+                <>
+                  <Anchor href={c.referralLinkUrl} target="_blank" size="xs">
+                    apply via referral
+                  </Anchor>
+                  {c.referralLinkSeeded && (
+                    <Text size="xs" c="dimmed">
+                      link credits the app author — store your own to earn it
+                    </Text>
+                  )}
+                </>
+              )}
             </Table.Td>
             <Table.Td>
               <Text size="sm">{bonusText(c)}</Text>
@@ -152,9 +165,12 @@ function CombinedResults({ results }: { results: PersonResult[] }): React.ReactE
       list.map((c) => ({ ...c, personName: r.name }))
     const rec = results.flatMap((r) => tag(r, r.recommended))
     const blk = results.flatMap((r) => tag(r, r.blocked))
-    // ROI ordering across the whole household.
+    // ROI ordering across the whole household; ties prefer linked products
+    // (mirrors the engine's per-person sort).
     const byRoi = (a: Candidate, b: Candidate) =>
-      (b.roiPct ?? -1) - (a.roiPct ?? -1) || ((b.totalValueCents ?? 0) - (a.totalValueCents ?? 0))
+      (b.roiPct ?? -1) - (a.roiPct ?? -1) ||
+      Number(b.hasReferralLink) - Number(a.hasReferralLink) ||
+      (b.totalValueCents ?? 0) - (a.totalValueCents ?? 0)
     rec.sort(byRoi)
     blk.sort(byRoi)
     const issuers = [...new Set([...rec, ...blk].map((c) => c.issuerName).filter(Boolean))].sort() as string[]
