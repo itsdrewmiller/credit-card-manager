@@ -10,9 +10,11 @@ import {
   Text,
   Title,
   List,
-  ActionIcon
+  ActionIcon,
+  SimpleGrid
 } from '@mantine/core'
 import { IconUsers, IconBuildingStore, IconCreditCard, IconTrash } from '@tabler/icons-react'
+import { useMediaQuery } from '@mantine/hooks'
 import { useNavigate } from 'react-router-dom'
 import { trpc } from '../trpc'
 import { BUSINESS_TYPES } from '@shared/constants'
@@ -25,6 +27,8 @@ const DONE_KEY = 'ccm.setupDone'
  */
 export function FirstRunSetup(): React.ReactElement | null {
   const navigate = useNavigate()
+  // Phones get the whole screen; the stepper + forms are cramped in a dialog.
+  const isMobile = useMediaQuery('(max-width: 47.99em)', false)
   const utils = trpc.useUtils()
   const people = trpc.people.list.useQuery()
   const businesses = trpc.businesses.list.useQuery()
@@ -87,6 +91,7 @@ export function FirstRunSetup(): React.ReactElement | null {
       onClose={dismiss}
       title="Welcome — let's set things up"
       size="lg"
+      fullScreen={isMobile}
       closeOnClickOutside={false}
     >
       <Stepper active={active} onStepClick={setActive} size="sm">
@@ -142,20 +147,18 @@ export function FirstRunSetup(): React.ReactElement | null {
               Optional — add any businesses you open cards under (LLC, sole proprietor). You can skip
               this and add them later.
             </Text>
-            <Group align="flex-end">
-              <TextInput
-                label="Business name"
-                placeholder="e.g. Searchlight LLC"
-                value={bizName}
-                onChange={(e) => setBizName(e.currentTarget.value)}
-                style={{ flex: 1 }}
-              />
+            <TextInput
+              label="Business name"
+              placeholder="e.g. Searchlight LLC"
+              value={bizName}
+              onChange={(e) => setBizName(e.currentTarget.value)}
+            />
+            <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="sm">
               <Select
                 label="Owner"
                 data={peopleOptions}
                 value={bizOwner}
                 onChange={(v) => setBizOwner(v ?? '')}
-                w={150}
               />
               <Select
                 label="Type"
@@ -163,22 +166,22 @@ export function FirstRunSetup(): React.ReactElement | null {
                 value={bizType}
                 onChange={(v) => setBizType(v ?? '')}
                 clearable
-                w={140}
               />
-              <Button
-                onClick={() =>
-                  addBusiness.mutate({
-                    name: bizName.trim(),
-                    ownerPersonId: Number(bizOwner),
-                    type: bizType || null
-                  })
-                }
-                disabled={!bizName.trim() || !bizOwner}
-                loading={addBusiness.isPending}
-              >
-                Add
-              </Button>
-            </Group>
+            </SimpleGrid>
+            <Button
+              style={{ alignSelf: 'flex-start' }}
+              onClick={() =>
+                addBusiness.mutate({
+                  name: bizName.trim(),
+                  ownerPersonId: Number(bizOwner),
+                  type: bizType || null
+                })
+              }
+              disabled={!bizName.trim() || !bizOwner}
+              loading={addBusiness.isPending}
+            >
+              Add business
+            </Button>
             <List spacing={4} size="sm">
               {bizRows.map((b) => (
                 <List.Item

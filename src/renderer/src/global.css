@@ -1,0 +1,9 @@
+/* The page never scrolls horizontally — wide content scrolls inside its own
+   containers. Also stops iOS WKWebView's horizontal rubber-banding, which
+   otherwise lets the whole viewport pan sideways even when content fits. */
+html,
+body {
+  overflow-x: hidden;
+  overscroll-behavior-x: none;
+  width: 100%;
+}

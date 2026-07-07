@@ -1,13 +1,19 @@
 import React from 'react'
 import {
+  Anchor,
+  Button,
   Text,
   SimpleGrid,
   Card,
   Group,
+  Stack,
   Table,
+  ThemeIcon,
   Divider,
   useComputedColorScheme
 } from '@mantine/core'
+import { IconCheck } from '@tabler/icons-react'
+import { useNavigate } from 'react-router-dom'
 import { BarChart } from '@mantine/charts'
 import { trpc } from '../trpc'
 import { PageHeader } from '../components/PageHeader'
@@ -58,6 +64,66 @@ function StatTile({
           {hint}
         </Text>
       )}
+    </Card>
+  )
+}
+
+function Step({
+  n,
+  done,
+  children
+}: {
+  n: number
+  done?: boolean
+  children: React.ReactNode
+}): React.ReactElement {
+  return (
+    <Group gap="sm" align="flex-start" wrap="nowrap">
+      <ThemeIcon size="sm" radius="xl" variant={done ? 'filled' : 'light'} color={done ? 'teal' : 'blue'}>
+        {done ? <IconCheck size={12} /> : <Text size="xs">{n}</Text>}
+      </ThemeIcon>
+      <Text size="sm" c={done ? 'dimmed' : undefined} td={done ? 'line-through' : undefined}>
+        {children}
+      </Text>
+    </Group>
+  )
+}
+
+/** Walk-through shown until the first card exists. */
+function GettingStarted({ peopleCount }: { peopleCount: number }): React.ReactElement {
+  const navigate = useNavigate()
+  return (
+    <Card withBorder radius="md" padding="lg" mb="lg">
+      <Text fw={600} mb="xs">
+        Getting started
+      </Text>
+      <Stack gap="sm">
+        <Step n={1} done={peopleCount > 0}>
+          Add the people (and any businesses) you track cards for.
+        </Step>
+        <Step n={2}>
+          Pull your free Equifax credit report at{' '}
+          <Anchor href="https://www.annualcreditreport.com" target="_blank" inherit>
+            annualcreditreport.com
+          </Anchor>{' '}
+          and import the PDF — every personal card appears at once.
+        </Step>
+        <Step n={3}>
+          Business cards don&apos;t show on personal credit reports — add any you already have by
+          hand with &quot;Add card&quot;.
+        </Step>
+      </Stack>
+      <Group mt="md">
+        {peopleCount === 0 ? (
+          <Button size="sm" onClick={() => navigate('/people')}>
+            Add people
+          </Button>
+        ) : (
+          <Button size="sm" onClick={() => navigate('/cards')}>
+            Go to Cards
+          </Button>
+        )}
+      </Group>
     </Card>
   )
 }
@@ -193,6 +259,9 @@ export function Dashboard(): React.ReactElement {
           />
         </SimpleGrid>
 
+        {health.data?.counts.cards === 0 && (
+          <GettingStarted peopleCount={health.data.counts.people} />
+        )}
         <FeeRenewalSection />
         <VelocitySection />
         <Divider my="lg" />
