@@ -9,6 +9,7 @@ import { seedIssuers } from '../../src/main/db/issuers'
 import { seedCashbackRates } from '../../src/main/db/cashback'
 import { person, pointProgram, card, signupBonus, issuer, cardProduct } from '../../src/main/db/schema'
 import { appRouter } from '../../src/main/trpc/router'
+import { todayIso } from '../../src/shared/dates'
 
 describe('database + router integration', () => {
   let t: TestDb
@@ -118,9 +119,10 @@ describe('database + router integration', () => {
 
     const entries = t.db.query.spendEntry.findMany().sync().filter((e) => e.bonusId === bonus.id)
     expect(entries.map((e) => e.amountCents)).toEqual([100000, 150000, -30000])
-    // Spend is dated by when it was recorded, not by the bonus window.
-    const todayIso = new Date().toISOString().slice(0, 10)
-    expect(entries[0].date).toBe(todayIso)
+    // Spend is dated by when it was recorded, not by the bonus window. Use the
+    // app's own local-date helper: toISOString() is UTC and disagrees with it
+    // for a few hours every evening.
+    expect(entries[0].date).toBe(todayIso())
 
     // Marking received stamps a receivedDate, which puts value on the timeline.
     await caller.bonuses.update({ id: bonus.id, received: true, cashAmountCents: 75000 })
