@@ -181,6 +181,7 @@ export function Cards(): React.ReactElement {
       ) : rows.length === 0 ? (
         <EmptyState title="No cards in this view" description="Try a different status filter." />
       ) : (
+        <Table.ScrollContainer minWidth={960}>
         <Table highlightOnHover withTableBorder>
           <Table.Thead>
             <Table.Tr>
@@ -267,6 +268,7 @@ export function Cards(): React.ReactElement {
             ))}
           </Table.Tbody>
         </Table>
+        </Table.ScrollContainer>
       )}
       </QueryGate>
 

@@ -1,5 +1,6 @@
 import React from 'react'
-import { AppShell, Group, Text, NavLink, ScrollArea, Badge } from '@mantine/core'
+import { AppShell, Burger, Group, Text, NavLink, ScrollArea, Badge } from '@mantine/core'
+import { useDisclosure, useMediaQuery } from '@mantine/hooks'
 import {
   IconLayoutDashboard,
   IconUsers,
@@ -56,12 +57,28 @@ function NeedsInfoBadge(): React.ReactElement | null {
 export function App(): React.ReactElement {
   const location = useLocation()
   const navigate = useNavigate()
+  const [navOpened, nav] = useDisclosure(false)
+  // Matches the navbar's 'sm' breakpoint (48em); collapsed headers reserve no space.
+  const isMobile = useMediaQuery('(max-width: 47.99em)', false)
 
   return (
-    <AppShell navbar={{ width: 240, breakpoint: 'sm' }} padding="md">
+    <AppShell
+      // The header exists only below sm, to host the burger; the navbar
+      // becomes an overlay drawer there and closes after navigating.
+      header={{ height: 48, collapsed: !isMobile }}
+      navbar={{ width: 240, breakpoint: 'sm', collapsed: { mobile: !navOpened } }}
+      padding="md"
+    >
       <FirstRunSetup />
+      <AppShell.Header hiddenFrom="sm">
+        <Group h="100%" px="md" gap="sm">
+          <Burger opened={navOpened} onClick={nav.toggle} size="sm" aria-label="Toggle navigation" />
+          <IconCreditCard size={20} />
+          <Text fw={700}>Card Manager</Text>
+        </Group>
+      </AppShell.Header>
       <AppShell.Navbar p="sm">
-        <Group gap="xs" mb="md" px="xs">
+        <Group gap="xs" mb="md" px="xs" visibleFrom="sm">
           <IconCreditCard size={22} />
           <Text fw={700}>Card Manager</Text>
         </Group>
@@ -73,7 +90,10 @@ export function App(): React.ReactElement {
               label={item.label}
               leftSection={item.icon}
               rightSection={item.to === '/cards' ? <NeedsInfoBadge /> : undefined}
-              onClick={() => navigate(item.to)}
+              onClick={() => {
+                navigate(item.to)
+                nav.close()
+              }}
             />
           ))}
         </ScrollArea>

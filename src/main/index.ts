@@ -96,8 +96,9 @@ function createWindow(): BrowserWindow {
   const win = new BrowserWindow({
     width: 1280,
     height: 820,
-    minWidth: 940,
-    minHeight: 600,
+    // Low enough to exercise the phone-width responsive layouts.
+    minWidth: 360,
+    minHeight: 500,
     show: false,
     title: 'Credit Card Manager',
     webPreferences: {

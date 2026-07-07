@@ -50,7 +50,7 @@ function StatTile({
       <Text size="xs" c="dimmed" tt="uppercase" fw={600}>
         {label}
       </Text>
-      <Text fz={28} fw={700}>
+      <Text fz={{ base: 22, sm: 28 }} fw={700}>
         {value}
       </Text>
       {hint && (
@@ -73,6 +73,7 @@ function FeeRenewalSection(): React.ReactElement | null {
       <Text size="sm" c="dimmed" mb="sm">
         Open for ~a year — close or downgrade before the renewal posts to skip the fee.
       </Text>
+      <Table.ScrollContainer minWidth={480}>
       <Table verticalSpacing="xs">
         <Table.Thead>
           <Table.Tr>
@@ -101,12 +102,14 @@ function FeeRenewalSection(): React.ReactElement | null {
           ))}
         </Table.Tbody>
       </Table>
+      </Table.ScrollContainer>
     </Card>
   )
 }
 
 function MonthlyTable({ overview }: { overview: Overview }): React.ReactElement {
   return (
+    <Table.ScrollContainer minWidth={760}>
     <Table withTableBorder highlightOnHover>
       <Table.Thead>
         <Table.Tr>
@@ -141,6 +144,7 @@ function MonthlyTable({ overview }: { overview: Overview }): React.ReactElement 
         ))}
       </Table.Tbody>
     </Table>
+    </Table.ScrollContainer>
   )
 }
 

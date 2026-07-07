@@ -98,6 +98,7 @@ function applyFilters(rows: Candidate[], f: Filters): Candidate[] {
 
 function RecommendedTable({ rows }: { rows: Candidate[] }): React.ReactElement {
   return (
+    <Table.ScrollContainer minWidth={860}>
     <Table withTableBorder highlightOnHover verticalSpacing="xs">
       <Table.Thead>
         <Table.Tr>
@@ -154,6 +155,7 @@ function RecommendedTable({ rows }: { rows: Candidate[] }): React.ReactElement {
         ))}
       </Table.Tbody>
     </Table>
+    </Table.ScrollContainer>
   )
 }
 
