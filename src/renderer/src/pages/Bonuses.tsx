@@ -1,5 +1,15 @@
-import React from 'react'
-import { Button, Badge, NumberInput, Text, Progress, Stack, Group, Tabs } from '@mantine/core'
+import React, { useState } from 'react'
+import {
+  Button,
+  Badge,
+  NumberInput,
+  Text,
+  Progress,
+  Stack,
+  Group,
+  Tabs,
+  SegmentedControl
+} from '@mantine/core'
 import { IconPlus } from '@tabler/icons-react'
 import { trpc } from '../trpc'
 import { PageHeader } from '../components/PageHeader'
@@ -144,6 +154,11 @@ export function Bonuses(): React.ReactElement {
   const bonuses = trpc.bonuses.list.useQuery()
   const cards = trpc.cards.list.useQuery()
 
+  const [filter, setFilter] = useState('incomplete')
+  const rows = (bonuses.data ?? []).filter((b) =>
+    filter === 'all' ? true : filter === 'received' ? b.received : !b.received
+  )
+
   const invalidate = (): void => void utils.bonuses.list.invalidate()
 
   const create = trpc.bonuses.create.useMutation({ onSuccess: invalidate })
@@ -208,13 +223,24 @@ export function Bonuses(): React.ReactElement {
             <Text c="dimmed" size="sm">
               Signup bonuses you&apos;re actively working on your cards.
             </Text>
-            <Button
-              leftSection={<IconPlus size={16} />}
-              onClick={editor.openCreate}
-              disabled={(cards.data ?? []).length === 0}
-            >
-              Add bonus
-            </Button>
+            <Group>
+              <SegmentedControl
+                value={filter}
+                onChange={setFilter}
+                data={[
+                  { label: 'Incomplete', value: 'incomplete' },
+                  { label: 'Received', value: 'received' },
+                  { label: 'All', value: 'all' }
+                ]}
+              />
+              <Button
+                leftSection={<IconPlus size={16} />}
+                onClick={editor.openCreate}
+                disabled={(cards.data ?? []).length === 0}
+              >
+                Add bonus
+              </Button>
+            </Group>
           </Group>
 
           <QueryGate queries={[bonuses, cards]}>
@@ -223,12 +249,19 @@ export function Bonuses(): React.ReactElement {
             ) : (
               <DataTable
                 columns={columns}
-                rows={bonuses.data}
+                rows={rows}
                 verticalSpacing="sm"
-                empty={{
-                  title: 'No bonuses tracked',
-                  description: 'Add a signup bonus with its spend target and deadline.'
-                }}
+                empty={
+                  (bonuses.data ?? []).length > 0
+                    ? {
+                        title: `No ${filter === 'received' ? 'received' : 'incomplete'} bonuses`,
+                        description: 'Switch the filter above to see the rest.'
+                      }
+                    : {
+                        title: 'No bonuses tracked',
+                        description: 'Add a signup bonus with its spend target and deadline.'
+                      }
+                }
                 rowActions={(b) => (
                   <RowActionsMenu
                     onEdit={() => editor.openEdit(b)}
