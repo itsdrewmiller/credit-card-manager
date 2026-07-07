@@ -7,3 +7,8 @@ body {
   overscroll-behavior-x: none;
   width: 100%;
 }
+
+/* Modals manage their own scroll containers, outside the body clamp. */
+.mantine-Modal-content {
+  overflow-x: hidden;
+}

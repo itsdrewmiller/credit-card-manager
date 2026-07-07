@@ -30,6 +30,7 @@ export function FirstRunSetup(): React.ReactElement | null {
   // Phones get the whole screen; the stepper + forms are cramped in a dialog.
   const isMobile = useMediaQuery('(max-width: 47.99em)', false)
   const utils = trpc.useUtils()
+  const health = trpc.system.health.useQuery()
   const people = trpc.people.list.useQuery()
   const businesses = trpc.businesses.list.useQuery()
 
@@ -37,12 +38,20 @@ export function FirstRunSetup(): React.ReactElement | null {
   const [active, setActive] = useState(0)
   const decided = useRef(false)
 
-  // Decide once, when the people query first resolves.
+  // Decide once, when the counts first resolve. Setup resumes until it's
+  // explicitly finished or skipped (DONE_KEY): quitting mid-wizard reopens it
+  // — at the businesses step if people already exist. Established databases
+  // (cards present) never see it.
   useEffect(() => {
-    if (decided.current || !people.isSuccess) return
+    if (decided.current || !health.isSuccess) return
     decided.current = true
-    if (localStorage.getItem(DONE_KEY) !== '1' && (people.data?.length ?? 0) === 0) setOpen(true)
-  }, [people.isSuccess, people.data])
+    const counts = health.data?.counts
+    if (!counts || localStorage.getItem(DONE_KEY) === '1') return
+    if (counts.people === 0 || counts.cards === 0) {
+      setActive(counts.people > 0 ? 1 : 0)
+      setOpen(true)
+    }
+  }, [health.isSuccess, health.data])
 
   const [personName, setPersonName] = useState('')
   const [bizName, setBizName] = useState('')
