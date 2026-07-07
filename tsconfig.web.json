@@ -1,6 +1,7 @@
 {
   "include": [
     "src/renderer/**/*",
+    "src/web/**/*",
     "src/preload/*.d.ts",
     "src/shared/**/*"
   ],
