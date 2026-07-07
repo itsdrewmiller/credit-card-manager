@@ -1,7 +1,18 @@
 import { resolve } from 'node:path'
-import { readFileSync } from 'node:fs'
-import { defineConfig } from 'vite'
+import { readFileSync, renameSync, existsSync } from 'node:fs'
+import { defineConfig, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
+
+/** Capacitor expects webDir/index.html; the dev entry is index.web.html. */
+function renameEntry(): Plugin {
+  return {
+    name: 'rename-web-entry',
+    closeBundle() {
+      const from = resolve('out/web/index.web.html')
+      if (existsSync(from)) renameSync(from, resolve('out/web/index.html'))
+    }
+  }
+}
 
 const { version } = JSON.parse(readFileSync(resolve('package.json'), 'utf8'))
 
@@ -21,7 +32,7 @@ export default defineConfig({
   define: {
     __APP_VERSION__: JSON.stringify(version)
   },
-  plugins: [react()],
+  plugins: [react(), renameEntry()],
   build: {
     outDir: 'out/web',
     rollupOptions: { input: resolve('index.web.html') }
