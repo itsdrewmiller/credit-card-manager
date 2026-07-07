@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { buildReport } from '../../src/main/domain/report'
 
-const empty = { spendEntries: [], bonuses: [], referrals: [], benefits: [] }
+const empty = { spendEntries: [], bonuses: [], referrals: [], benefits: [], cards: [] }
 
 describe('buildReport', () => {
   it('returns an empty report with no activity', () => {
@@ -130,6 +130,83 @@ describe('buildReport', () => {
     expect(r.months[0].cashbackReturnCents).toBe(1800) // (1000 - 100) * 2%
     expect(r.months[0].returnCents).toBe(1800)
     expect(r.totals.returnOnSpend).toBeCloseTo(1800 / 140000)
+  })
+
+  it('charges annual fees a month after opening, then every anniversary', () => {
+    const r = buildReport(
+      {
+        ...empty,
+        cards: [{ annualFeeCents: 9500, openedDate: '2024-03-10', closedDate: null }]
+      },
+      '2026-07-06'
+    )
+    const feeMonths = r.months.filter((m) => m.feeCents > 0).map((m) => [m.month, m.feeCents])
+    expect(feeMonths).toEqual([
+      ['2024-04', 9500],
+      ['2025-04', 9500],
+      ['2026-04', 9500]
+    ])
+    expect(r.totals.feeCents).toBe(28500)
+    expect(r.totals.returnCents).toBe(-28500)
+  })
+
+  it('stops charging fees at closedDate and skips fee-free or unopened cards', () => {
+    const r = buildReport(
+      {
+        ...empty,
+        cards: [
+          { annualFeeCents: 9500, openedDate: '2024-03-10', closedDate: '2025-06-01' },
+          { annualFeeCents: 0, openedDate: '2024-03-10', closedDate: null },
+          { annualFeeCents: null, openedDate: '2024-03-10', closedDate: null },
+          { annualFeeCents: 9500, openedDate: null, closedDate: null }
+        ]
+      },
+      '2026-07-06'
+    )
+    expect(r.totals.feeCents).toBe(19000) // 2024-04 and 2025-04 only
+  })
+
+  it('subtracts fees from monthly and overall return', () => {
+    const r = buildReport(
+      {
+        ...empty,
+        spendEntries: [{ amountCents: 100000, date: '2026-04-05', cashbackPct: 2 }],
+        cards: [{ annualFeeCents: 9500, openedDate: '2026-03-10', closedDate: null }]
+      },
+      '2026-07-06'
+    )
+    const april = r.months.find((m) => m.month === '2026-04')
+    expect(april?.feeCents).toBe(9500)
+    expect(april?.returnCents).toBe(2000 - 9500)
+    expect(r.totals.returnOnSpend).toBeCloseTo((2000 - 9500) / 100000)
+  })
+
+  it('scopes the report to the year the first tracked bonus starts', () => {
+    const r = buildReport(
+      {
+        ...empty,
+        spendEntries: [
+          { amountCents: 50000, date: '2025-11-01' }, // before scope -> dropped
+          { amountCents: 100000, date: '2026-06-01' }
+        ],
+        bonuses: [
+          {
+            received: false,
+            receivedDate: null,
+            startDate: '2026-05-24',
+            cashAmountCents: 50000,
+            pointsAmount: null,
+            valuationCpp: null
+          }
+        ],
+        // Fee charges 2024-04, 2025-04, 2026-04 — only the 2026 one is in scope.
+        cards: [{ annualFeeCents: 9500, openedDate: '2024-03-10', closedDate: null }]
+      },
+      '2026-07-06'
+    )
+    expect(r.months[0].month).toBe('2026-04')
+    expect(r.totals.spendCents).toBe(100000)
+    expect(r.totals.feeCents).toBe(9500)
   })
 
   it('crosses year boundaries when filling months', () => {

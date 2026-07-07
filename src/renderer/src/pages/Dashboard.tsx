@@ -71,6 +71,7 @@ function MonthlyTable({ overview }: { overview: Overview }): React.ReactElement 
           <Table.Th ta="right">Referrals</Table.Th>
           <Table.Th ta="right">Benefits</Table.Th>
           <Table.Th ta="right">Cash back</Table.Th>
+          <Table.Th ta="right">Fees</Table.Th>
           <Table.Th ta="right">Return</Table.Th>
           <Table.Th ta="right">Return / spend</Table.Th>
         </Table.Tr>
@@ -84,6 +85,7 @@ function MonthlyTable({ overview }: { overview: Overview }): React.ReactElement 
             <Table.Td ta="right">{formatCents(m.referralReturnCents)}</Table.Td>
             <Table.Td ta="right">{formatCents(m.benefitReturnCents)}</Table.Td>
             <Table.Td ta="right">{formatCents(m.cashbackReturnCents)}</Table.Td>
+            <Table.Td ta="right">{m.feeCents > 0 ? `−${formatCents(m.feeCents)}` : '—'}</Table.Td>
             <Table.Td ta="right" fw={500}>
               {formatCents(m.returnCents)}
             </Table.Td>
@@ -116,7 +118,9 @@ export function Dashboard(): React.ReactElement {
       <PageHeader title="Dashboard" />
       <Text c="dimmed" mb="lg">
         Tracked bonus spend against realized return — signup bonuses when received, referrals when
-        paid, benefit credits when used, and baseline cash back on tracked spend.
+        paid, benefit credits when used, and baseline cash back on tracked spend — net of annual
+        fees, assumed charged a month after opening and each anniversary. Starts the year of your
+        first tracked bonus.
       </Text>
 
       <QueryGate queries={[health, overview]}>
@@ -131,7 +135,7 @@ export function Dashboard(): React.ReactElement {
               totals?.referralReturnCents ?? 0
             )} referrals · ${formatCents(totals?.benefitReturnCents ?? 0)} benefits · ${formatCents(
               totals?.cashbackReturnCents ?? 0
-            )} cash back`}
+            )} cash back · −${formatCents(totals?.feeCents ?? 0)} fees`}
           />
           <StatTile
             label="Return on spend"

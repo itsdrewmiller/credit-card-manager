@@ -1,5 +1,5 @@
 import { router, publicProcedure } from '../trpc'
-import { signupBonus, referral, benefit } from '../../db/schema'
+import { signupBonus, referral, benefit, card } from '../../db/schema'
 import { buildReport } from '../../domain/report'
 
 export const reportsRouter = router({
@@ -19,6 +19,7 @@ export const reportsRouter = router({
       .map((b) => ({
         received: b.received,
         receivedDate: b.receivedDate,
+        startDate: b.startDate,
         cashAmountCents: b.cashAmountCents,
         pointsAmount: b.pointsAmount,
         valuationCpp: b.pointProgram?.valuationCpp ?? null
@@ -41,7 +42,15 @@ export const reportsRouter = router({
       })
       .from(benefit)
       .all()
+    const cards = ctx.db
+      .select({
+        annualFeeCents: card.annualFeeCents,
+        openedDate: card.openedDate,
+        closedDate: card.closedDate
+      })
+      .from(card)
+      .all()
 
-    return buildReport({ spendEntries, bonuses, referrals, benefits })
+    return buildReport({ spendEntries, bonuses, referrals, benefits, cards })
   })
 })
