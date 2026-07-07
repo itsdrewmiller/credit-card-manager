@@ -1,6 +1,6 @@
 import { app, BrowserWindow, shell, session, dialog, ipcMain } from 'electron'
 import { join } from 'node:path'
-import { existsSync, readFileSync } from 'node:fs'
+import { appendFileSync, existsSync, readFileSync } from 'node:fs'
 import { is } from '@electron-toolkit/utils'
 // electron-updater is CJS; the main bundle is ESM, so named imports fail at
 // runtime ("Named export 'autoUpdater' not found") — go through the default.
@@ -155,13 +155,44 @@ function maybeRefreshOfferFeed(): void {
 
 /**
  * Check GitHub Releases for a newer version, download in the background, and
- * notify when it will install on quit. Packaged builds only; failures
- * (offline, ad-hoc-signed local build) are logged and never block the app.
+ * notify when it will install on quit. Packaged builds only.
+ *
+ * Failure containment: updater activity and errors append to
+ * ~/Library/Logs/<app>/updater.log — console.warn is invisible in a packaged
+ * app, so without the file a failed update is undiagnosable. The check also
+ * re-runs every four hours: a transient failure (offline, rate-limited, quit
+ * mid-download) gets retried instead of lost until the next launch, and an
+ * app left running across a release still picks it up. Re-checking stops once
+ * an update has downloaded; it installs on quit.
  */
 function setupAutoUpdate(): void {
   if (!app.isPackaged) return
-  autoUpdater.on('error', (err) => console.warn('[update]', err.message))
-  autoUpdater.checkForUpdatesAndNotify().catch((err) => console.warn('[update]', err))
+  const logFile = join(app.getPath('logs'), 'updater.log')
+  const logLine = (level: string, args: unknown[]): void => {
+    const text = args.map((a) => (a instanceof Error ? a.stack || a.message : String(a))).join(' ')
+    try {
+      appendFileSync(logFile, `${new Date().toISOString()} [${level}] ${text}\n`)
+    } catch {
+      // logging must never take down the updater
+    }
+  }
+  autoUpdater.logger = {
+    info: (...args: unknown[]) => logLine('info', args),
+    warn: (...args: unknown[]) => logLine('warn', args),
+    error: (...args: unknown[]) => logLine('error', args),
+    debug: (...args: unknown[]) => logLine('debug', args)
+  }
+  autoUpdater.on('error', (err) => logLine('error', [err]))
+
+  const check = (): void => {
+    autoUpdater.checkForUpdatesAndNotify().catch((err) => logLine('error', [err]))
+  }
+  const recheck = setInterval(check, 4 * 3600 * 1000)
+  autoUpdater.on('update-downloaded', (info) => {
+    logLine('info', [`update ${info.version} downloaded; installs on quit`])
+    clearInterval(recheck)
+  })
+  check()
 }
 
 app.whenReady().then(() => {
