@@ -82,6 +82,25 @@ module.exports = {
     hardenedRuntime: hasMacCert,
     notarize: false // handled by the afterSign hook (build/notarize.cjs)
   },
+  // Mac App Store channel (npm run dist:mas). Separate from the GitHub-release
+  // channel above: MAS builds are sandboxed, signed with Apple Distribution +
+  // Mac Installer Distribution certs, wrapped in an embedded provisioning
+  // profile, and updated through the App Store (electron-updater is disabled
+  // in-app via the process.mas guard). Prereqs, created once in the Apple
+  // Developer portal and App Store Connect:
+  //   - "Apple Distribution" and "Mac Installer Distribution" certs in the
+  //     login keychain
+  //   - a Mac App Store provisioning profile for com.searchlight.cardmanager,
+  //     saved as build/embedded.provisionprofile
+  // Output is release/Credit Card Manager-<version>.pkg — upload with the
+  // Transporter app.
+  mas: {
+    entitlements: 'build/entitlements.mas.plist',
+    entitlementsInherit: 'build/entitlements.mas.inherit.plist',
+    provisioningProfile: 'build/embedded.provisionprofile',
+    hardenedRuntime: false,
+    category: 'public.app-category.finance'
+  },
   win: {
     target: 'nsis'
     // Signs automatically when CSC_LINK / CSC_KEY_PASSWORD are in the environment.

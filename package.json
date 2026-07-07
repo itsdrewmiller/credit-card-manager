@@ -25,7 +25,8 @@
     "test:watch": "vitest",
     "rebuild": "electron-rebuild -f -w better-sqlite3",
     "pack": "electron-vite build && electron-builder --dir --config electron-builder.config.cjs",
-    "dist": "electron-vite build && electron-builder --config electron-builder.config.cjs"
+    "dist": "electron-vite build && electron-builder --config electron-builder.config.cjs",
+    "dist:mas": "electron-vite build && electron-builder --config electron-builder.config.cjs --mac mas"
   },
   "dependencies": {
     "better-sqlite3": "^12.11.1",
