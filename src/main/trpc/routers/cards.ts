@@ -5,6 +5,7 @@ import { card, benefit } from '../../db/schema'
 import { CARD_STATUSES } from '@shared/constants'
 import { todayIso } from '@shared/dates'
 import { cardMissingFields } from '../../domain/needsInfo'
+import { nextFeeRenewal, FEE_REMINDER_LEAD_DAYS } from '../../domain/fees'
 import { sweptOnClose } from '../../domain/benefit'
 import {
   applyProductBenefits,
@@ -63,6 +64,21 @@ export const cardsRouter = router({
       .findFirst({ where: eq(card.id, input.id), with: withRelations })
       .sync()
     return row ? enrich(row) : null
+  }),
+
+  /** Open cards whose annual-fee renewal posts soon — close before it does. */
+  upcomingFees: publicProcedure.query(({ ctx }) => {
+    const today = todayIso()
+    const rows = ctx.db.query.card
+      .findMany({ with: { product: { with: { issuer: true } }, owner: true, business: true } })
+      .sync()
+    return rows
+      .map((c) => ({ card: c, renewal: nextFeeRenewal(c, today) }))
+      .filter(
+        (r): r is typeof r & { renewal: NonNullable<typeof r.renewal> } =>
+          r.renewal != null && r.renewal.daysUntil <= FEE_REMINDER_LEAD_DAYS
+      )
+      .sort((a, b) => a.renewal.daysUntil - b.renewal.daysUntil)
   }),
 
   /** Live cards (open/applied) missing churning-critical fields. */

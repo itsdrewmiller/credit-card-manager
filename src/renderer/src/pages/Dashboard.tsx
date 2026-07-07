@@ -13,7 +13,9 @@ import { trpc } from '../trpc'
 import { PageHeader } from '../components/PageHeader'
 import { QueryGate } from '../components/QueryGate'
 import { VelocitySection } from '../components/VelocitySection'
+import { cardLabel } from '../components/useCardEditor'
 import { formatCents } from '@shared/format'
+import { formatDate } from '@shared/dates'
 import type { RouterOutputs } from '../lib/types'
 
 type Overview = RouterOutputs['reports']['overview']
@@ -56,6 +58,49 @@ function StatTile({
           {hint}
         </Text>
       )}
+    </Card>
+  )
+}
+
+/** Open cards whose annual fee renews soon — close or downgrade before it posts. */
+function FeeRenewalSection(): React.ReactElement | null {
+  const renewals = trpc.cards.upcomingFees.useQuery()
+  if (!renewals.data || renewals.data.length === 0) return null
+
+  return (
+    <Card withBorder radius="md" padding="lg" mb="lg">
+      <Text fw={600}>Annual fees coming due</Text>
+      <Text size="sm" c="dimmed" mb="sm">
+        Open for ~a year — close or downgrade before the renewal posts to skip the fee.
+      </Text>
+      <Table verticalSpacing="xs">
+        <Table.Thead>
+          <Table.Tr>
+            <Table.Th>Card</Table.Th>
+            <Table.Th>Holder</Table.Th>
+            <Table.Th ta="right">Fee</Table.Th>
+            <Table.Th ta="right">Renews</Table.Th>
+          </Table.Tr>
+        </Table.Thead>
+        <Table.Tbody>
+          {renewals.data.map(({ card: c, renewal }) => (
+            <Table.Tr key={c.id}>
+              <Table.Td fw={500}>{cardLabel(c)}</Table.Td>
+              <Table.Td>{c.business?.name ?? c.owner?.name ?? '—'}</Table.Td>
+              <Table.Td ta="right">{formatCents(renewal.feeCents)}</Table.Td>
+              <Table.Td ta="right">
+                <Text size="sm">{formatDate(renewal.renewalDate)}</Text>
+                <Text
+                  size="xs"
+                  c={renewal.daysUntil < 14 ? 'red' : renewal.daysUntil < 30 ? 'orange' : 'dimmed'}
+                >
+                  {renewal.daysUntil}d left
+                </Text>
+              </Table.Td>
+            </Table.Tr>
+          ))}
+        </Table.Tbody>
+      </Table>
     </Card>
   )
 }
@@ -144,6 +189,7 @@ export function Dashboard(): React.ReactElement {
           />
         </SimpleGrid>
 
+        <FeeRenewalSection />
         <VelocitySection />
         <Divider my="lg" />
 
