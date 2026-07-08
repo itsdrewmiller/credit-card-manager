@@ -59,3 +59,40 @@ export function offerValueCents(o: {
   return pointsValueCents(o.pointsAmount, o.pointProgram?.valuationCpp ?? o.pointValueCpp)
 }
 
+/** What an offer's bonus is paid in — the axis the Recommendations filter cuts on. */
+export type RewardCategory = 'cash' | 'points' | 'airline' | 'hotel'
+
+export const REWARD_CATEGORY_LABELS: Record<RewardCategory, string> = {
+  cash: 'Currency',
+  points: 'Card points',
+  airline: 'Airlines',
+  hotel: 'Hotels'
+}
+
+/**
+ * Classify an offer's reward. The linked point program's kind is
+ * authoritative; 'cashback' programs (e.g. Bank of America points) count as
+ * card points, not currency — they're still a points balance, only USD
+ * bonuses are 'cash'. Unlinked offers fall back to the reward kind /
+ * currency text, and unknown points default to card points.
+ */
+export function offerRewardCategory(o: {
+  cashAmountCents?: number | null
+  currency?: string | null
+  rewardKind?: string | null
+  pointProgramKind?: string | null
+}): RewardCategory {
+  switch (o.pointProgramKind) {
+    case 'airline':
+      return 'airline'
+    case 'hotel':
+      return 'hotel'
+    case 'transferable':
+    case 'cashback':
+      return 'points'
+  }
+  if (o.cashAmountCents != null || o.currency === 'USD') return 'cash'
+  if (o.rewardKind === 'miles' || /\bmiles?\b/i.test(o.currency ?? '')) return 'airline'
+  return 'points'
+}
+

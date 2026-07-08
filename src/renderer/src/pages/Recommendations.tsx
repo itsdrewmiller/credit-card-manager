@@ -5,6 +5,7 @@ import {
   Badge,
   Button,
   Checkbox,
+  Chip,
   Code,
   Group,
   NumberInput,
@@ -13,7 +14,7 @@ import {
   Tabs,
   Text
 } from '@mantine/core'
-import { IconPlus, IconRefresh, IconSparkles } from '@tabler/icons-react'
+import { IconExternalLink, IconPlus, IconRefresh, IconSparkles } from '@tabler/icons-react'
 import { trpc } from '../trpc'
 import { PageHeader } from '../components/PageHeader'
 import { EmptyState } from '../components/EmptyState'
@@ -22,7 +23,12 @@ import { DataTable, RowCardList, type Column } from '../components/DataTable'
 import { RowActionsMenu } from '../components/RowActionsMenu'
 import { useEntityEditor } from '../components/useEntityEditor'
 import { RuleForm, type RuleFormValue } from '../components/RuleForm'
-import { formatCents, formatPoints } from '@shared/format'
+import {
+  formatCents,
+  formatPoints,
+  REWARD_CATEGORY_LABELS,
+  type RewardCategory
+} from '@shared/format'
 import { formatDate } from '@shared/dates'
 import { showSuccess } from '../lib/mutations'
 import type { RecommendationOverview, RecommendationRuleRow } from '../lib/types'
@@ -83,6 +89,8 @@ interface Filters {
   issuer: string | null
   holder: string | null // 'personal' | business name
   maxMinSpend: number | string
+  /** Reward categories to show; empty = all (same narrowing semantics as the selects). */
+  categories: RewardCategory[]
 }
 
 function applyFilters(rows: Candidate[], f: Filters): Candidate[] {
@@ -92,27 +100,46 @@ function applyFilters(rows: Candidate[], f: Filters): Candidate[] {
     if (f.holder && f.holder !== 'personal' && c.businessName !== f.holder) return false
     if (f.maxMinSpend !== '' && c.minSpendCents != null && c.minSpendCents > Number(f.maxMinSpend) * 100)
       return false
+    if (f.categories.length > 0 && !f.categories.includes(c.rewardCategory)) return false
     return true
   })
 }
 
-function CardCell({ c }: { c: Candidate }): React.ReactElement {
+function CardCell({
+  c,
+  prominentLink = false
+}: {
+  c: Candidate
+  /** Phone cards render the link as a tappable button instead of a tiny anchor. */
+  prominentLink?: boolean
+}): React.ReactElement {
   return (
     <>
       <Text size="sm" fw={500}>
         {c.label}
       </Text>
-      {c.referralLinkUrl && (
-        <>
+      {c.referralLinkUrl &&
+        (prominentLink ? (
+          <Button
+            component="a"
+            href={c.referralLinkUrl}
+            target="_blank"
+            size="compact-sm"
+            variant="light"
+            mt={6}
+            rightSection={<IconExternalLink size={14} />}
+          >
+            Apply via referral
+          </Button>
+        ) : (
           <Anchor href={c.referralLinkUrl} target="_blank" size="xs">
             apply via referral
           </Anchor>
-          {c.referralLinkSeeded && (
-            <Text size="xs" c="dimmed">
-              link credits the app author — store your own to earn it
-            </Text>
-          )}
-        </>
+        ))}
+      {c.referralLinkUrl && c.referralLinkSeeded && (
+        <Text size="xs" c="dimmed" mt={prominentLink ? 4 : 0}>
+          this link supports the app author
+        </Text>
       )}
     </>
   )
@@ -135,7 +162,7 @@ const candidateKey = (c: Candidate): string => `${c.offerId}-${c.personId}-${c.b
 function RecommendedTable({ rows }: { rows: Candidate[] }): React.ReactElement {
   // Phone widths get the card as the title with the rest stacked underneath.
   const mobileColumns: Column<Candidate & { id: string }>[] = [
-    { header: 'Card', render: (c) => <CardCell c={c} /> },
+    { header: 'Card', render: (c) => <CardCell c={c} prominentLink /> },
     { header: 'Who', render: (c) => <WhoCell c={c} /> },
     { header: 'Bonus', render: (c) => <BonusCell c={c} /> },
     { header: 'Value', render: (c) => <ValueCell c={c} /> },
@@ -198,7 +225,12 @@ function RecommendedTable({ rows }: { rows: Candidate[] }): React.ReactElement {
 }
 
 function CombinedResults({ results }: { results: PersonResult[] }): React.ReactElement {
-  const [filters, setFilters] = useState<Filters>({ issuer: null, holder: null, maxMinSpend: '' })
+  const [filters, setFilters] = useState<Filters>({
+    issuer: null,
+    holder: null,
+    maxMinSpend: '',
+    categories: []
+  })
 
   const { recommended, blocked, issuers, holders } = useMemo(() => {
     const tag = (r: PersonResult, list: PersonResult['recommended']): Candidate[] =>
@@ -252,6 +284,19 @@ function CombinedResults({ results }: { results: PersonResult[] }): React.ReactE
           value={filters.maxMinSpend}
           onChange={(v) => setFilters((f) => ({ ...f, maxMinSpend: v }))}
         />
+        <Chip.Group
+          multiple
+          value={filters.categories}
+          onChange={(v) => setFilters((f) => ({ ...f, categories: v as RewardCategory[] }))}
+        >
+          <Group gap={6}>
+            {(Object.keys(REWARD_CATEGORY_LABELS) as RewardCategory[]).map((cat) => (
+              <Chip key={cat} value={cat} variant="light" size="sm">
+                {REWARD_CATEGORY_LABELS[cat]}
+              </Chip>
+            ))}
+          </Group>
+        </Chip.Group>
         {over524.map((r) => (
           <Badge key={r.personId} color="red" variant="light">
             {r.name} at/over 5/24

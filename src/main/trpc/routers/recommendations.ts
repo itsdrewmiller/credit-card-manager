@@ -2,7 +2,7 @@ import { z } from 'zod'
 import { eq, asc } from 'drizzle-orm'
 import { router, publicProcedure } from '../trpc'
 import type { DbLike } from '../../db'
-import { offerValueCents } from '@shared/format'
+import { offerRewardCategory, offerValueCents } from '@shared/format'
 import { ruleParamsError } from '@shared/rules'
 import { recommendationRule, spendEntry, person, appSetting } from '../../db/schema'
 import { recommend } from '../../domain/recommend'
@@ -87,6 +87,12 @@ export const recommendationsRouter = router({
         pointsAmount: o.pointsAmount,
         cashAmountCents: o.cashAmountCents,
         currency: o.pointProgram?.name ?? o.currency,
+        rewardCategory: offerRewardCategory({
+          cashAmountCents: o.cashAmountCents,
+          currency: o.currency,
+          rewardKind: o.rewardKind,
+          pointProgramKind: o.pointProgram?.kind ?? null
+        }),
         earnPct: o.product?.defaultCashbackPct ?? null,
         referralValueCents: o.referralValueCents,
         annualFeeCents: o.product?.defaultAnnualFeeCents ?? null,
@@ -97,7 +103,14 @@ export const recommendationsRouter = router({
       }))
     const people = ctx.db.query.person.findMany().sync()
     const businesses = ctx.db.query.business.findMany().sync()
-    const cards = ctx.db.query.card.findMany({ with: { product: true } }).sync()
+    const cards = ctx.db.query.card
+      .findMany({ with: { product: { with: { issuer: true } } } })
+      .sync()
+      .map((c) => ({
+        ...c,
+        productName: c.product?.name ?? null,
+        productIssuerName: c.product?.issuer?.name ?? null
+      }))
     const spendEntries = ctx.db
       .select({ amountCents: spendEntry.amountCents, date: spendEntry.date })
       .from(spendEntry)

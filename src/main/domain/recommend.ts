@@ -1,4 +1,5 @@
 import { addMonthsIso, monthsAgoIso, toIsoDate, todayIso } from '@shared/dates'
+import type { RewardCategory } from '@shared/format'
 import { bonusRemainingCents, isBonusOpen } from './bonus'
 import { personVelocity, type VelocityCardLike } from './velocity'
 
@@ -26,7 +27,82 @@ import { personVelocity, type VelocityCardLike } from './velocity'
  *        household-wide: wait while remaining min-spend on open bonuses is
  *        maxOpenMonths+ of tracked spend pace; waitUntil projects when pace
  *        or deadlines bring the open spend back under the threshold
+ *  - family_bonus_order { families? }                  issuer "family" welcome-offer hierarchies
+ *        (defaults to Amex's): getting a higher-tier card forfeits lower-tier
+ *        welcome offers, so higher tiers are blocked while a lower-tier bonus
+ *        is still collectable, and lower tiers are blocked once a higher tier
+ *        was ever held
  */
+
+/** One ordered card family for family_bonus_order. Names are matched
+ *  case-insensitively by substring: a product is in the family when its name
+ *  contains every `include` term and no `exclude` term (and the issuer
+ *  matches, when known); its tier is the highest-indexed `tiers` pattern the
+ *  name contains. */
+export interface BonusFamily {
+  label: string
+  issuer?: string
+  include?: string[]
+  exclude?: string[]
+  /** Low to high; e.g. Amex MR: green < gold < platinum. */
+  tiers: string[]
+}
+
+/**
+ * Amex's published family rules (the family_bonus_order default): welcome
+ * offers are ineligible on a card whose family sibling of a HIGHER tier was
+ * ever held, so bonuses must be collected bottom-up. All Platinum variants
+ * (vanilla/Schwab/Morgan Stanley) are one tier; Graphite is assumed above
+ * Platinum. Delta, Hilton, and Blue Cash are their own families — Delta Gold
+ * has nothing to do with the MR Gold. Marriott is deliberately absent
+ * (cross-issuer 24-month rules don't fit this model). Business cards carry
+ * only per-card lifetime language, so they're excluded here.
+ */
+export const AMEX_FAMILIES: BonusFamily[] = [
+  {
+    label: 'Amex Membership Rewards',
+    issuer: 'American Express',
+    exclude: ['business', 'delta', 'hilton', 'marriott', 'bonvoy', 'blue cash', 'everyday', 'corporate'],
+    tiers: ['green', 'gold', 'platinum', 'graphite']
+  },
+  {
+    label: 'Amex Delta',
+    issuer: 'American Express',
+    include: ['delta'],
+    exclude: ['business'],
+    tiers: ['blue', 'gold', 'platinum', 'reserve']
+  },
+  {
+    label: 'Amex Hilton',
+    issuer: 'American Express',
+    include: ['hilton'],
+    exclude: ['business'],
+    tiers: ['hilton', 'surpass', 'aspire']
+  },
+  {
+    label: 'Amex Blue Cash',
+    issuer: 'American Express',
+    include: ['blue cash'],
+    exclude: ['business'],
+    tiers: ['everyday', 'preferred']
+  }
+]
+
+/** Tier index of a product in a family, or -1 when it isn't in the family. */
+function familyTier(
+  f: BonusFamily,
+  productName: string | null | undefined,
+  issuerName: string | null | undefined
+): number {
+  const name = (productName ?? '').toLowerCase()
+  if (!name) return -1
+  // Held cards without a linked product/issuer stay out rather than guessing.
+  if (f.issuer && issuerName !== f.issuer) return -1
+  if ((f.include ?? []).some((t) => !name.includes(t))) return -1
+  if ((f.exclude ?? []).some((t) => name.includes(t))) return -1
+  for (let i = f.tiers.length - 1; i >= 0; i--) if (name.includes(f.tiers[i])) return i
+  return -1
+}
 
 export interface RecommendInput {
   offers: {
@@ -40,6 +116,8 @@ export interface RecommendInput {
     pointsAmount?: number | null
     cashAmountCents?: number | null
     currency?: string | null
+    /** What the bonus pays out in (see offerRewardCategory); defaults to card points. */
+    rewardCategory?: RewardCategory
     /** Product's baseline earn rate (percent). */
     earnPct?: number | null
     /** What a referrer earns when this application uses their link. */
@@ -58,6 +136,9 @@ export interface RecommendInput {
     cardProductId: number | null
     ownerPersonId: number | null
     appliedDate: string | null
+    /** Linked product/issuer names — the family_bonus_order rule matches on these. */
+    productName?: string | null
+    productIssuerName?: string | null
   })[]
   spendEntries: { amountCents: number; date: string }[]
   /** Signup bonuses on held cards; unfinished ones gate new applications. */
@@ -111,6 +192,7 @@ export interface Candidate {
   pointsAmount: number | null
   cashAmountCents: number | null
   currency: string | null
+  rewardCategory: RewardCategory
   earnPct: number | null
   /** Beneficiary of the stored referral link this application would use. */
   referralFrom: string | null
@@ -347,6 +429,57 @@ export function recommend(input: RecommendInput): PersonRecommendations[] {
           }
           break
         }
+        case 'family_bonus_order': {
+          const families = (p.families as BonusFamily[] | undefined) ?? AMEX_FAMILIES
+          // Welcome-offer eligibility is per person (Amex doesn't care which
+          // business applies), and "have or have had" includes closed cards —
+          // only rejected applications never held the card.
+          const everHeld = personCards.filter((c) => c.status !== 'rejected')
+          for (const f of families) {
+            const offerTier = familyTier(f, offer.productName, offer.issuerName)
+            if (offerTier < 0) continue
+            let maxHeldTier = -1
+            let maxHeldName: string | null = null
+            for (const c of everHeld) {
+              const t = familyTier(f, c.productName, c.productIssuerName)
+              if (t > maxHeldTier) {
+                maxHeldTier = t
+                maxHeldName = c.productName ?? null
+              }
+            }
+            // Same tier blocks too: all Platinum variants carry each other in
+            // their family language, and re-applying for a card once held
+            // (even closed) never re-earns its own bonus.
+            if (maxHeldTier >= offerTier) {
+              blocks.push({
+                kind: rule.kind,
+                reason: `won't get the bonus — already had ${maxHeldName ?? 'a same-or-higher card'} (${f.label} family rule)`,
+                waitUntil: null
+              })
+              continue
+            }
+            // Lower-tier bonuses still collectable (offer in feed, tier above
+            // anything held) would be forfeited by taking this card first.
+            const forfeited = [
+              ...new Set(
+                input.offers
+                  .filter((o) => {
+                    const t = familyTier(f, o.productName, o.issuerName)
+                    return t >= 0 && t < offerTier && t > maxHeldTier
+                  })
+                  .map((o) => o.productName)
+              )
+            ]
+            if (forfeited.length > 0) {
+              blocks.push({
+                kind: rule.kind,
+                reason: `getting this first forfeits the ${forfeited.join(' and ')} bonus${forfeited.length > 1 ? 'es' : ''} (${f.label} family rule) — apply for ${forfeited.length > 1 ? 'those' : 'that'} first`,
+                waitUntil: null
+              })
+            }
+          }
+          break
+        }
         default:
           break // unknown kinds are ignored, not fatal
       }
@@ -399,6 +532,7 @@ export function recommend(input: RecommendInput): PersonRecommendations[] {
       pointsAmount: offer.pointsAmount ?? null,
       cashAmountCents: offer.cashAmountCents ?? null,
       currency: offer.currency ?? null,
+      rewardCategory: offer.rewardCategory ?? 'points',
       earnPct: offer.earnPct ?? null,
       referralFrom,
       referralValueCents,
