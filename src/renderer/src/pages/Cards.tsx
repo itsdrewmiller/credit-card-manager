@@ -17,6 +17,7 @@ import { PageHeader } from '../components/PageHeader'
 import { EmptyState } from '../components/EmptyState'
 import { QueryGate } from '../components/QueryGate'
 import { RowActionsMenu } from '../components/RowActionsMenu'
+import { RowCardList, type Column } from '../components/DataTable'
 import { CsvImportButton } from '../components/CsvImportButton'
 import { CreditReportImport } from '../components/CreditReportImport'
 import { useCardEditor, cardLabel } from '../components/useCardEditor'
@@ -136,6 +137,93 @@ export function Cards(): React.ReactElement {
     </Table.Th>
   )
 
+  // Shared by the desktop table body and the phone-width stacked cards; the
+  // sortable header row above stays in sync by matching this order.
+  const columns: Column<CardRow>[] = [
+    {
+      header: 'Card',
+      render: (c) => (
+        <>
+          <Text fw={500}>{cardLabel(c)}</Text>
+          {c.last4 && (
+            <Text size="xs" c="dimmed">
+              ····{c.last4}
+            </Text>
+          )}
+        </>
+      )
+    },
+    { header: 'Owner', render: (c) => c.owner?.name ?? <Text c="dimmed">—</Text> },
+    {
+      header: 'Business',
+      render: (c) => (c.business ? c.business.name : <Text c="dimmed">Personal</Text>)
+    },
+    {
+      header: 'Status',
+      render: (c) => (
+        <Badge color={CARD_STATUS_COLOR[c.status as CardStatus] ?? 'gray'} variant="light">
+          {CARD_STATUS_LABELS[c.status as CardStatus] ?? c.status}
+        </Badge>
+      )
+    },
+    { header: 'Annual fee', render: (c) => formatCents(c.annualFeeCents) },
+    {
+      header: 'Opened',
+      render: (c) => (
+        <>
+          <Text size="sm">{formatDate(c.openedDate)}</Text>
+          {c.closedDate && (
+            <Text size="xs" c="dimmed">
+              closed {formatDate(c.closedDate)}
+            </Text>
+          )}
+        </>
+      )
+    },
+    {
+      header: 'Autopay',
+      render: (c) => (
+        <Checkbox
+          checked={c.autopay}
+          onChange={(e) => setAutopay.mutate({ id: c.id, autopay: e.currentTarget.checked })}
+          aria-label="Automatic payments set up"
+        />
+      )
+    },
+    {
+      header: 'Earn %',
+      render: (c) => (
+        <EarnRateCell
+          card={c}
+          onCommit={(productId, pct) => setCashback.mutate({ id: productId, defaultCashbackPct: pct })}
+        />
+      )
+    },
+    {
+      header: 'Needs info',
+      render: (c) =>
+        c.missingFields.length === 0 ? (
+          <Badge color="green" variant="light">
+            Complete
+          </Badge>
+        ) : (
+          <Tooltip label={c.missingFields.map((f) => CARD_FIELD_LABELS[f]).join(', ')} withArrow>
+            <Badge color="orange" variant="light">
+              {c.missingFields.length} missing
+            </Badge>
+          </Tooltip>
+        )
+    }
+  ]
+
+  const actions = (c: CardRow): React.ReactElement => (
+    <RowActionsMenu
+      onEdit={() => editor.openEdit(c)}
+      onDelete={() => remove.mutate({ id: c.id })}
+      deleteLabel={`Delete ${cardLabel(c)}?`}
+    />
+  )
+
   return (
     <>
       <PageHeader title="Cards">
@@ -181,7 +269,8 @@ export function Cards(): React.ReactElement {
       ) : rows.length === 0 ? (
         <EmptyState title="No cards in this view" description="Try a different status filter." />
       ) : (
-        <Table.ScrollContainer minWidth={960}>
+        <>
+        <Table.ScrollContainer minWidth={960} visibleFrom="sm">
         <Table highlightOnHover withTableBorder>
           <Table.Thead>
             <Table.Tr>
@@ -200,75 +289,17 @@ export function Cards(): React.ReactElement {
           <Table.Tbody>
             {rows.map((c: CardRow) => (
               <Table.Tr key={c.id}>
-                <Table.Td>
-                  <Text fw={500}>{cardLabel(c)}</Text>
-                  {c.last4 && (
-                    <Text size="xs" c="dimmed">
-                      ····{c.last4}
-                    </Text>
-                  )}
-                </Table.Td>
-                <Table.Td>{c.owner?.name ?? <Text c="dimmed">—</Text>}</Table.Td>
-                <Table.Td>
-                  {c.business ? c.business.name : <Text c="dimmed">Personal</Text>}
-                </Table.Td>
-                <Table.Td>
-                  <Badge color={CARD_STATUS_COLOR[c.status as CardStatus] ?? 'gray'} variant="light">
-                    {CARD_STATUS_LABELS[c.status as CardStatus] ?? c.status}
-                  </Badge>
-                </Table.Td>
-                <Table.Td>{formatCents(c.annualFeeCents)}</Table.Td>
-                <Table.Td>
-                  <Text size="sm">{formatDate(c.openedDate)}</Text>
-                  {c.closedDate && (
-                    <Text size="xs" c="dimmed">
-                      closed {formatDate(c.closedDate)}
-                    </Text>
-                  )}
-                </Table.Td>
-                <Table.Td>
-                  <Checkbox
-                    checked={c.autopay}
-                    onChange={(e) => setAutopay.mutate({ id: c.id, autopay: e.currentTarget.checked })}
-                    aria-label="Automatic payments set up"
-                  />
-                </Table.Td>
-                <Table.Td>
-                  <EarnRateCell
-                    card={c}
-                    onCommit={(productId, pct) =>
-                      setCashback.mutate({ id: productId, defaultCashbackPct: pct })
-                    }
-                  />
-                </Table.Td>
-                <Table.Td>
-                  {c.missingFields.length === 0 ? (
-                    <Badge color="green" variant="light">
-                      Complete
-                    </Badge>
-                  ) : (
-                    <Tooltip
-                      label={c.missingFields.map((f) => CARD_FIELD_LABELS[f]).join(', ')}
-                      withArrow
-                    >
-                      <Badge color="orange" variant="light">
-                        {c.missingFields.length} missing
-                      </Badge>
-                    </Tooltip>
-                  )}
-                </Table.Td>
-                <Table.Td>
-                  <RowActionsMenu
-                    onEdit={() => editor.openEdit(c)}
-                    onDelete={() => remove.mutate({ id: c.id })}
-                    deleteLabel={`Delete ${cardLabel(c)}?`}
-                  />
-                </Table.Td>
+                {columns.map((col, i) => (
+                  <Table.Td key={i}>{col.render(c)}</Table.Td>
+                ))}
+                <Table.Td>{actions(c)}</Table.Td>
               </Table.Tr>
             ))}
           </Table.Tbody>
         </Table>
         </Table.ScrollContainer>
+        <RowCardList columns={columns} rows={rows} rowActions={actions} />
+        </>
       )}
       </QueryGate>
 

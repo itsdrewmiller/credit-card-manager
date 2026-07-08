@@ -18,7 +18,7 @@ import { trpc } from '../trpc'
 import { PageHeader } from '../components/PageHeader'
 import { EmptyState } from '../components/EmptyState'
 import { QueryGate } from '../components/QueryGate'
-import { DataTable, type Column } from '../components/DataTable'
+import { DataTable, RowCardList, type Column } from '../components/DataTable'
 import { RowActionsMenu } from '../components/RowActionsMenu'
 import { useEntityEditor } from '../components/useEntityEditor'
 import { RuleForm, type RuleFormValue } from '../components/RuleForm'
@@ -96,9 +96,63 @@ function applyFilters(rows: Candidate[], f: Filters): Candidate[] {
   })
 }
 
-function RecommendedTable({ rows }: { rows: Candidate[] }): React.ReactElement {
+function CardCell({ c }: { c: Candidate }): React.ReactElement {
   return (
-    <Table.ScrollContainer minWidth={860}>
+    <>
+      <Text size="sm" fw={500}>
+        {c.label}
+      </Text>
+      {c.referralLinkUrl && (
+        <>
+          <Anchor href={c.referralLinkUrl} target="_blank" size="xs">
+            apply via referral
+          </Anchor>
+          {c.referralLinkSeeded && (
+            <Text size="xs" c="dimmed">
+              link credits the app author — store your own to earn it
+            </Text>
+          )}
+        </>
+      )}
+    </>
+  )
+}
+
+function BonusCell({ c }: { c: Candidate }): React.ReactElement {
+  return (
+    <>
+      <Text size="sm">{bonusText(c)}</Text>
+      <Text size="xs" c="dimmed">
+        {c.minSpendCents != null ? `${formatCents(c.minSpendCents)} spend` : 'no min spend'}
+        {c.windowMonths != null ? ` in ${c.windowMonths} mo` : ''}
+      </Text>
+    </>
+  )
+}
+
+const candidateKey = (c: Candidate): string => `${c.offerId}-${c.personId}-${c.businessId ?? 'p'}`
+
+function RecommendedTable({ rows }: { rows: Candidate[] }): React.ReactElement {
+  // Phone widths get the card as the title with the rest stacked underneath.
+  const mobileColumns: Column<Candidate & { id: string }>[] = [
+    { header: 'Card', render: (c) => <CardCell c={c} /> },
+    { header: 'Who', render: (c) => <WhoCell c={c} /> },
+    { header: 'Bonus', render: (c) => <BonusCell c={c} /> },
+    { header: 'Value', render: (c) => <ValueCell c={c} /> },
+    { header: 'Earn %', render: (c) => <Text size="sm">{c.earnPct != null ? `${c.earnPct}%` : '—'}</Text> },
+    {
+      header: 'ROI on spend',
+      render: (c) => (
+        <Text size="sm" fw={500}>
+          {c.roiPct != null ? `${Math.round(c.roiPct)}%` : '—'}
+        </Text>
+      )
+    }
+  ]
+
+  return (
+    <>
+    <Table.ScrollContainer minWidth={860} visibleFrom="sm">
     <Table withTableBorder highlightOnHover verticalSpacing="xs">
       <Table.Thead>
         <Table.Tr>
@@ -112,33 +166,15 @@ function RecommendedTable({ rows }: { rows: Candidate[] }): React.ReactElement {
       </Table.Thead>
       <Table.Tbody>
         {rows.map((c) => (
-          <Table.Tr key={`${c.offerId}-${c.personId}-${c.businessId ?? 'p'}`}>
+          <Table.Tr key={candidateKey(c)}>
             <Table.Td>
               <WhoCell c={c} />
             </Table.Td>
             <Table.Td>
-              <Text size="sm" fw={500}>
-                {c.label}
-              </Text>
-              {c.referralLinkUrl && (
-                <>
-                  <Anchor href={c.referralLinkUrl} target="_blank" size="xs">
-                    apply via referral
-                  </Anchor>
-                  {c.referralLinkSeeded && (
-                    <Text size="xs" c="dimmed">
-                      link credits the app author — store your own to earn it
-                    </Text>
-                  )}
-                </>
-              )}
+              <CardCell c={c} />
             </Table.Td>
             <Table.Td>
-              <Text size="sm">{bonusText(c)}</Text>
-              <Text size="xs" c="dimmed">
-                {c.minSpendCents != null ? `${formatCents(c.minSpendCents)} spend` : 'no min spend'}
-                {c.windowMonths != null ? ` in ${c.windowMonths} mo` : ''}
-              </Text>
+              <BonusCell c={c} />
             </Table.Td>
             <Table.Td ta="right">
               <ValueCell c={c} />
@@ -156,6 +192,8 @@ function RecommendedTable({ rows }: { rows: Candidate[] }): React.ReactElement {
       </Table.Tbody>
     </Table>
     </Table.ScrollContainer>
+    <RowCardList columns={mobileColumns} rows={rows.map((c) => ({ ...c, id: candidateKey(c) }))} />
+    </>
   )
 }
 

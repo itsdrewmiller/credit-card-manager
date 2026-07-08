@@ -10,13 +10,53 @@ export interface Column<Row> {
 }
 
 /**
+ * Stacked-card rendering of rows for phone widths: the first column is the
+ * card title, the rest are header-labeled lines. Hidden from the sm
+ * breakpoint up. Used by DataTable, and directly by pages that manage their
+ * own <Table> (Cards) so they too avoid horizontal scrolling on phones.
+ */
+export function RowCardList<Row extends { id: number | string }>({
+  columns,
+  rows,
+  rowActions
+}: {
+  columns: Column<Row>[]
+  rows: Row[]
+  rowActions?: (row: Row) => React.ReactNode
+}): React.ReactElement {
+  const [title, ...rest] = columns
+  return (
+    <Stack hiddenFrom="sm" gap="sm">
+      {rows.map((row) => (
+        <Card key={row.id} withBorder radius="md" padding="md">
+          <Group justify="space-between" align="flex-start" wrap="nowrap" mb={rest.length ? 'xs' : 0}>
+            <Box style={{ minWidth: 0 }}>{title.render(row)}</Box>
+            {rowActions && <Box>{rowActions(row)}</Box>}
+          </Group>
+          <Stack gap={6}>
+            {rest.map((c, i) => (
+              <Group key={i} justify="space-between" align="flex-start" wrap="nowrap" gap="md">
+                <Text size="xs" c="dimmed" style={{ flexShrink: 0 }}>
+                  {c.header}
+                </Text>
+                <Box style={{ textAlign: 'right', minWidth: 0 }}>{c.render(row)}</Box>
+              </Group>
+            ))}
+          </Stack>
+        </Card>
+      ))}
+    </Stack>
+  )
+}
+
+/**
  * Deliberately dumb list table: columns + rows + empty state + an optional
  * trailing actions cell. No sorting/filtering/pagination — pages that need
  * those (Cards) use <Table> directly.
  *
- * Below the sm breakpoint each row renders as a stacked card instead (the
- * first column as the card title, the rest as header-labeled lines), so every
- * DataTable page works at phone width without horizontal scrolling.
+ * Below the sm breakpoint each row renders as a stacked card instead (via
+ * RowCardList), so every DataTable page works at phone width without
+ * horizontal scrolling.
  */
 export function DataTable<Row extends { id: number }>({
   columns,
@@ -34,7 +74,6 @@ export function DataTable<Row extends { id: number }>({
 }): React.ReactElement {
   const list = rows ?? []
   if (list.length === 0) return <EmptyState title={empty.title} description={empty.description} />
-  const [title, ...rest] = columns
   return (
     <>
       <Box visibleFrom="sm">
@@ -61,26 +100,7 @@ export function DataTable<Row extends { id: number }>({
           </Table.Tbody>
         </Table>
       </Box>
-      <Stack hiddenFrom="sm" gap="sm">
-        {list.map((row) => (
-          <Card key={row.id} withBorder radius="md" padding="md">
-            <Group justify="space-between" align="flex-start" wrap="nowrap" mb={rest.length ? 'xs' : 0}>
-              <Box style={{ minWidth: 0 }}>{title.render(row)}</Box>
-              {rowActions && <Box>{rowActions(row)}</Box>}
-            </Group>
-            <Stack gap={6}>
-              {rest.map((c, i) => (
-                <Group key={i} justify="space-between" align="flex-start" wrap="nowrap" gap="md">
-                  <Text size="xs" c="dimmed" style={{ flexShrink: 0 }}>
-                    {c.header}
-                  </Text>
-                  <Box style={{ textAlign: 'right', minWidth: 0 }}>{c.render(row)}</Box>
-                </Group>
-              ))}
-            </Stack>
-          </Card>
-        ))}
-      </Stack>
+      <RowCardList columns={columns} rows={list} rowActions={rowActions} />
     </>
   )
 }
