@@ -11,10 +11,12 @@ import {
   Text,
   Alert,
   Stack,
-  SimpleGrid
+  SimpleGrid,
+  LoadingOverlay
 } from '@mantine/core'
 import { notifications } from '@mantine/notifications'
 import { IconFileTypePdf, IconUpload, IconInfoCircle, IconCheck } from '@tabler/icons-react'
+import { useMediaQuery } from '@mantine/hooks'
 import { trpc } from '../trpc'
 import { useInvalidateCards } from '../lib/mutations'
 import { usePeopleOptions, useProductOptions } from '../lib/options'
@@ -50,6 +52,7 @@ export function CreditReportImport({
   const peopleOptions = usePeopleOptions()
   const productOptions = useProductOptions()
 
+  const isMobile = useMediaQuery('(max-width: 47.99em)', false)
   const [file, setFile] = useState<File | null>(null)
   const [ownerPersonId, setOwnerPersonId] = useState<string>('')
   const [preview, setPreview] = useState<ImportPreview | null>(null)
@@ -127,7 +130,18 @@ export function CreditReportImport({
   }
 
   return (
-    <Modal opened={opened} onClose={close} title="Import from a credit report" size="90%">
+    <Modal
+      opened={opened}
+      onClose={close}
+      title="Import from a credit report"
+      size="90%"
+      fullScreen={isMobile}
+    >
+      <LoadingOverlay
+        visible={parse.isPending}
+        overlayProps={{ blur: 1 }}
+        loaderProps={{ children: 'Parsing report…' }}
+      />
       <Text c="dimmed" size="sm" mb="md">
         Upload an Equifax PDF to bootstrap personal cards. Every tradeline becomes a card (a stub if
         it can&apos;t be matched); finish the details afterward with the &quot;Needs info&quot;
@@ -180,6 +194,7 @@ export function CreditReportImport({
             . Review and adjust below.
           </Alert>
 
+          <Table.ScrollContainer minWidth={720}>
           <Table withTableBorder verticalSpacing="sm" mb="md">
             <Table.Thead>
               <Table.Tr>
@@ -246,6 +261,7 @@ export function CreditReportImport({
               ))}
             </Table.Tbody>
           </Table>
+          </Table.ScrollContainer>
 
           <Group justify="flex-end">
             <Stack gap={2} align="flex-end">

@@ -12,3 +12,10 @@ body {
 .mantine-Modal-content {
   overflow-x: hidden;
 }
+
+/* Dropdowns need to visibly float above the form (weak on iOS otherwise). */
+.mantine-Popover-dropdown,
+.mantine-Combobox-dropdown {
+  box-shadow: var(--mantine-shadow-lg);
+  border: 1px solid var(--mantine-color-default-border);
+}

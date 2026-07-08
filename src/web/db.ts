@@ -67,6 +67,33 @@ export async function openWebDatabase(): Promise<WebDb> {
   // Structurally the same sync drizzle API the routers were written against;
   // only the driver's RunResult type differs.
   const db = drizzle(sqlite, { schema }) as unknown as DB
+
+  // Upstream bug (still present in drizzle-orm 0.45): SQLJsSession.prepareQuery
+  // drops its customResultMapper argument, so every relational query
+  // (db.query.*.findMany({ with })) returns raw unmapped rows and relations
+  // resolve to null. prepareOneTimeQuery forwards the mapper correctly —
+  // route through it and undo the one-time flag so statements stay reusable.
+  /* eslint-disable @typescript-eslint/no-explicit-any */
+  const session = (db as any).session
+  const proto = Object.getPrototypeOf(session)
+  proto.prepareQuery = function (
+    query: unknown,
+    fields: unknown,
+    executeMethod: unknown,
+    isResponseInArrayMode: unknown,
+    customResultMapper: unknown
+  ) {
+    const prepared = this.prepareOneTimeQuery(
+      query,
+      fields,
+      executeMethod,
+      isResponseInArrayMode,
+      customResultMapper
+    )
+    prepared.isOneTimeQuery = false
+    return prepared
+  }
+  /* eslint-enable @typescript-eslint/no-explicit-any */
   seedAll(db, { offersCsv, defaultRulesJson })
 
   let timer: number | undefined

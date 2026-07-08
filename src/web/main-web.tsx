@@ -9,12 +9,26 @@ import { openWebDatabase } from './db'
  * window.trpcIpc so the renderer is byte-for-byte identical, then mount the
  * app. Mutations persist the database to IndexedDB.
  */
+// In the browser, pdfjs needs an explicit worker (the Electron main process
+// runs it workerless). Configured lazily before the first importer call so
+// the ~1 MB worker never loads unless a report is parsed.
+let pdfWorkerReady: Promise<void> | undefined
+function ensurePdfWorker(): Promise<void> {
+  pdfWorkerReady ??= (async () => {
+    const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs')
+    const workerUrl = (await import('pdfjs-dist/legacy/build/pdf.worker.mjs?url')).default
+    pdfjs.GlobalWorkerOptions.workerSrc = workerUrl
+  })()
+  return pdfWorkerReady
+}
+
 async function bootstrap(): Promise<void> {
   const { db, persist } = await openWebDatabase()
   const createCaller = createCallerFactory(appRouter)
 
   window.trpcIpc = {
     request: async (op: TrpcRequest) => {
+      if (op.path.startsWith('importer.')) await ensurePdfWorker()
       const caller = createCaller({ db }) as Record<string, unknown>
       const fn = op.path
         .split('.')

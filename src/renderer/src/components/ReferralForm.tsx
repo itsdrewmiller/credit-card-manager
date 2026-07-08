@@ -71,7 +71,7 @@ export function ReferralForm({
 
   return (
     <form onSubmit={submit}>
-      <SimpleGrid cols={2} mb="sm">
+      <SimpleGrid cols={{ base: 1, sm: 2 }} mb="sm">
         <Select
           label="From (referrer)"
           withAsterisk
@@ -96,7 +96,7 @@ export function ReferralForm({
         mb="sm"
       />
       <TextInput label="Link" placeholder="https://…" {...form.getInputProps('link')} mb="sm" />
-      <SimpleGrid cols={3} mb="sm">
+      <SimpleGrid cols={{ base: 1, sm: 3 }} mb="sm">
         <TextInput
           label="Reward"
           placeholder="e.g. 20,000 pts"

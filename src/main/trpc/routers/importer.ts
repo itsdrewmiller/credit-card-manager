@@ -55,7 +55,8 @@ export const importerRouter = router({
   parseEquifax: publicProcedure
     .input(z.object({ base64: z.string() }))
     .mutation(async ({ ctx, input }) => {
-      const data = new Uint8Array(Buffer.from(input.base64, 'base64'))
+      // atob, not Buffer: this router also runs inside the browser build.
+      const data = Uint8Array.from(atob(input.base64), (c) => c.charCodeAt(0))
       const items = await extractTextItems(data)
       const tradelines = parseEquifaxAccounts(items)
       const matcher = buildIssuerMatcher(aliasCorpus(ctx.db))

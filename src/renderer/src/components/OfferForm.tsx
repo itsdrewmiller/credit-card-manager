@@ -118,7 +118,7 @@ export function OfferForm({
           mb="sm"
         />
       ) : (
-        <SimpleGrid cols={3} mb="sm">
+        <SimpleGrid cols={{ base: 1, sm: 3 }} mb="sm">
           <NumberInput
             label="Points / miles"
             min={0}
@@ -153,7 +153,7 @@ export function OfferForm({
         {...form.getInputProps('referralValueDollars')}
         mb="sm"
       />
-      <SimpleGrid cols={3} mb="sm">
+      <SimpleGrid cols={{ base: 1, sm: 3 }} mb="sm">
         <NumberInput
           label="Min spend ($)"
           min={0}

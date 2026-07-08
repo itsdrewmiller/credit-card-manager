@@ -97,7 +97,7 @@ export function BenefitForm({
         mb="sm"
       />
       <TextInput label="Benefit name" withAsterisk {...form.getInputProps('name')} mb="sm" />
-      <SimpleGrid cols={2} mb="sm">
+      <SimpleGrid cols={{ base: 1, sm: 2 }} mb="sm">
         <TextInput
           label="Category"
           placeholder="Dining, Travel, …"
@@ -110,7 +110,7 @@ export function BenefitForm({
           {...form.getInputProps('period')}
         />
       </SimpleGrid>
-      <SimpleGrid cols={3} mb="sm">
+      <SimpleGrid cols={{ base: 1, sm: 3 }} mb="sm">
         <NumberInput
           label="Value ($)"
           min={0}
@@ -129,7 +129,7 @@ export function BenefitForm({
       </SimpleGrid>
 
       <Divider my="sm" label="Usage window" />
-      <SimpleGrid cols={2} mb="sm">
+      <SimpleGrid cols={{ base: 1, sm: 2 }} mb="sm">
         <DateInput
           label="Use after"
           valueFormat="YYYY-MM-DD"

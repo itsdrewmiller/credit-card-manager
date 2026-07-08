@@ -138,7 +138,7 @@ export function BonusForm({
           mb="sm"
         />
       ) : (
-        <SimpleGrid cols={2} mb="sm">
+        <SimpleGrid cols={{ base: 1, sm: 2 }} mb="sm">
           <Select
             label="Point program"
             data={programOptions}
@@ -169,7 +169,7 @@ export function BonusForm({
       </Alert>
 
       <Divider my="sm" label="Minimum spend" />
-      <SimpleGrid cols={2} mb="sm">
+      <SimpleGrid cols={{ base: 1, sm: 2 }} mb="sm">
         <NumberInput
           label="Spend target ($)"
           min={0}
@@ -185,7 +185,7 @@ export function BonusForm({
           {...form.getInputProps('spendSoFarDollars')}
         />
       </SimpleGrid>
-      <SimpleGrid cols={3} mb="sm">
+      <SimpleGrid cols={{ base: 1, sm: 3 }} mb="sm">
         <DateInput
           label="Start"
           valueFormat="YYYY-MM-DD"

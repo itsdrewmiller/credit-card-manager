@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import { Drawer, Modal } from '@mantine/core'
+import { useMediaQuery } from '@mantine/hooks'
 import { showSuccess } from '../lib/mutations'
 
 /** Structural subset of a tRPC useMutation result — keeps this hook
@@ -42,6 +43,8 @@ export function useEntityEditor<Row extends { id: number }, FormValue>(opts: {
   openCopy: (row: Row) => void
   element: React.ReactElement
 } {
+  // Phones: drawers and modals take the whole screen.
+  const isMobile = useMediaQuery('(max-width: 47.99em)', false)
   const [opened, setOpened] = useState(false)
   const [editing, setEditing] = useState<Row | null>(null)
   const [template, setTemplate] = useState<Row | null>(null)
@@ -80,13 +83,19 @@ export function useEntityEditor<Row extends { id: number }, FormValue>(opts: {
         opened={opened}
         onClose={() => setOpened(false)}
         position="right"
-        size={opts.size ?? 'lg'}
+        size={isMobile ? '100%' : (opts.size ?? 'lg')}
         title={title}
       >
         {body}
       </Drawer>
     ) : (
-      <Modal opened={opened} onClose={() => setOpened(false)} size={opts.size} title={title}>
+      <Modal
+        opened={opened}
+        onClose={() => setOpened(false)}
+        size={opts.size}
+        fullScreen={isMobile}
+        title={title}
+      >
         {body}
       </Modal>
     )

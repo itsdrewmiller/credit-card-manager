@@ -135,7 +135,7 @@ export function CardForm({
         onChange={onProductChange}
         mb="sm"
       />
-      <SimpleGrid cols={2} mb="sm">
+      <SimpleGrid cols={{ base: 1, sm: 2 }} mb="sm">
         <Select
           label="Owner"
           placeholder="Whose card"
@@ -159,7 +159,7 @@ export function CardForm({
         {...form.getInputProps('status')}
         mb="sm"
       />
-      <SimpleGrid cols={3} mb="sm">
+      <SimpleGrid cols={{ base: 1, sm: 3 }} mb="sm">
         <Select
           label="Network"
           data={NETWORKS as unknown as string[]}
@@ -177,7 +177,7 @@ export function CardForm({
       </SimpleGrid>
 
       <Divider my="sm" label="Dates" />
-      <SimpleGrid cols={3} mb="sm">
+      <SimpleGrid cols={{ base: 1, sm: 3 }} mb="sm">
         <DateInput
           label="Applied"
           valueFormat="YYYY-MM-DD"
