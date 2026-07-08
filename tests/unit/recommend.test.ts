@@ -481,3 +481,28 @@ describe('recommend', () => {
     expect(drew.recommended).toHaveLength(2)
   })
 })
+
+describe('monthly spend projection', () => {
+  it('uses the resolved monthly spend instead of tracked entries when provided', () => {
+    // Tracked pace is $2k/mo (base); CSP needs $4k in 3 mo. With a $500/mo
+    // projection, capacity is $1.5k and the offer blocks.
+    const [drew] = recommend(
+      base({
+        monthlySpendCents: 50000,
+        rules: [{ kind: 'min_spend_capacity', params: { lookbackMonths: 3, buffer: 1 } }]
+      })
+    )
+    const csp = drew.blocked.find((c) => c.label.includes('Sapphire'))!
+    expect(csp.blocks[0].kind).toBe('min_spend_capacity')
+
+    // And a generous projection un-blocks everything despite no tracked history.
+    const [rich] = recommend(
+      base({
+        spendEntries: [],
+        monthlySpendCents: 1000000,
+        rules: [{ kind: 'min_spend_capacity', params: { lookbackMonths: 3, buffer: 1 } }]
+      })
+    )
+    expect(rich.blocked).toHaveLength(0)
+  })
+})

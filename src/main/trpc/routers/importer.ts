@@ -2,9 +2,9 @@ import { z } from 'zod'
 import { eq } from 'drizzle-orm'
 import { router, publicProcedure } from '../trpc'
 import type { DB } from '../../db'
-import { card, issuer, issuerAlias } from '../../db/schema'
+import { card, issuer, issuerAlias, person } from '../../db/schema'
 import { extractTextItems } from '../../import/pdf'
-import { parseEquifaxAccounts } from '../../import/equifax'
+import { parseEquifaxAccounts, parseAvgMonthlySpendCents } from '../../import/equifax'
 import { buildIssuerMatcher, type AliasRow, type IssuerMatch } from '../../import/match'
 import { findDuplicate, type DedupCard } from '../../import/dedup'
 import { applyProductDefaults } from '../../domain/product'
@@ -59,6 +59,7 @@ export const importerRouter = router({
       const data = Uint8Array.from(atob(input.base64), (c) => c.charCodeAt(0))
       const items = await extractTextItems(data)
       const tradelines = parseEquifaxAccounts(items)
+      const avgMonthlySpendCents = parseAvgMonthlySpendCents(items)
       const matcher = buildIssuerMatcher(aliasCorpus(ctx.db))
       const existing = existingDedupCards(ctx.db, matcher)
 
@@ -79,6 +80,7 @@ export const importerRouter = router({
       })
 
       return {
+        avgMonthlySpendCents,
         total: tradelines.length,
         creditCards: matched.filter((t) => t.isCreditCard).length,
         matched: matched.filter((t) => t.suggestedIssuerId != null).length,
@@ -89,10 +91,23 @@ export const importerRouter = router({
 
   /** Create cards from confirmed tradelines. Every row becomes a card. */
   commit: publicProcedure
-    .input(z.object({ ownerPersonId: z.number().int().nullish(), rows: z.array(commitRow) }))
+    .input(
+      z.object({
+        ownerPersonId: z.number().int().nullish(),
+        /** 12-month average from the report; saved on the owner when present. */
+        avgMonthlySpendCents: z.number().int().nullish(),
+        rows: z.array(commitRow)
+      })
+    )
     .mutation(({ ctx, input }) => {
       let created = 0
       ctx.db.transaction((tx) => {
+        if (input.ownerPersonId != null && input.avgMonthlySpendCents != null) {
+          tx.update(person)
+            .set({ avgMonthlySpendCents: input.avgMonthlySpendCents, updatedAt: Date.now() })
+            .where(eq(person.id, input.ownerPersonId))
+            .run()
+        }
         for (const r of input.rows) {
           // When a product is matched, inherit its annual fee / network / issuer.
           const values = applyProductDefaults(tx, {

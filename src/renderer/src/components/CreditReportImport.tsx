@@ -21,6 +21,7 @@ import { trpc } from '../trpc'
 import { useInvalidateCards } from '../lib/mutations'
 import { usePeopleOptions, useProductOptions } from '../lib/options'
 import { formatDate } from '@shared/dates'
+import { formatCents } from '@shared/format'
 import type { ImportPreview, TradelineRow } from '../lib/types'
 
 function ConfidenceBadge({ t }: { t: TradelineRow }): React.ReactElement {
@@ -126,7 +127,11 @@ export function CreditReportImport({
           status: t.status
         }
       })
-    commit.mutate({ ownerPersonId: ownerPersonId ? Number(ownerPersonId) : null, rows })
+    commit.mutate({
+      ownerPersonId: ownerPersonId ? Number(ownerPersonId) : null,
+      avgMonthlySpendCents: preview.avgMonthlySpendCents ?? null,
+      rows
+    })
   }
 
   return (
@@ -192,6 +197,14 @@ export function CreditReportImport({
               </>
             )}
             . Review and adjust below.
+            {preview.avgMonthlySpendCents != null && (
+              <>
+                {' '}
+                Measured <strong>{formatCents(preview.avgMonthlySpendCents)}/mo</strong> average
+                spend over the last 12 months — saved to the selected person for the monthly-spend
+                projection.
+              </>
+            )}
           </Alert>
 
           <Table.ScrollContainer minWidth={720}>

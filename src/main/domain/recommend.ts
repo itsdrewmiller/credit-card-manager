@@ -83,6 +83,12 @@ export interface RecommendInput {
     ownerName: string | null
   }[]
   rules: { kind: string; params: Record<string, unknown> }[]
+  /**
+   * Projected monthly spend. When set, capacity rules use it directly;
+   * when null, the rate is derived from tracked spend entries (legacy
+   * behavior). Callers resolve the manual override / report-based default.
+   */
+  monthlySpendCents?: number | null
   today: Date
 }
 
@@ -148,8 +154,10 @@ const appDate = (c: { appliedDate: string | null; openedDate: string | null }): 
 export function recommend(input: RecommendInput): PersonRecommendations[] {
   const { today } = input
 
-  // Tracked monthly spend rate, per min_spend_capacity's lookback.
+  // Projected monthly spend: the caller-resolved value when present, else
+  // the tracked rate over the rule's lookback window.
   const spendRate = (lookbackMonths: number): number => {
+    if (input.monthlySpendCents != null) return input.monthlySpendCents
     const cutoff = monthsAgoIso(lookbackMonths, today)
     const total = input.spendEntries
       .filter((e) => e.date >= cutoff)

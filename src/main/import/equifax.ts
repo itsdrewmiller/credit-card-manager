@@ -139,3 +139,38 @@ export function parseEquifaxAccounts(items: string[]): ParsedTradeline[] {
   }
   return tradelines
 }
+
+/**
+ * Average monthly spend over the trailing 12 months, from the per-account
+ * "Account History" tables (the consumer-disclosure format lists an
+ * "Actual Payment" dollar row per month; paying the statement approximates
+ * that month's spend). Tolerant by design: rows are found anywhere in the
+ * text, up to 12 monthly values are read per account (most recent first in
+ * Equifax tables), and null comes back when the report has no such tables.
+ */
+export function parseAvgMonthlySpendCents(items: string[]): number | null {
+  const money = /^\$?\s?[\d,]+(?:\.\d{2})?$/
+  const emptyCell = /^(?:--+|—|N\/A|\*+)$/i
+  let totalCents = 0
+  let sawAny = false
+
+  for (let i = 0; i < items.length; i++) {
+    if (!/^Actual Payment(?: Amount)?:?$/i.test(items[i].trim())) continue
+    const vals: number[] = []
+    for (let j = i + 1; j < items.length && vals.length < 12; j++) {
+      const t = items[j].trim()
+      if (money.test(t)) {
+        const cents = parseMoneyCents(t)
+        if (cents != null) vals.push(cents)
+        continue
+      }
+      if (emptyCell.test(t)) continue // reported month with no payment
+      break // next row label — this account's row is done
+    }
+    if (vals.length > 0) {
+      sawAny = true
+      totalCents += vals.reduce((a, b) => a + b, 0) / 12
+    }
+  }
+  return sawAny ? Math.round(totalCents) : null
+}

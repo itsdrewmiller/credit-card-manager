@@ -1,0 +1,1 @@
+ALTER TABLE `person` ADD `avg_monthly_spend_cents` integer;

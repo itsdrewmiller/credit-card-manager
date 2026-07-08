@@ -28,6 +28,11 @@ const timestamps = {
 export const person = sqliteTable('person', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   name: text('name').notNull(),
+  // Average monthly spend over the last 12 months, measured from this
+  // person's imported credit report (actual payments across accounts).
+  // Summed across people it's the default monthly-spend projection for
+  // recommendations.
+  avgMonthlySpendCents: integer('avg_monthly_spend_cents'),
   notes: text('notes'),
   ...timestamps
 })

@@ -4,15 +4,36 @@ import { router, publicProcedure } from '../trpc'
 import type { DbLike } from '../../db'
 import { offerValueCents } from '@shared/format'
 import { ruleParamsError } from '@shared/rules'
-import { recommendationRule, spendEntry } from '../../db/schema'
+import { recommendationRule, spendEntry, person, appSetting } from '../../db/schema'
 import { recommend } from '../../domain/recommend'
 import { importOffersCsv } from '../../import/offers'
 import { getSetting, setSetting } from '../../db/settings'
+import { monthsAgoIso } from '@shared/dates'
 
 export const DEFAULT_FEED_URL =
   'https://raw.githubusercontent.com/itsdrewmiller/credit-card-manager/main/data/signup_bonuses.csv'
 export const FEED_URL_KEY = 'offer_feed_url'
 export const FEED_REFRESHED_KEY = 'offer_feed_refreshed_at'
+export const MONTHLY_SPEND_KEY = 'monthly_spend_override_cents'
+
+/** Sum of per-person 12-month averages measured from imported credit reports. */
+function reportDefaultCents(db: DbLike): number | null {
+  const rows = db.select({ v: person.avgMonthlySpendCents }).from(person).all()
+  const vals = rows.map((r) => r.v).filter((v): v is number => v != null)
+  return vals.length > 0 ? vals.reduce((a, b) => a + b, 0) : null
+}
+
+/** Tracked bonus-spend rate over the trailing 3 months. */
+function activityCents(db: DbLike, today: Date): number {
+  const cutoff = monthsAgoIso(3, today)
+  const total = db
+    .select({ amountCents: spendEntry.amountCents, date: spendEntry.date })
+    .from(spendEntry)
+    .all()
+    .filter((e) => e.date >= cutoff)
+    .reduce((n, e) => n + e.amountCents, 0)
+  return Math.round(total / 3)
+}
 
 const ruleUpsert = z.object({
   kind: z.string().min(1),
@@ -101,6 +122,12 @@ export const recommendationsRouter = router({
         ownerName: l.ownerPerson?.name ?? l.ownerBusiness?.name ?? null
       }))
 
+    const today = new Date()
+    const overrideRaw = getSetting(ctx.db, MONTHLY_SPEND_KEY)
+    const overrideCents = overrideRaw != null ? Number(overrideRaw) : null
+    const reportCents = reportDefaultCents(ctx.db)
+    const effectiveCents = overrideCents ?? reportCents
+
     return {
       results: recommend({
         offers,
@@ -111,12 +138,31 @@ export const recommendationsRouter = router({
         bonuses,
         referralLinks,
         rules: enabledRules(ctx.db),
-        today: new Date()
+        monthlySpendCents: effectiveCents,
+        today
       }),
+      monthlySpend: {
+        overrideCents,
+        reportDefaultCents: reportCents,
+        activityCents: activityCents(ctx.db, today),
+        effectiveCents
+      },
       feedRefreshedAt: getSetting(ctx.db, FEED_REFRESHED_KEY),
       feedUrl: getSetting(ctx.db, FEED_URL_KEY) ?? DEFAULT_FEED_URL
     }
   }),
+
+  /** Manual monthly-spend projection; null restores the report-based default. */
+  setMonthlySpend: publicProcedure
+    .input(z.object({ cents: z.number().int().min(0).nullable() }))
+    .mutation(({ ctx, input }) => {
+      if (input.cents == null) {
+        ctx.db.delete(appSetting).where(eq(appSetting.key, MONTHLY_SPEND_KEY)).run()
+      } else {
+        setSetting(ctx.db, MONTHLY_SPEND_KEY, String(input.cents))
+      }
+      return { cents: input.cents }
+    }),
 
   /** Manual "check for new offers now". */
   refreshFeed: publicProcedure.mutation(({ ctx }) => refreshOfferFeed(ctx.db)),

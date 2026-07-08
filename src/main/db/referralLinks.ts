@@ -77,7 +77,29 @@ const SEEDED_LINKS: { key: string; issuer: string; product: string; url: string 
     issuer: 'Chase',
     product: 'Freedom Unlimited',
     url: 'https://www.referyourchasecard.com/18a/25VGC63XSD#unlimited-content'
-  }
+  },
+  ...['Spark Cash Select', 'VentureOne Business'].map((product) => ({
+    key: `referral_link_seed.capital_one_${product.toLowerCase().replace(/\s+/g, '_')}.v1`,
+    issuer: 'Capital One',
+    product,
+    url: 'https://i.capitalone.com/JxL3wgVb9'
+  })),
+  // Personal Capital One family ("Savor Rewards" is the catalog's older
+  // duplicate of Savor — same card, same link).
+  ...['Venture X', 'VentureOne', 'Venture', 'Savor', 'Savor Rewards', 'Quicksilver'].map(
+    (product) => ({
+      key: `referral_link_seed.capital_one_${product.toLowerCase().replace(/\s+/g, '_')}.v1`,
+      issuer: 'Capital One',
+      product,
+      url: 'https://i.capitalone.com/JNnBDWlDX'
+    })
+  ),
+  ...['Spark Cash Plus', 'Venture X Business'].map((product) => ({
+    key: `referral_link_seed.capital_one_${product.toLowerCase().replace(/\s+/g, '_')}.v1`,
+    issuer: 'Capital One',
+    product,
+    url: 'https://i.capitalone.com/J8nQnQPu5'
+  }))
 ]
 
 export function seedReferralLinks(db: DbLike): number {

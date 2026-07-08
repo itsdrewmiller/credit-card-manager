@@ -345,6 +345,80 @@ function RulesTab(): React.ReactElement {
   )
 }
 
+/**
+ * Projected monthly spend feeding the capacity rules: manual value, tracked
+ * bonus-activity rate, or the report-measured default (sum of each person's
+ * 12-month average from their imported credit report).
+ */
+function MonthlySpendControl({
+  spend
+}: {
+  spend: NonNullable<RecommendationOverview['monthlySpend']>
+}): React.ReactElement {
+  const utils = trpc.useUtils()
+  const setSpend = trpc.recommendations.setMonthlySpend.useMutation({
+    onSuccess: () => void utils.recommendations.overview.invalidate()
+  })
+  const [value, setValue] = useState<number | string>(
+    spend.effectiveCents != null ? spend.effectiveCents / 100 : ''
+  )
+
+  const commit = (v: number | string): void => {
+    const cents = v === '' ? null : Math.round(Number(v) * 100)
+    if (cents !== spend.overrideCents) setSpend.mutate({ cents })
+  }
+
+  const source =
+    spend.overrideCents != null
+      ? 'set manually'
+      : spend.reportDefaultCents != null
+        ? 'default from credit reports'
+        : 'from tracked bonus spend'
+
+  return (
+    <Group gap="sm" align="flex-end" mb="md" wrap="wrap">
+      <NumberInput
+        label="Projected monthly spend"
+        description={source}
+        min={0}
+        decimalScale={0}
+        thousandSeparator=","
+        prefix="$"
+        hideControls
+        w={200}
+        value={value}
+        onChange={setValue}
+        onBlur={() => commit(value)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') commit(value)
+        }}
+      />
+      <Button
+        variant="default"
+        size="sm"
+        onClick={() => {
+          setValue(spend.activityCents / 100)
+          setSpend.mutate({ cents: spend.activityCents })
+        }}
+      >
+        From recent activity ({formatCents(spend.activityCents)}/mo)
+      </Button>
+      <Button
+        variant="default"
+        size="sm"
+        disabled={spend.reportDefaultCents == null}
+        onClick={() => {
+          setValue(spend.reportDefaultCents != null ? spend.reportDefaultCents / 100 : '')
+          setSpend.mutate({ cents: null })
+        }}
+      >
+        Restore default
+        {spend.reportDefaultCents != null ? ` (${formatCents(spend.reportDefaultCents)}/mo)` : ''}
+      </Button>
+    </Group>
+  )
+}
+
 export function Recommendations(): React.ReactElement {
   const utils = trpc.useUtils()
   const overview = trpc.recommendations.overview.useQuery()
@@ -388,6 +462,12 @@ export function Recommendations(): React.ReactElement {
 
         <Tabs.Panel value="recs">
           <QueryGate queries={[overview]}>
+            {overview.data && (
+              <MonthlySpendControl
+                key={`${overview.data.monthlySpend.overrideCents}-${overview.data.monthlySpend.effectiveCents}`}
+                spend={overview.data.monthlySpend}
+              />
+            )}
             {overview.data && overview.data.results.length === 0 ? (
               <EmptyState title="No people yet" description="Add people to get recommendations." />
             ) : (
