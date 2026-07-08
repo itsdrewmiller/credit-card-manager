@@ -505,4 +505,222 @@ describe('monthly spend projection', () => {
     )
     expect(rich.blocked).toHaveLength(0)
   })
+
+  describe('family_bonus_order (Amex family rules)', () => {
+    const AMEX_GOLD = {
+      id: 20,
+      cardProductId: 300,
+      productName: 'Gold',
+      issuerName: 'American Express',
+      isBusiness: false,
+      valueCents: 60000,
+      minSpendCents: 600000,
+      windowMonths: 6,
+      expires: null
+    }
+    const AMEX_PLATINUM = {
+      id: 21,
+      cardProductId: 301,
+      productName: 'Platinum',
+      issuerName: 'American Express',
+      isBusiness: false,
+      valueCents: 150000,
+      minSpendCents: 800000,
+      windowMonths: 6,
+      expires: null
+    }
+    const SCHWAB_PLATINUM = {
+      id: 22,
+      cardProductId: 302,
+      productName: 'Platinum for Schwab',
+      issuerName: 'American Express',
+      isBusiness: false,
+      valueCents: 150000,
+      minSpendCents: 800000,
+      windowMonths: 6,
+      expires: null
+    }
+    const DELTA_GOLD = {
+      id: 23,
+      cardProductId: 303,
+      productName: 'Delta SkyMiles Gold',
+      issuerName: 'American Express',
+      isBusiness: false,
+      valueCents: 50000,
+      minSpendCents: 200000,
+      windowMonths: 6,
+      expires: null
+    }
+    const RULE = [{ kind: 'family_bonus_order', params: {} }]
+    const rich = { spendEntries: [], monthlySpendCents: 10000000 }
+
+    it('blocks Platinum while the Gold bonus is still collectable', () => {
+      const [drew] = recommend(
+        base({ ...rich, offers: [AMEX_GOLD, AMEX_PLATINUM, SCHWAB_PLATINUM], rules: RULE })
+      )
+      expect(drew.recommended.map((c) => c.label)).toEqual(['American Express Gold'])
+      const plat = drew.blocked.find((c) => c.label === 'American Express Platinum')!
+      expect(plat.blocks[0].kind).toBe('family_bonus_order')
+      expect(plat.blocks[0].reason).toContain('forfeits the Gold bonus')
+      // Schwab Platinum is a Platinum variant — same tier, same block.
+      const schwab = drew.blocked.find((c) => c.label.includes('Schwab'))!
+      expect(schwab.blocks[0].kind).toBe('family_bonus_order')
+    })
+
+    it('unblocks Platinum once Gold was applied for, even if since closed', () => {
+      const [drew] = recommend(
+        base({
+          ...rich,
+          offers: [AMEX_PLATINUM],
+          cards: [
+            {
+              id: 1,
+              cardProductId: 300,
+              ownerPersonId: 1,
+              businessId: null,
+              appliedDate: '2025-01-01',
+              openedDate: '2025-01-01',
+              status: 'closed',
+              productName: 'Gold',
+              productIssuerName: 'American Express'
+            }
+          ],
+          rules: RULE
+        })
+      )
+      expect(drew.recommended.map((c) => c.label)).toEqual(['American Express Platinum'])
+    })
+
+    it('blocks the Gold bonus — and sibling Platinum variants — once any Platinum was held', () => {
+      const [drew] = recommend(
+        base({
+          ...rich,
+          offers: [AMEX_GOLD, AMEX_PLATINUM],
+          cards: [
+            {
+              id: 1,
+              cardProductId: 302,
+              ownerPersonId: 1,
+              businessId: null,
+              appliedDate: '2024-01-01',
+              openedDate: '2024-01-01',
+              status: 'open',
+              productName: 'Platinum for Schwab',
+              productIssuerName: 'American Express'
+            }
+          ],
+          rules: RULE
+        })
+      )
+      const gold = drew.blocked.find((c) => c.label === 'American Express Gold')!
+      expect(gold.blocks[0].kind).toBe('family_bonus_order')
+      expect(gold.blocks[0].reason).toContain('already had Platinum for Schwab')
+      // Same-tier sibling: vanilla Platinum's bonus is also gone.
+      const plat = drew.blocked.find((c) => c.label === 'American Express Platinum')!
+      expect(plat.blocks[0].kind).toBe('family_bonus_order')
+    })
+
+    it('treats Delta as its own family: MR Platinum held does not touch Delta Gold, and vice versa', () => {
+      const [drew] = recommend(
+        base({
+          ...rich,
+          offers: [DELTA_GOLD, AMEX_PLATINUM],
+          cards: [
+            {
+              id: 1,
+              cardProductId: 301,
+              ownerPersonId: 1,
+              businessId: null,
+              appliedDate: '2024-01-01',
+              openedDate: '2024-01-01',
+              status: 'open',
+              productName: 'Platinum',
+              productIssuerName: 'American Express'
+            }
+          ],
+          rules: RULE
+        })
+      )
+      // Delta Gold is unaffected by the MR-family Platinum; re-applying for
+      // Platinum itself is blocked (once held, its bonus is gone for good).
+      expect(drew.recommended.map((c) => c.label)).toEqual([
+        'American Express Delta SkyMiles Gold'
+      ])
+      const plat = drew.blocked.find((c) => c.label === 'American Express Platinum')!
+      expect(plat.blocks[0].kind).toBe('family_bonus_order')
+      expect(plat.blocks[0].reason).toContain('already had Platinum')
+    })
+
+    it('orders Delta tiers within the Delta family', () => {
+      const DELTA_PLATINUM = {
+        ...DELTA_GOLD,
+        id: 24,
+        cardProductId: 304,
+        productName: 'Delta SkyMiles Platinum'
+      }
+      // Platinum blocked while the Delta Gold bonus is collectable…
+      const [before] = recommend(base({ ...rich, offers: [DELTA_GOLD, DELTA_PLATINUM], rules: RULE }))
+      const plat = before.blocked.find((c) => c.label.includes('Delta SkyMiles Platinum'))!
+      expect(plat.blocks[0].kind).toBe('family_bonus_order')
+      // …and Delta Gold is dead once the Reserve was held.
+      const [after] = recommend(
+        base({
+          ...rich,
+          offers: [DELTA_GOLD],
+          cards: [
+            {
+              id: 1,
+              cardProductId: 305,
+              ownerPersonId: 1,
+              businessId: null,
+              appliedDate: '2025-06-01',
+              openedDate: '2025-06-01',
+              status: 'open',
+              productName: 'Delta SkyMiles Reserve',
+              productIssuerName: 'American Express'
+            }
+          ],
+          rules: RULE
+        })
+      )
+      const gold = after.blocked.find((c) => c.label.includes('Delta SkyMiles Gold'))!
+      expect(gold.blocks[0].kind).toBe('family_bonus_order')
+      expect(gold.blocks[0].reason).toContain('already had Delta SkyMiles Reserve')
+    })
+
+    it('does not misread a rejected application or another issuer\'s "Platinum" as family history', () => {
+      const [drew] = recommend(
+        base({
+          ...rich,
+          offers: [AMEX_GOLD],
+          cards: [
+            {
+              id: 1,
+              cardProductId: 301,
+              ownerPersonId: 1,
+              businessId: null,
+              appliedDate: '2024-01-01',
+              openedDate: null,
+              status: 'rejected',
+              productName: 'Platinum',
+              productIssuerName: 'American Express'
+            },
+            {
+              id: 2,
+              cardProductId: 900,
+              ownerPersonId: 1,
+              businessId: null,
+              appliedDate: null,
+              openedDate: '2023-01-01',
+              status: 'open',
+              productName: 'Platinum Rewards Visa',
+              productIssuerName: 'Wells Fargo'
+            }
+          ],
+          rules: RULE
+        })
+      )
+      expect(drew.recommended.map((c) => c.label)).toEqual(['American Express Gold'])
+    })
+  })
 })

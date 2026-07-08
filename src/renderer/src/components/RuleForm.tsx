@@ -61,6 +61,12 @@ const KINDS: { value: string; label: string; hint: string; example: string }[] =
     label: 'Minimum bonus value',
     hint: 'Skips offers worth less than a threshold (cents).',
     example: '{"minCents": 30000}'
+  },
+  {
+    value: 'family_bonus_order',
+    label: 'Card-family bonus order',
+    hint: "Issuer families where a higher-tier card kills lower-tier welcome offers (defaults to Amex's: Green→Gold→Platinum, Delta, Hilton, Blue Cash). Blocks higher tiers until the lower bonuses are collected, and lower tiers once a higher card was held.",
+    example: '{}'
   }
 ]
 

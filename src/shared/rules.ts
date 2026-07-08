@@ -31,6 +31,19 @@ export const RULE_PARAM_SCHEMAS = {
   finish_open_bonuses: z.strictObject({
     maxOpenMonths: z.number().positive().optional(),
     lookbackMonths: z.number().int().positive().optional()
+  }),
+  family_bonus_order: z.strictObject({
+    families: z
+      .array(
+        z.strictObject({
+          label: z.string(),
+          issuer: z.string().optional(),
+          include: z.array(z.string()).optional(),
+          exclude: z.array(z.string()).optional(),
+          tiers: z.array(z.string()).min(2)
+        })
+      )
+      .optional()
   })
 } as const
 

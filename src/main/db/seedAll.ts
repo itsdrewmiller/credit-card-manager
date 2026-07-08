@@ -5,7 +5,7 @@ import { seedPointPrograms } from './points'
 import { seedExtraProducts } from './products'
 import { seedCashbackRates, seedBureauReporting, seedReferralValues } from './cashback'
 import { generateUpcomingBenefits } from './generateBenefits'
-import { seedDefaultRules } from './rules'
+import { seedDefaultRules, seedRuleAdditions } from './rules'
 import { seedReferralLinks } from './referralLinks'
 import { dedupeCatalog } from './dedupe'
 import { importOffersCsv } from '../import/offers'
@@ -50,6 +50,8 @@ export function seedAll(db: DbLike, resources: SeedResources): void {
   if (referrals) console.log(`[db] filled typical referral values on ${referrals} offers`)
   const seededRules = seedDefaultRules(db, resources.defaultRulesJson)
   if (seededRules) console.log(`[db] seeded ${seededRules} default recommendation rules`)
+  const addedRules = seedRuleAdditions(db)
+  if (addedRules) console.log(`[db] seeded ${addedRules} new recommendation rules`)
   const seededLinks = seedReferralLinks(db)
   if (seededLinks) console.log(`[db] seeded ${seededLinks} referral links`)
   const gen = generateUpcomingBenefits(db)
