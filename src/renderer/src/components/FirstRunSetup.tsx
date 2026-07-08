@@ -18,6 +18,7 @@ import { useMediaQuery } from '@mantine/hooks'
 import { useNavigate } from 'react-router-dom'
 import { trpc } from '../trpc'
 import { BUSINESS_TYPES } from '@shared/constants'
+import { MODAL_SELECT_PROPS } from '../lib/touchSelect'
 
 const DONE_KEY = 'ccm.setupDone'
 
@@ -168,6 +169,7 @@ export function FirstRunSetup(): React.ReactElement | null {
                 data={peopleOptions}
                 value={bizOwner}
                 onChange={(v) => setBizOwner(v ?? '')}
+                {...MODAL_SELECT_PROPS}
               />
               <Select
                 label="Type"
@@ -175,6 +177,7 @@ export function FirstRunSetup(): React.ReactElement | null {
                 value={bizType}
                 onChange={(v) => setBizType(v ?? '')}
                 clearable
+                {...MODAL_SELECT_PROPS}
               />
             </SimpleGrid>
             <Button

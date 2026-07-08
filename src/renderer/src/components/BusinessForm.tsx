@@ -2,6 +2,7 @@ import React from 'react'
 import { TextInput, Textarea, Select } from '@mantine/core'
 import { useForm } from '@mantine/form'
 import { BUSINESS_TYPES } from '@shared/constants'
+import { MODAL_SELECT_PROPS } from '../lib/touchSelect'
 import type { BusinessRow } from '../lib/types'
 import { FormFooter } from './FormFooter'
 
@@ -59,7 +60,7 @@ export function BusinessForm({
         label="Owner"
         withAsterisk
         data={peopleOptions}
-        searchable
+        {...MODAL_SELECT_PROPS}
         {...form.getInputProps('ownerPersonId')}
         mb="sm"
       />
@@ -67,6 +68,7 @@ export function BusinessForm({
         label="Type"
         data={BUSINESS_TYPES as unknown as string[]}
         clearable
+        {...MODAL_SELECT_PROPS}
         {...form.getInputProps('type')}
         mb="sm"
       />
