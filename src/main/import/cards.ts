@@ -5,6 +5,7 @@ import { CARD_STATUSES, type CardStatus } from '@shared/constants'
 import { parseCsv } from './csv'
 import { stripIssuerPrefix, cleanCardName, canonicalProductName } from './naming'
 import { centsOrNull, normalizeNetwork, findOrCreateIssuer, findOrCreateProduct } from './shared'
+import { createPersonWithSoleProp } from '../domain/person'
 
 function findOrCreatePerson(db: DbLike, name: string): number {
   const existing = db
@@ -13,7 +14,7 @@ function findOrCreatePerson(db: DbLike, name: string): number {
     .where(sql`lower(${person.name}) = ${name.toLowerCase()}`)
     .get()
   if (existing) return existing.id
-  return db.insert(person).values({ name }).returning({ id: person.id }).get().id
+  return createPersonWithSoleProp(db, { name }).id
 }
 
 function findOrCreateBusiness(db: DbLike, name: string, ownerPersonId: number): number {

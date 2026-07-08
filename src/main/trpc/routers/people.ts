@@ -2,6 +2,7 @@ import { z } from 'zod'
 import { eq, asc } from 'drizzle-orm'
 import { router, publicProcedure } from '../trpc'
 import { person } from '../../db/schema'
+import { createPersonWithSoleProp } from '../../domain/person'
 
 const upsert = z.object({
   name: z.string().min(1, 'Name is required'),
@@ -13,9 +14,9 @@ export const peopleRouter = router({
     ctx.db.select().from(person).orderBy(asc(person.name)).all()
   ),
 
-  create: publicProcedure.input(upsert).mutation(({ ctx, input }) =>
-    ctx.db.insert(person).values(input).returning().get()
-  ),
+  create: publicProcedure
+    .input(upsert)
+    .mutation(({ ctx, input }) => createPersonWithSoleProp(ctx.db, input)),
 
   update: publicProcedure
     .input(upsert.extend({ id: z.number().int() }))
