@@ -1,8 +1,8 @@
 import React, { useMemo, useState } from 'react'
 import {
   Accordion,
-  Anchor,
   Badge,
+  Box,
   Button,
   Checkbox,
   Chip,
@@ -105,39 +105,41 @@ function applyFilters(rows: Candidate[], f: Filters): Candidate[] {
   })
 }
 
-function CardCell({
+function CardCell({ c }: { c: Candidate }): React.ReactElement {
+  return (
+    <Text size="sm" fw={500}>
+      {c.label}
+    </Text>
+  )
+}
+
+/** The apply-via-referral CTA: a real button on its own line/column. */
+function ReferralLink({
   c,
-  prominentLink = false
+  size = 'compact-sm',
+  fullWidth = false
 }: {
   c: Candidate
-  /** Phone cards render the link as a tappable button instead of a tiny anchor. */
-  prominentLink?: boolean
-}): React.ReactElement {
+  size?: string
+  fullWidth?: boolean
+}): React.ReactElement | null {
+  if (!c.referralLinkUrl) return null
   return (
     <>
-      <Text size="sm" fw={500}>
-        {c.label}
-      </Text>
-      {c.referralLinkUrl &&
-        (prominentLink ? (
-          <Button
-            component="a"
-            href={c.referralLinkUrl}
-            target="_blank"
-            size="compact-sm"
-            variant="light"
-            mt={6}
-            rightSection={<IconExternalLink size={14} />}
-          >
-            Apply via referral
-          </Button>
-        ) : (
-          <Anchor href={c.referralLinkUrl} target="_blank" size="xs">
-            apply via referral
-          </Anchor>
-        ))}
-      {c.referralLinkUrl && c.referralLinkSeeded && (
-        <Text size="xs" c="dimmed" mt={prominentLink ? 4 : 0}>
+      <Button
+        component="a"
+        href={c.referralLinkUrl}
+        target="_blank"
+        size={size}
+        variant="light"
+        fullWidth={fullWidth}
+        fw={600}
+        rightSection={<IconExternalLink size={14} />}
+      >
+        Apply via referral
+      </Button>
+      {c.referralLinkSeeded && (
+        <Text size="xs" c="dimmed" mt={4}>
           this link supports the app author
         </Text>
       )}
@@ -162,7 +164,19 @@ const candidateKey = (c: Candidate): string => `${c.offerId}-${c.personId}-${c.b
 function RecommendedTable({ rows }: { rows: Candidate[] }): React.ReactElement {
   // Phone widths get the card as the title with the rest stacked underneath.
   const mobileColumns: Column<Candidate & { id: string }>[] = [
-    { header: 'Card', render: (c) => <CardCell c={c} prominentLink /> },
+    {
+      header: 'Card',
+      render: (c) => (
+        <>
+          <CardCell c={c} />
+          {c.referralLinkUrl && (
+            <Box mt={8}>
+              <ReferralLink c={c} size="sm" fullWidth />
+            </Box>
+          )}
+        </>
+      )
+    },
     { header: 'Who', render: (c) => <WhoCell c={c} /> },
     { header: 'Bonus', render: (c) => <BonusCell c={c} /> },
     { header: 'Value', render: (c) => <ValueCell c={c} /> },
@@ -179,12 +193,13 @@ function RecommendedTable({ rows }: { rows: Candidate[] }): React.ReactElement {
 
   return (
     <>
-    <Table.ScrollContainer minWidth={860} visibleFrom="sm">
+    <Table.ScrollContainer minWidth={1000} visibleFrom="sm">
     <Table withTableBorder highlightOnHover verticalSpacing="xs">
       <Table.Thead>
         <Table.Tr>
           <Table.Th>Who</Table.Th>
           <Table.Th>Card</Table.Th>
+          <Table.Th>Referral</Table.Th>
           <Table.Th>Bonus</Table.Th>
           <Table.Th ta="right">Value</Table.Th>
           <Table.Th ta="right">Earn %</Table.Th>
@@ -199,6 +214,9 @@ function RecommendedTable({ rows }: { rows: Candidate[] }): React.ReactElement {
             </Table.Td>
             <Table.Td>
               <CardCell c={c} />
+            </Table.Td>
+            <Table.Td>
+              <ReferralLink c={c} />
             </Table.Td>
             <Table.Td>
               <BonusCell c={c} />

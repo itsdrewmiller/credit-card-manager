@@ -30,7 +30,7 @@ export function RowCardList<Row extends { id: number | string }>({
       {rows.map((row) => (
         <Card key={row.id} withBorder radius="md" padding="md">
           <Group justify="space-between" align="flex-start" wrap="nowrap" mb={rest.length ? 'xs' : 0}>
-            <Box style={{ minWidth: 0 }}>{title.render(row)}</Box>
+            <Box style={{ minWidth: 0, flex: 1 }}>{title.render(row)}</Box>
             {rowActions && <Box>{rowActions(row)}</Box>}
           </Group>
           <Stack gap={6}>
