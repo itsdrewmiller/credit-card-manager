@@ -23,6 +23,17 @@ export const RULE_PARAM_SCHEMAS = {
     months: z.number().int().positive().optional(),
     max: z.number().int().min(1).optional()
   }),
+  max_recent_apps_issuer: z.strictObject({
+    issuer: z.string().optional(),
+    months: z.number().int().positive().optional(),
+    max: z.number().int().min(1).optional(),
+    businessOnly: z.boolean().optional()
+  }),
+  max_open_matching: z.strictObject({
+    issuer: z.string().optional(),
+    match: z.array(z.string()).min(1),
+    max: z.number().int().min(1).optional()
+  }),
   min_spend_capacity: z.strictObject({
     lookbackMonths: z.number().int().positive().optional(),
     buffer: z.number().positive().optional()
@@ -40,7 +51,9 @@ export const RULE_PARAM_SCHEMAS = {
           issuer: z.string().optional(),
           include: z.array(z.string()).optional(),
           exclude: z.array(z.string()).optional(),
-          tiers: z.array(z.string()).min(2)
+          // A single tier models a lifetime group: ever holding any member
+          // kills the welcome offer on all of them (e.g. Chase's no-AF Inks).
+          tiers: z.array(z.string()).min(1)
         })
       )
       .optional()

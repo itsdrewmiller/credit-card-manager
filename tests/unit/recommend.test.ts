@@ -506,6 +506,140 @@ describe('monthly spend projection', () => {
     expect(rich.blocked).toHaveLength(0)
   })
 
+  describe('max_recent_apps_issuer (per person, across businesses)', () => {
+    const RULE = [{ kind: 'max_recent_apps_issuer', params: { issuer: 'Chase', months: 1, max: 1 } }]
+    // Chase Ink applied for under the Lambda business two weeks ago.
+    const recentInk = {
+      id: 1,
+      cardProductId: 500,
+      ownerPersonId: 1,
+      businessId: 10,
+      appliedDate: '2026-06-25',
+      openedDate: '2026-06-25',
+      status: 'open' as const,
+      productName: 'Ink Business Preferred',
+      productIssuerName: 'Chase'
+    }
+
+    it("a recent Chase business app blocks the person's next Chase card, personal or under another business", () => {
+      const [drew] = recommend(base({ cards: [recentInk], rules: RULE }))
+      const csp = drew.blocked.find((c) => c.label.includes('Sapphire'))!
+      expect(csp.blocks[0].kind).toBe('max_recent_apps_issuer')
+      expect(csp.blocks[0].reason).toContain('across personal + businesses')
+      expect(csp.blocks[0].waitUntil).toBe('2026-07-25')
+      // Non-Chase offers are unaffected.
+      expect(drew.recommended.map((c) => c.label)).toEqual(['Capital One Spark Cash Plus'])
+    })
+
+    it('stops blocking once the application ages past the window', () => {
+      const [drew] = recommend(
+        base({ cards: [{ ...recentInk, appliedDate: '2026-05-01', openedDate: '2026-05-01' }], rules: RULE })
+      )
+      expect(drew.blocked).toHaveLength(0)
+    })
+  })
+
+  describe('Chase Ink rules (per person, across businesses)', () => {
+    const INK_CASH = {
+      id: 30,
+      cardProductId: 600,
+      productName: 'Ink Cash',
+      issuerName: 'Chase',
+      isBusiness: true,
+      valueCents: 75000,
+      minSpendCents: 600000,
+      windowMonths: 3,
+      expires: null
+    }
+    const INK_UNLIMITED = { ...INK_CASH, id: 31, cardProductId: 601, productName: 'Ink Unlimited' }
+    const INK_PREFERRED = { ...INK_CASH, id: 32, cardProductId: 602, productName: 'Ink Preferred' }
+    const rich = { spendEntries: [], monthlySpendCents: 10000000 }
+    const inkCard = (over: Record<string, unknown>) => ({
+      id: 99,
+      cardProductId: 600,
+      ownerPersonId: 1,
+      businessId: 10,
+      appliedDate: '2024-01-01',
+      openedDate: '2024-01-01',
+      status: 'open',
+      productName: 'Ink Cash',
+      productIssuerName: 'Chase',
+      ...over
+    })
+
+    it('businessOnly pacing: a business app 2 months ago blocks business offers, not personal ones', () => {
+      const RULE = [
+        { kind: 'max_recent_apps_issuer', params: { issuer: 'Chase', months: 3, max: 1, businessOnly: true } }
+      ]
+      const [drew] = recommend(
+        base({
+          ...rich,
+          offers: [CSR, INK_UNLIMITED],
+          cards: [inkCard({ appliedDate: '2026-05-05', openedDate: '2026-05-05' })],
+          rules: RULE
+        })
+      )
+      const ink = drew.blocked.find((c) => c.label.includes('Ink Unlimited'))!
+      expect(ink.blocks[0].kind).toBe('max_recent_apps_issuer')
+      expect(ink.blocks[0].reason).toContain('business application')
+      expect(ink.blocks[0].waitUntil).toBe('2026-08-05')
+      // The personal Sapphire is not paced by the business-only rule.
+      expect(drew.recommended.map((c) => c.label)).toContain('Chase Sapphire Preferred')
+    })
+
+    it('max_open_matching: 3 open Inks across businesses block the next Ink but not other Chase cards', () => {
+      const RULE = [{ kind: 'max_open_matching', params: { issuer: 'Chase', match: ['ink'], max: 3 } }]
+      const three = [
+        inkCard({ id: 1, businessId: 10 }),
+        inkCard({ id: 2, cardProductId: 602, productName: 'Ink Preferred', businessId: 11 }),
+        inkCard({ id: 3, cardProductId: 603, productName: 'Ink Premier', businessId: null })
+      ]
+      const [drew] = recommend(base({ ...rich, offers: [CSR, INK_UNLIMITED], cards: three, rules: RULE }))
+      const ink = drew.blocked.find((c) => c.label.includes('Ink Unlimited'))!
+      expect(ink.blocks[0].kind).toBe('max_open_matching')
+      expect(ink.blocks[0].reason).toContain('close one before applying')
+      expect(drew.recommended.map((c) => c.label)).toContain('Chase Sapphire Preferred')
+      // Closing one lifts the ceiling.
+      const [after] = recommend(
+        base({
+          ...rich,
+          offers: [INK_UNLIMITED],
+          cards: [three[0], three[1], { ...three[2], status: 'closed' }],
+          rules: RULE
+        })
+      )
+      expect(after.recommended.map((c) => c.label)).toContain('Chase Ink Unlimited')
+    })
+
+    it('Nov 2025 bonus rules: any no-AF Ink ever held kills all no-AF Ink bonuses, AF Inks are per exact card', () => {
+      const FAMILIES = [
+        {
+          label: 'Chase Ink (no annual fee)',
+          issuer: 'Chase',
+          include: ['ink'],
+          exclude: ['preferred', 'premier'],
+          tiers: ['ink']
+        },
+        { label: 'Chase Ink Preferred', issuer: 'Chase', include: ['ink', 'preferred'], tiers: ['ink'] }
+      ]
+      const RULE = [{ kind: 'family_bonus_order', params: { families: FAMILIES } }]
+      // Ink Cash closed years ago (even under another business).
+      const [drew] = recommend(
+        base({
+          ...rich,
+          offers: [INK_UNLIMITED, INK_PREFERRED],
+          cards: [inkCard({ status: 'closed' })],
+          rules: RULE
+        })
+      )
+      const unlimited = drew.blocked.find((c) => c.label.includes('Ink Unlimited'))!
+      expect(unlimited.blocks[0].kind).toBe('family_bonus_order')
+      expect(unlimited.blocks[0].reason).toContain('already had Ink Cash')
+      // The annual-fee Preferred is its own group — still winnable.
+      expect(drew.recommended.map((c) => c.label)).toContain('Chase Ink Preferred')
+    })
+  })
+
   describe('family_bonus_order (Amex family rules)', () => {
     const AMEX_GOLD = {
       id: 20,

@@ -21,6 +21,13 @@ import { personVelocity, type VelocityCardLike } from './velocity'
  *        reserved slots only when spendLastSlots is true
  *  - max_recent_apps_person { months, max }           application pacing per person
  *  - max_recent_apps_business { months, max }         application pacing per business
+ *  - max_recent_apps_issuer { issuer, months, max, businessOnly }
+ *        per person for one issuer, counting personal AND business
+ *        applications together (they share the SSN); businessOnly paces just
+ *        the business-card queue (e.g. Chase's ~90-day consensus)
+ *  - max_open_matching { issuer, match, max }          per-person cap on OPEN cards whose
+ *        product name matches (e.g. 3 open Inks) — blocks matching offers
+ *        until one is closed
  *  - min_spend_capacity { lookbackMonths, buffer }    min-spend must fit tracked spend rate × window
  *  - min_bonus_value { minCents }                     skip small bonuses
  *  - finish_open_bonuses { maxOpenMonths, lookbackMonths }
@@ -333,6 +340,57 @@ export function recommend(input: RecommendInput): PersonRecommendations[] {
               kind: rule.kind,
               reason: `${apps.length} personal applications in ${months} mo (max ${max})`,
               waitUntil: addMonthsIso(apps[apps.length - max], months)
+            })
+          }
+          break
+        }
+        case 'max_recent_apps_issuer': {
+          const issuer = (p.issuer as string | undefined) ?? 'Chase'
+          if (offer.issuerName !== issuer) break
+          // businessOnly: pace just business cards (e.g. the ~90-day Chase
+          // business-app consensus) — the offer and the counted cards are
+          // both business-side, but still per person: a second entity doesn't
+          // get its own lane.
+          const businessOnly = p.businessOnly === true
+          if (businessOnly && !offer.isBusiness) break
+          const months = Number(p.months ?? 1)
+          const max = Number(p.max ?? 1)
+          // Business cards carry the applicant's personal guarantee, so the
+          // issuer sees every application — personal or under any business —
+          // on one profile. Pace them together per person.
+          const apps = recentApps(
+            personCards.filter(
+              (c) => c.productIssuerName === issuer && (!businessOnly || c.businessId != null)
+            ),
+            months
+          )
+          if (apps.length >= max) {
+            blocks.push({
+              kind: rule.kind,
+              reason: `${apps.length} ${issuer}${businessOnly ? ' business' : ''} application${apps.length === 1 ? '' : 's'} in ${months} mo across personal + businesses (max ${max})`,
+              waitUntil: addMonthsIso(apps[apps.length - max], months)
+            })
+          }
+          break
+        }
+        case 'max_open_matching': {
+          const issuer = (p.issuer as string | undefined) ?? 'Chase'
+          const match = ((p.match as string[] | undefined) ?? []).map((m) => m.toLowerCase())
+          if (match.length === 0) break
+          const matches = (name: string | null | undefined, cardIssuer: string | null | undefined): boolean =>
+            cardIssuer === issuer && match.some((m) => (name ?? '').toLowerCase().includes(m))
+          if (!matches(offer.productName, offer.issuerName)) break
+          const max = Number(p.max ?? 3)
+          // Open count is per person across every holder — the issuer
+          // underwrites the person, so entity #2 doesn't reset the ceiling.
+          const open = personCards.filter(
+            (c) => c.status === 'open' && matches(c.productName, c.productIssuerName)
+          )
+          if (open.length >= max) {
+            blocks.push({
+              kind: rule.kind,
+              reason: `already holds ${open.length} open ${issuer} ${match.join('/')} card${open.length === 1 ? '' : 's'} across all businesses (max ${max}) — close one before applying`,
+              waitUntil: null
             })
           }
           break

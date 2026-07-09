@@ -45,6 +45,18 @@ const KINDS: { value: string; label: string; hint: string; example: string }[] =
     example: '{"months": 6, "max": 2}'
   },
   {
+    value: 'max_recent_apps_issuer',
+    label: 'Application pacing (issuer, per person)',
+    hint: "At most N applications with one issuer per person, counting personal and every business's applications together — they all hit the same profile. businessOnly: true paces just the business-card queue.",
+    example: '{"issuer": "Chase", "months": 1, "max": 1}'
+  },
+  {
+    value: 'max_open_matching',
+    label: 'Open-card ceiling (matching products)',
+    hint: 'Blocks offers whose product matches the patterns when the person already holds N open matching cards across all businesses (e.g. 3 open Inks).',
+    example: '{"issuer": "Chase", "match": ["ink"], "max": 3}'
+  },
+  {
     value: 'min_spend_capacity',
     label: 'Spend capacity',
     hint: 'Min-spend must fit your tracked monthly spend × the offer window.',

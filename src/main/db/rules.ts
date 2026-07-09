@@ -39,6 +39,46 @@ const RULE_ADDITIONS: { key: string; kind: string; params: Record<string, unknow
     params: {},
     notes:
       "Amex family rules: collect bonuses bottom-up (Green→Gold→Platinum; Delta, Hilton, and Blue Cash are separate families). Graphite is assumed above Platinum — edit params with custom families if Amex publishes different terms."
+  },
+  {
+    key: 'rule_seed.max_recent_apps_issuer_chase.v1',
+    kind: 'max_recent_apps_issuer',
+    params: { issuer: 'Chase', months: 1, max: 1 },
+    notes:
+      'Chase sees personal and business applications on one profile (personal guarantee), and heavy velocity risks a shutdown review — at least 30 days between any two Chase applications per person, across all entities.'
+  },
+  {
+    key: 'rule_seed.max_recent_apps_issuer_chase_business.v1',
+    kind: 'max_recent_apps_issuer',
+    params: { issuer: 'Chase', months: 3, max: 1, businessOnly: true },
+    notes:
+      "Post-crackdown consensus: ~90 days between Chase business applications per person. A second entity doesn't get its own lane — it's the same queue under your SSN."
+  },
+  {
+    key: 'rule_seed.max_open_matching_chase_ink.v1',
+    kind: 'max_open_matching',
+    params: { issuer: 'Chase', match: ['ink'], max: 3 },
+    notes:
+      'Open Ink count is the real approval ceiling: 4+ open Inks (across all businesses) drives denials. Close one before applying — low utilization on existing Inks also hurts.'
+  },
+  {
+    key: 'rule_seed.family_bonus_order_chase_ink.v1',
+    kind: 'family_bonus_order',
+    params: {
+      families: [
+        {
+          label: 'Chase Ink (no annual fee)',
+          issuer: 'Chase',
+          include: ['ink'],
+          exclude: ['preferred', 'premier'],
+          tiers: ['ink']
+        },
+        { label: 'Chase Ink Preferred', issuer: 'Chase', include: ['ink', 'preferred'], tiers: ['ink'] },
+        { label: 'Chase Ink Premier', issuer: 'Chase', include: ['ink', 'premier'], tiers: ['ink'] }
+      ]
+    },
+    notes:
+      "Chase's Nov 2025 bonus rules: a no-AF Ink bonus is dead if you've ever had ANY no-AF Chase business card (any entity — eligibility follows you, not the EIN); annual-fee Inks are once-ever per exact card. Enforcement consistency is still unclear, so don't build on a second EIN for a repeat bonus."
   }
 ]
 
