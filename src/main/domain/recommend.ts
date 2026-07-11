@@ -160,6 +160,9 @@ export interface RecommendInput {
     productIssuerName?: string | null
     /** Charge / hybrid product — doesn't count toward credit-card-only rules. */
     productIsCharge?: boolean
+    /** Products this card was converted FROM (downgrades/upgrades) — they
+     *  still count as "ever held" for family bonus rules. */
+    formerProducts?: { name: string | null; issuerName: string | null }[]
   })[]
   spendEntries: { amountCents: number; date: string }[]
   /** Signup bonuses on held cards; unfinished ones gate new applications. */
@@ -589,10 +592,18 @@ export function recommend(input: RecommendInput): PersonRecommendations[] {
             let maxHeldTier = -1
             let maxHeldName: string | null = null
             for (const c of everHeld) {
-              const t = familyTier(f, c.productName, c.productIssuerName)
-              if (t > maxHeldTier) {
-                maxHeldTier = t
-                maxHeldName = c.productName ?? null
+              // A card counts for every product it has ever been — the
+              // current one plus anything it was converted from.
+              const everWas = [
+                { name: c.productName ?? null, issuerName: c.productIssuerName ?? null },
+                ...(c.formerProducts ?? [])
+              ]
+              for (const p of everWas) {
+                const t = familyTier(f, p.name, p.issuerName)
+                if (t > maxHeldTier) {
+                  maxHeldTier = t
+                  maxHeldName = p.name
+                }
               }
             }
             // Same tier blocks too: all Platinum variants carry each other in

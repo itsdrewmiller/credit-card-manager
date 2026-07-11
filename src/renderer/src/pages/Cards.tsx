@@ -1,23 +1,35 @@
 import React, { useState, useMemo } from 'react'
 import {
   Table,
+  Box,
   Button,
   Checkbox,
   Chip,
+  CloseButton,
   Group,
   Badge,
+  Menu,
   NumberInput,
   Text,
+  TextInput,
   Tooltip,
   SegmentedControl
 } from '@mantine/core'
-import { IconPlus, IconChevronUp, IconChevronDown, IconFileTypePdf } from '@tabler/icons-react'
+import {
+  IconPlus,
+  IconChevronUp,
+  IconChevronDown,
+  IconFileTypePdf,
+  IconSearch,
+  IconArrowsExchange
+} from '@tabler/icons-react'
 import { trpc } from '../trpc'
 import { PageHeader } from '../components/PageHeader'
 import { EmptyState } from '../components/EmptyState'
 import { QueryGate } from '../components/QueryGate'
 import { RowActionsMenu } from '../components/RowActionsMenu'
 import { RowCardList, type Column } from '../components/DataTable'
+import { ChangeProductModal } from '../components/ChangeProductModal'
 import { CsvImportButton } from '../components/CsvImportButton'
 import { CreditReportImport } from '../components/CreditReportImport'
 import { useCardEditor, cardLabel } from '../components/useCardEditor'
@@ -99,9 +111,11 @@ export function Cards(): React.ReactElement {
   const invalidate = useInvalidateCards()
 
   const [status, setStatus] = useState<string>('all')
+  const [query, setQuery] = useState('')
   const [needsOnly, setNeedsOnly] = useState(false)
   const [sort, setSort] = useState<Sort>({ field: 'opened', dir: 'desc' })
   const [reportOpen, setReportOpen] = useState(false)
+  const [changingProduct, setChangingProduct] = useState<CardRow | null>(null)
 
   const remove = trpc.cards.delete.useMutation({ onSuccess: invalidate })
   const updateCard = trpc.cards.update.useMutation({ onSuccess: invalidate })
@@ -118,11 +132,19 @@ export function Cards(): React.ReactElement {
 
   const rows = useMemo(() => {
     const all = cards.data ?? []
+    const q = query.trim().toLowerCase()
     const filtered = all
       .filter((c) => status === 'all' || c.status === status)
       .filter((c) => !needsOnly || c.missingFields.length > 0)
+      .filter(
+        (c) =>
+          q === '' ||
+          `${cardLabel(c)} ${c.last4 ?? ''} ${c.owner?.name ?? ''} ${c.business?.name ?? ''}`
+            .toLowerCase()
+            .includes(q)
+      )
     return [...filtered].sort((a, b) => compare(value(a, sort.field), value(b, sort.field), sort.dir))
-  }, [cards.data, status, needsOnly, sort])
+  }, [cards.data, status, query, needsOnly, sort])
 
   const toggleSort = (field: SortField): void =>
     setSort((s) => ({ field, dir: s.field === field && s.dir === 'asc' ? 'desc' : 'asc' }))
@@ -148,6 +170,14 @@ export function Cards(): React.ReactElement {
           {c.last4 && (
             <Text size="xs" c="dimmed">
               ····{c.last4}
+            </Text>
+          )}
+          {c.productChanges.length > 0 && (
+            <Text size="xs" c="dimmed">
+              formerly {c.productChanges[c.productChanges.length - 1].fromProduct?.name ?? '?'}
+              {c.productChanges[c.productChanges.length - 1].changedDate
+                ? ` until ${formatDate(c.productChanges[c.productChanges.length - 1].changedDate)}`
+                : ''}
             </Text>
           )}
         </>
@@ -257,6 +287,11 @@ export function Cards(): React.ReactElement {
       onEdit={() => editor.openEdit(c)}
       onDelete={() => remove.mutate({ id: c.id })}
       deleteLabel={`Delete ${cardLabel(c)}?`}
+      extraItems={
+        <Menu.Item leftSection={<IconArrowsExchange size={16} />} onClick={() => setChangingProduct(c)}>
+          Change product…
+        </Menu.Item>
+      }
     />
   )
 
@@ -277,17 +312,32 @@ export function Cards(): React.ReactElement {
       </PageHeader>
 
       <Group mb="md">
-        <SegmentedControl
-          value={status}
-          onChange={setStatus}
-          data={[
-            { label: 'All', value: 'all' },
-            { label: 'Open', value: 'open' },
-            { label: 'Closed', value: 'closed' },
-            { label: 'Applied', value: 'applied' },
-            { label: 'Rejected', value: 'rejected' },
-            { label: 'Withdrawn', value: 'withdrawn' }
-          ]}
+        {/* Six segments outgrow a phone — scroll the control, not the page. */}
+        <Box style={{ maxWidth: '100%', overflowX: 'auto' }}>
+          <SegmentedControl
+            value={status}
+            onChange={setStatus}
+            data={[
+              { label: 'All', value: 'all' },
+              { label: 'Open', value: 'open' },
+              { label: 'Closed', value: 'closed' },
+              { label: 'Applied', value: 'applied' },
+              { label: 'Rejected', value: 'rejected' },
+              { label: 'Withdrawn', value: 'withdrawn' }
+            ]}
+          />
+        </Box>
+        <TextInput
+          placeholder="Filter by name"
+          leftSection={<IconSearch size={14} />}
+          value={query}
+          onChange={(e) => setQuery(e.currentTarget.value)}
+          w={200}
+          rightSection={
+            query !== '' ? (
+              <CloseButton size="sm" onClick={() => setQuery('')} aria-label="Clear filter" />
+            ) : undefined
+          }
         />
         <Chip checked={needsOnly} onChange={setNeedsOnly} variant="light" color="orange">
           Needs info{needsCount > 0 ? ` (${needsCount})` : ''}
@@ -341,6 +391,7 @@ export function Cards(): React.ReactElement {
       </QueryGate>
 
       <CreditReportImport opened={reportOpen} onClose={() => setReportOpen(false)} />
+      <ChangeProductModal card={changingProduct} onClose={() => setChangingProduct(null)} />
       {editor.element}
     </>
   )

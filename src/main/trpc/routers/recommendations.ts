@@ -122,13 +122,22 @@ export const recommendationsRouter = router({
     const people = ctx.db.query.person.findMany().sync()
     const businesses = ctx.db.query.business.findMany().sync()
     const cards = ctx.db.query.card
-      .findMany({ with: { product: { with: { issuer: true } } } })
+      .findMany({
+        with: {
+          product: { with: { issuer: true } },
+          productChanges: { with: { fromProduct: { with: { issuer: true } } } }
+        }
+      })
       .sync()
       .map((c) => ({
         ...c,
         productName: c.product?.name ?? null,
         productIssuerName: c.product?.issuer?.name ?? null,
-        productIsCharge: c.product?.isCharge ?? false
+        productIsCharge: c.product?.isCharge ?? false,
+        formerProducts: c.productChanges.map((pc) => ({
+          name: pc.fromProduct?.name ?? null,
+          issuerName: pc.fromProduct?.issuer?.name ?? null
+        }))
       }))
     const spendEntries = ctx.db
       .select({ amountCents: spendEntry.amountCents, date: spendEntry.date })

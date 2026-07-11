@@ -49,6 +49,35 @@ export const business = sqliteTable('business', {
   ...timestamps
 })
 
+/**
+ * Product-change (downgrade/upgrade) history for a card: the same account
+ * converted to a different product — e.g. United Explorer → Gateway — without
+ * closing. The card row keeps its openedDate (account age, 5/24) and simply
+ * points at the new product; each conversion is recorded here so past
+ * products still count as "ever held" for bonus-eligibility rules. Plain
+ * product corrections (fixing a wrong assignment via Edit) intentionally
+ * write no history.
+ */
+export const cardProductChange = sqliteTable(
+  'card_product_change',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    cardId: integer('card_id')
+      .notNull()
+      .references(() => card.id, { onDelete: 'cascade' }),
+    fromProductId: integer('from_product_id').references(() => cardProduct.id, {
+      onDelete: 'set null'
+    }),
+    toProductId: integer('to_product_id').references(() => cardProduct.id, { onDelete: 'set null' }),
+    changedDate: text('changed_date'),
+    notes: text('notes'),
+    ...timestamps
+  },
+  (t) => ({
+    cardIdx: index('card_product_change_card_idx').on(t.cardId)
+  })
+)
+
 // --- Issuers & the product catalog -----------------------------------------
 
 export const issuer = sqliteTable('issuer', {
@@ -441,7 +470,20 @@ export const cardRelations = relations(card, ({ one, many }) => ({
   business: one(business, { fields: [card.businessId], references: [business.id] }),
   bonuses: many(signupBonus),
   benefits: many(benefit),
-  recurringPayments: many(recurringPayment)
+  recurringPayments: many(recurringPayment),
+  productChanges: many(cardProductChange)
+}))
+
+export const cardProductChangeRelations = relations(cardProductChange, ({ one }) => ({
+  card: one(card, { fields: [cardProductChange.cardId], references: [card.id] }),
+  fromProduct: one(cardProduct, {
+    fields: [cardProductChange.fromProductId],
+    references: [cardProduct.id]
+  }),
+  toProduct: one(cardProduct, {
+    fields: [cardProductChange.toProductId],
+    references: [cardProduct.id]
+  })
 }))
 
 export const recurringPaymentRelations = relations(recurringPayment, ({ one }) => ({
@@ -518,6 +560,7 @@ export const schema = {
   recurringPayment,
   recommendationRule,
   appSetting,
+  cardProductChange,
   personRelations,
   businessRelations,
   issuerRelations,
@@ -532,5 +575,6 @@ export const schema = {
   productBenefitRelations,
   referralRelations,
   referralLinkRelations,
-  recurringPaymentRelations
+  recurringPaymentRelations,
+  cardProductChangeRelations
 }

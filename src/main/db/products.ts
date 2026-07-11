@@ -22,7 +22,21 @@ export const EXTRA_PRODUCTS: {
   { issuer: 'Synchrony', name: 'Amazon Store Card', annualFeeCents: 0 },
   { issuer: 'Goldman Sachs', name: 'Apple Card', network: 'Mastercard', annualFeeCents: 0 },
   { issuer: 'U.S. Bank', name: 'Smartly', network: 'Visa', annualFeeCents: 0 },
-  { issuer: 'Alliant Credit Union', name: 'Cashback Visa Signature', network: 'Visa', annualFeeCents: 0 }
+  { issuer: 'Alliant Credit Union', name: 'Cashback Visa Signature', network: 'Visa', annualFeeCents: 0 },
+  // Common downgrade / product-change targets — rarely carry a public bonus,
+  // so the offer feed never creates them.
+  { issuer: 'Chase', name: 'United Gateway', network: 'Visa', annualFeeCents: 0 },
+  { issuer: 'Chase', name: 'Freedom Flex', network: 'Mastercard', annualFeeCents: 0 },
+  { issuer: 'Chase', name: 'Freedom', network: 'Visa', annualFeeCents: 0 },
+  { issuer: 'Chase', name: 'Marriott Bonvoy Bold', network: 'Visa', annualFeeCents: 0 },
+  { issuer: 'Chase', name: 'IHG Classic', network: 'Mastercard', annualFeeCents: 0 },
+  { issuer: 'American Express', name: 'Green', network: 'Amex', annualFeeCents: 15000 },
+  { issuer: 'Citi', name: 'Strata', network: 'Mastercard', annualFeeCents: 0 },
+  { issuer: 'Citi', name: 'AAdvantage MileUp', network: 'Mastercard', annualFeeCents: 0 },
+  { issuer: 'Capital One', name: 'VentureOne', network: 'Visa', annualFeeCents: 0 },
+  { issuer: 'Capital One', name: 'Quicksilver', network: 'Mastercard', annualFeeCents: 0 },
+  { issuer: 'Barclays', name: 'JetBlue', network: 'Mastercard', annualFeeCents: 0 },
+  { issuer: 'Bank of America', name: 'Customized Cash Rewards', network: 'Visa', annualFeeCents: 0 }
 ]
 
 /** Idempotently add the supplemental products (find-or-create by issuer + name). */

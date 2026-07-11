@@ -1023,6 +1023,34 @@ describe('monthly spend projection', () => {
       expect(gold.blocks[0].reason).toContain('already had Delta SkyMiles Reserve')
     })
 
+    it('counts products a card was converted FROM (downgrades) as family history', () => {
+      // Platinum downgraded to Green: the card is Green now, but Platinum was held.
+      const [drew] = recommend(
+        base({
+          ...rich,
+          offers: [AMEX_GOLD],
+          cards: [
+            {
+              id: 1,
+              cardProductId: 310,
+              ownerPersonId: 1,
+              businessId: null,
+              appliedDate: '2023-01-01',
+              openedDate: '2023-01-01',
+              status: 'open',
+              productName: 'Green',
+              productIssuerName: 'American Express',
+              formerProducts: [{ name: 'Platinum', issuerName: 'American Express' }]
+            }
+          ],
+          rules: RULE
+        })
+      )
+      const gold = drew.blocked.find((c) => c.label === 'American Express Gold')!
+      expect(gold.blocks[0].kind).toBe('family_bonus_order')
+      expect(gold.blocks[0].reason).toContain('already had Platinum')
+    })
+
     it('does not misread a rejected application or another issuer\'s "Platinum" as family history', () => {
       const [drew] = recommend(
         base({

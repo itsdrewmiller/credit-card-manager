@@ -1,7 +1,7 @@
 import { z } from 'zod'
 import { eq, desc, inArray } from 'drizzle-orm'
 import { router, publicProcedure } from '../trpc'
-import { card, benefit } from '../../db/schema'
+import { card, benefit, cardProductChange, productBenefit } from '../../db/schema'
 import { CARD_STATUSES } from '@shared/constants'
 import { todayIso } from '@shared/dates'
 import { cardMissingFields } from '../../domain/needsInfo'
@@ -41,7 +41,8 @@ const withRelations = {
   owner: true,
   business: true,
   bonuses: { with: { pointProgram: true } },
-  benefits: true
+  benefits: true,
+  productChanges: { with: { fromProduct: true, toProduct: true } }
 } as const
 
 /** Enriched card row with derived missing-field list. */
@@ -154,6 +155,82 @@ export const cardsRouter = router({
         }
       }
       return updated
+    }),
+
+  /**
+   * A real product change (downgrade/upgrade): the same account converts to
+   * another product without closing. Records history — past products keep
+   * counting as "ever held" for bonus rules — swaps in the new product's
+   * defaults for fee, and exchanges unused benefit templates. Correcting a
+   * misassigned product is different: use plain update (no history).
+   */
+  changeProduct: publicProcedure
+    .input(
+      z.object({
+        id: z.number().int(),
+        toProductId: z.number().int(),
+        changedDate: z.string().nullish(),
+        notes: z.string().nullish()
+      })
+    )
+    .mutation(({ ctx, input }) => {
+      const before = ctx.db.query.card.findFirst({ where: eq(card.id, input.id) }).sync()
+      if (!before) throw new Error('Card not found')
+      if (before.cardProductId === input.toProductId) return enrich(before)
+
+      ctx.db
+        .insert(cardProductChange)
+        .values({
+          cardId: input.id,
+          fromProductId: before.cardProductId,
+          toProductId: input.toProductId,
+          changedDate: input.changedDate ?? todayIso(),
+          notes: input.notes ?? null
+        })
+        .run()
+
+      // Old product's unused benefit templates go with it; used ones stay
+      // (they happened). Then the new product's templates apply.
+      if (before.cardProductId != null) {
+        const oldTemplates = ctx.db
+          .select({ name: productBenefit.name })
+          .from(productBenefit)
+          .where(eq(productBenefit.cardProductId, before.cardProductId))
+          .all()
+          .map((t) => t.name)
+        if (oldTemplates.length > 0) {
+          const swept = ctx.db
+            .select({ id: benefit.id, name: benefit.name, used: benefit.used })
+            .from(benefit)
+            .where(eq(benefit.cardId, input.id))
+            .all()
+            .filter((b) => !b.used && oldTemplates.includes(b.name))
+          if (swept.length > 0) {
+            ctx.db.delete(benefit).where(inArray(benefit.id, swept.map((b) => b.id))).run()
+          }
+        }
+      }
+
+      const defaults = applyProductDefaults(ctx.db, {
+        cardProductId: input.toProductId,
+        issuerId: null,
+        network: null,
+        annualFeeCents: null
+      })
+      const updated = ctx.db
+        .update(card)
+        .set({
+          cardProductId: input.toProductId,
+          issuerId: defaults.issuerId ?? before.issuerId,
+          network: defaults.network ?? before.network,
+          annualFeeCents: defaults.annualFeeCents,
+          updatedAt: Date.now()
+        })
+        .where(eq(card.id, input.id))
+        .returning()
+        .get()
+      applyProductBenefits(ctx.db, input.id, input.toProductId)
+      return enrich(updated)
     }),
 
   delete: publicProcedure
