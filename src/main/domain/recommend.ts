@@ -59,18 +59,18 @@ export interface BonusFamily {
  * Amex's published family rules (the family_bonus_order default): welcome
  * offers are ineligible on a card whose family sibling of a HIGHER tier was
  * ever held, so bonuses must be collected bottom-up. All Platinum variants
- * (vanilla/Schwab/Morgan Stanley) are one tier; Graphite is assumed above
- * Platinum. Delta, Hilton, and Blue Cash are their own families — Delta Gold
- * has nothing to do with the MR Gold. Marriott is deliberately absent
- * (cross-issuer 24-month rules don't fit this model). Business cards carry
- * only per-card lifetime language, so they're excluded here.
+ * (vanilla/Schwab/Morgan Stanley) are one tier. Delta, Hilton, and Blue Cash
+ * are their own families — Delta Gold has nothing to do with the MR Gold.
+ * Marriott is deliberately absent (cross-issuer 24-month rules don't fit
+ * this model). Business cards (including Graphite, a business cash card)
+ * carry only per-card lifetime language, so they're excluded here.
  */
 export const AMEX_FAMILIES: BonusFamily[] = [
   {
     label: 'Amex Membership Rewards',
     issuer: 'American Express',
-    exclude: ['business', 'delta', 'hilton', 'marriott', 'bonvoy', 'blue cash', 'everyday', 'corporate'],
-    tiers: ['green', 'gold', 'platinum', 'graphite']
+    exclude: ['business', 'delta', 'hilton', 'marriott', 'bonvoy', 'blue cash', 'everyday', 'corporate', 'graphite'],
+    tiers: ['green', 'gold', 'platinum']
   },
   {
     label: 'Amex Delta',
@@ -125,6 +125,8 @@ export interface RecommendInput {
     currency?: string | null
     /** What the bonus pays out in (see offerRewardCategory); defaults to card points. */
     rewardCategory?: RewardCategory
+    /** Official issuer application page; the apply link when no referral is stored. */
+    applyUrl?: string | null
     /** Product's baseline earn rate (percent). */
     earnPct?: number | null
     /** What a referrer earns when this application uses their link. */
@@ -211,6 +213,8 @@ export interface Candidate {
   referralLinkUrl: string | null
   /** True when the surfaced link is the seeded one (credits the app author). */
   referralLinkSeeded: boolean
+  /** Official issuer application page (fallback when no referral link). */
+  applyUrl: string | null
   annualFeeCents: number | null
   feeWaivedFirstYear: boolean
   /** Baseline earn on the required min spend (minSpend × earn rate). */
@@ -597,6 +601,7 @@ export function recommend(input: RecommendInput): PersonRecommendations[] {
       hasReferralLink: links.length > 0,
       referralLinkUrl: surfacedLink?.url ?? null,
       referralLinkSeeded: surfacedLink?.source === 'seeded',
+      applyUrl: offer.applyUrl ?? null,
       annualFeeCents: offer.annualFeeCents ?? null,
       feeWaivedFirstYear: offer.feeWaivedFirstYear ?? false,
       earnOnSpendCents,

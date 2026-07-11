@@ -94,6 +94,7 @@ export const recommendationsRouter = router({
           pointProgramKind: o.pointProgram?.kind ?? null
         }),
         earnPct: o.product?.defaultCashbackPct ?? null,
+        applyUrl: o.product?.applyUrl ?? null,
         referralValueCents: o.referralValueCents,
         annualFeeCents: o.product?.defaultAnnualFeeCents ?? null,
         feeWaivedFirstYear: o.feeWaivedFirstYear,

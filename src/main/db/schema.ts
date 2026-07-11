@@ -73,6 +73,9 @@ export const cardProduct = sqliteTable(
     // Business products from a few issuers (notably Capital One) report to the
     // personal bureaus, so their cards count toward 5/24. Seeded by rule.
     reportsToPersonal: integer('reports_to_personal', { mode: 'boolean' }).notNull().default(false),
+    // Official issuer page to apply for this product; recommendations link it
+    // when no referral link is stored. Fed by the offer CSV's apply_url.
+    applyUrl: text('apply_url'),
     notes: text('notes'),
     ...timestamps
   },

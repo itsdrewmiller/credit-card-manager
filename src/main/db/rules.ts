@@ -38,7 +38,7 @@ const RULE_ADDITIONS: { key: string; kind: string; params: Record<string, unknow
     kind: 'family_bonus_order',
     params: {},
     notes:
-      "Amex family rules: collect bonuses bottom-up (Green→Gold→Platinum; Delta, Hilton, and Blue Cash are separate families). Graphite is assumed above Platinum — edit params with custom families if Amex publishes different terms."
+      'Amex family rules: collect bonuses bottom-up (Green→Gold→Platinum; Delta, Hilton, and Blue Cash are separate families). Edit params with custom families if Amex publishes different terms.'
   },
   {
     key: 'rule_seed.max_recent_apps_issuer_chase.v1',

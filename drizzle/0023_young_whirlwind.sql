@@ -1,0 +1,1 @@
+ALTER TABLE `card_product` ADD `apply_url` text;

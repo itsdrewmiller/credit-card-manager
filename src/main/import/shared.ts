@@ -45,7 +45,7 @@ export function findOrCreateProduct(
   network: string | null
 ): number {
   const existing = db
-    .select({ id: cardProduct.id, network: cardProduct.network })
+    .select({ id: cardProduct.id, network: cardProduct.network, isBusiness: cardProduct.isBusiness })
     .from(cardProduct)
     .where(
       and(eq(cardProduct.issuerId, issuerId), sql`lower(${cardProduct.name}) = ${name.toLowerCase()}`)
@@ -54,6 +54,12 @@ export function findOrCreateProduct(
   if (existing) {
     if (existing.network == null && network != null) {
       db.update(cardProduct).set({ network }).where(eq(cardProduct.id, existing.id)).run()
+    }
+    // The feed is authoritative for personal-vs-business on the products it
+    // names — a wrong flag poisons 5/24 math and family rules downstream
+    // (Graphite shipped mislabeled as personal once).
+    if (existing.isBusiness !== isBusiness) {
+      db.update(cardProduct).set({ isBusiness }).where(eq(cardProduct.id, existing.id)).run()
     }
     return existing.id
   }

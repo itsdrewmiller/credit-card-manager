@@ -1,6 +1,6 @@
 import { eq, sql } from 'drizzle-orm'
 import type { DB, DbLike } from '../db'
-import { productOffer, pointProgram } from '../db/schema'
+import { productOffer, pointProgram, cardProduct } from '../db/schema'
 import { parseCsv } from './csv'
 import { stripIssuerPrefix, cleanCardName, canonicalProductName } from './naming'
 import {
@@ -64,6 +64,13 @@ export function importOffersCsv(db: DB, text: string): OfferImportResult {
       const issuerId = findOrCreateIssuer(h, issuerName)
       const productName = canonicalProductName(stripIssuerPrefix(cleanCardName(name), issuerName))
       const productId = findOrCreateProduct(h, issuerId, productName, isBusiness, feeCents, network)
+
+      // Official application page travels on the product; only overwrite when
+      // the feed actually provides one, so manual entries survive refreshes.
+      const applyUrl = r.apply_url?.trim() || null
+      if (applyUrl) {
+        h.update(cardProduct).set({ applyUrl }).where(eq(cardProduct.id, productId)).run()
+      }
 
       const currency = r.bonus_currency?.trim() || null
       const isCash = currency === 'USD'
