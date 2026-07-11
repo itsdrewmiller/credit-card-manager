@@ -1,11 +1,13 @@
 import React from 'react'
 import {
   Anchor,
+  Badge,
   Button,
   Text,
   SimpleGrid,
   Card,
   Group,
+  Progress,
   Stack,
   Table,
   ThemeIcon,
@@ -128,47 +130,126 @@ function GettingStarted({ peopleCount }: { peopleCount: number }): React.ReactEl
   )
 }
 
-/** Open cards whose annual fee renews soon — close or downgrade before it posts. */
-function FeeRenewalSection(): React.ReactElement | null {
-  const renewals = trpc.cards.upcomingFees.useQuery()
-  if (!renewals.data || renewals.data.length === 0) return null
+const RATE_SOURCE_LABEL = {
+  manual: 'set manually',
+  reports: 'from credit reports',
+  activity: 'from tracked spend'
+} as const
+
+const PACE: Record<string, { label: string; color: string }> = {
+  met: { label: 'spend met', color: 'teal' },
+  on_track: { label: 'on pace', color: 'teal' },
+  behind: { label: 'behind pace', color: 'red' },
+  overdue: { label: 'overdue', color: 'red' },
+  unknown: { label: 'no deadline', color: 'gray' }
+}
+
+/**
+ * The action view: open bonus deadlines with progress and required pace,
+ * upcoming annual fees, and the projected date all remaining min-spend
+ * completes at the current rate (= free for the next application).
+ */
+function KeyDatesSection(): React.ReactElement | null {
+  const kd = trpc.reports.keyDates.useQuery()
+  const d = kd.data
+  if (!d || (d.bonuses.length === 0 && d.fees.length === 0)) return null
 
   return (
     <Card withBorder radius="md" padding="lg" mb="lg">
-      <Text fw={600}>Annual fees coming due</Text>
-      <Text size="sm" c="dimmed" mb="sm">
-        Open for ~a year — close or downgrade before the renewal posts to skip the fee.
-      </Text>
-      <Table.ScrollContainer minWidth={480}>
-      <Table verticalSpacing="xs">
-        <Table.Thead>
-          <Table.Tr>
-            <Table.Th>Card</Table.Th>
-            <Table.Th>Holder</Table.Th>
-            <Table.Th ta="right">Fee</Table.Th>
-            <Table.Th ta="right">Renews</Table.Th>
-          </Table.Tr>
-        </Table.Thead>
-        <Table.Tbody>
-          {renewals.data.map(({ card: c, renewal }) => (
-            <Table.Tr key={c.id}>
-              <Table.Td fw={500}>{cardLabel(c)}</Table.Td>
-              <Table.Td>{c.business?.name ?? c.owner?.name ?? '—'}</Table.Td>
-              <Table.Td ta="right">{formatCents(renewal.feeCents)}</Table.Td>
-              <Table.Td ta="right">
-                <Text size="sm">{formatDate(renewal.renewalDate)}</Text>
-                <Text
-                  size="xs"
-                  c={renewal.daysUntil < 14 ? 'red' : renewal.daysUntil < 30 ? 'orange' : 'dimmed'}
-                >
-                  {renewal.daysUntil}d left
+      <Group justify="space-between" align="baseline" mb={4}>
+        <Text fw={600}>Key dates</Text>
+        <Text size="xs" c="dimmed">
+          projected spend {formatCents(d.monthlyRateCents)}/mo · {RATE_SOURCE_LABEL[d.rateSource]}
+        </Text>
+      </Group>
+      {d.totalRemainingCents > 0 && (
+        <Text size="sm" c="dimmed" mb="md">
+          {formatCents(d.totalRemainingCents)} of bonus min-spend to go
+          {d.clearDate
+            ? ` — done ~${formatDate(d.clearDate)} at the current rate, then you're clear for the next application.`
+            : ' — set a projected monthly spend to see when it completes.'}
+        </Text>
+      )}
+
+      <Stack gap="lg">
+        {d.bonuses.map((b) => {
+          const pct =
+            b.targetSpendCents && b.targetSpendCents > 0
+              ? Math.min(100, (b.spendSoFarCents / b.targetSpendCents) * 100)
+              : 0
+          const pace = PACE[b.pace] ?? PACE.unknown
+          return (
+            <div key={b.id}>
+              <Group justify="space-between" gap={6}>
+                <Text size="sm" fw={500} style={{ minWidth: 0 }}>
+                  {cardLabel(b.card)}{' '}
+                  <Text span size="xs" c="dimmed">
+                    {b.card.business?.name ?? b.card.owner?.name ?? ''}
+                  </Text>
                 </Text>
-              </Table.Td>
-            </Table.Tr>
-          ))}
-        </Table.Tbody>
-      </Table>
-      </Table.ScrollContainer>
+                <Group gap={6} wrap="nowrap">
+                  {b.deadline && (
+                    <Text size="sm" c={b.daysLeft != null && b.daysLeft < 21 ? 'red' : undefined}>
+                      due {formatDate(b.deadline)}
+                      {b.daysLeft != null ? ` (${b.daysLeft}d)` : ''}
+                    </Text>
+                  )}
+                  <Badge size="sm" variant="light" color={pace.color}>
+                    {pace.label}
+                  </Badge>
+                </Group>
+              </Group>
+              {b.targetSpendCents != null && (
+                <Progress value={pct} mt={6} size="md" radius="xl" color={pace.color} />
+              )}
+              <Group justify="space-between" mt={4}>
+                <Text size="xs" c="dimmed">
+                  {b.targetSpendCents != null
+                    ? `${formatCents(b.spendSoFarCents)} of ${formatCents(b.targetSpendCents)} spent`
+                    : 'no spend target'}
+                  {b.valueCents != null ? ` · worth ${formatCents(b.valueCents)}` : ''}
+                </Text>
+                {b.requiredMonthlyCents != null && (
+                  <Text
+                    size="xs"
+                    c={b.requiredMonthlyCents > d.monthlyRateCents ? 'red' : 'dimmed'}
+                  >
+                    needs {formatCents(b.requiredMonthlyCents)}/mo
+                  </Text>
+                )}
+              </Group>
+            </div>
+          )
+        })}
+      </Stack>
+
+      {d.fees.length > 0 && (
+        <>
+          <Divider my="md" label="Annual fees coming due" labelPosition="left" />
+          <Stack gap={6}>
+            {d.fees.map(({ card: c, renewal }) => (
+              <Group key={c.id} justify="space-between" gap={6}>
+                <Text size="sm" fw={500} style={{ minWidth: 0 }}>
+                  {cardLabel(c)}{' '}
+                  <Text span size="xs" c="dimmed">
+                    {c.business?.name ?? c.owner?.name ?? ''}
+                  </Text>
+                </Text>
+                <Text size="sm" style={{ flexShrink: 0 }}>
+                  {formatCents(renewal.feeCents)} on {formatDate(renewal.renewalDate)}{' '}
+                  <Text
+                    span
+                    size="xs"
+                    c={renewal.daysUntil < 14 ? 'red' : renewal.daysUntil < 30 ? 'orange' : 'dimmed'}
+                  >
+                    ({renewal.daysUntil}d)
+                  </Text>
+                </Text>
+              </Group>
+            ))}
+          </Stack>
+        </>
+      )}
     </Card>
   )
 }
@@ -262,7 +343,7 @@ export function Dashboard(): React.ReactElement {
         {health.data?.counts.cards === 0 && (
           <GettingStarted peopleCount={health.data.counts.people} />
         )}
-        <FeeRenewalSection />
+        <KeyDatesSection />
         <VelocitySection />
         <Divider my="lg" />
 
