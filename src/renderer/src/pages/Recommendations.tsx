@@ -29,8 +29,8 @@ import {
   REWARD_CATEGORY_LABELS,
   type RewardCategory
 } from '@shared/format'
-import { formatDate } from '@shared/dates'
-import { showSuccess } from '../lib/mutations'
+import { formatDate, todayIso } from '@shared/dates'
+import { showSuccess, useInvalidateCards } from '../lib/mutations'
 import type { RecommendationOverview, RecommendationRuleRow } from '../lib/types'
 
 type PersonResult = RecommendationOverview['results'][number]
@@ -113,8 +113,10 @@ function CardCell({ c }: { c: Candidate }): React.ReactElement {
   )
 }
 
-/** The apply-via-referral CTA: a real button on its own line/column. */
-function ReferralLink({
+/** The apply CTA on its own line/column: the stored referral link when one
+ *  exists (always preferred — it earns someone something), else the issuer's
+ *  official application page. */
+function ApplyLink({
   c,
   size = 'compact-sm',
   fullWidth = false
@@ -123,22 +125,24 @@ function ReferralLink({
   size?: string
   fullWidth?: boolean
 }): React.ReactElement | null {
-  if (!c.referralLinkUrl) return null
+  const url = c.referralLinkUrl ?? c.applyUrl
+  if (!url) return null
+  const viaReferral = c.referralLinkUrl != null
   return (
     <>
       <Button
         component="a"
-        href={c.referralLinkUrl}
+        href={url}
         target="_blank"
         size={size}
-        variant="light"
+        variant={viaReferral ? 'light' : 'default'}
         fullWidth={fullWidth}
         fw={600}
         rightSection={<IconExternalLink size={14} />}
       >
-        Apply via referral
+        {viaReferral ? 'Apply via referral' : 'Apply'}
       </Button>
-      {c.referralLinkSeeded && (
+      {viaReferral && c.referralLinkSeeded && (
         <Text size="xs" c="dimmed" mt={4}>
           this link supports the app author
         </Text>
@@ -161,6 +165,49 @@ function BonusCell({ c }: { c: Candidate }): React.ReactElement {
 
 const candidateKey = (c: Candidate): string => `${c.offerId}-${c.personId}-${c.businessId ?? 'p'}`
 
+/** Records "I applied for this" as an applied-status card for the right
+ *  person/business, so the application can be resolved (approved/rejected)
+ *  from the Cards page when the decision comes back. */
+function MarkAppliedButton({
+  c,
+  fullWidth = false
+}: {
+  c: Candidate
+  fullWidth?: boolean
+}): React.ReactElement {
+  const utils = trpc.useUtils()
+  const invalidateCards = useInvalidateCards()
+  const create = trpc.cards.create.useMutation({
+    onSuccess: () => {
+      invalidateCards()
+      void utils.recommendations.overview.invalidate()
+      showSuccess('Application recorded — resolve it on the Cards page when you hear back')
+    }
+  })
+  return (
+    <Button
+      size="compact-xs"
+      variant="subtle"
+      color="gray"
+      fullWidth={fullWidth}
+      mt={4}
+      loading={create.isPending}
+      onClick={() =>
+        create.mutate({
+          cardProductId: c.cardProductId,
+          ownerPersonId: c.personId,
+          businessId: c.businessId,
+          status: 'applied',
+          appliedDate: todayIso(),
+          source: 'recommendation'
+        })
+      }
+    >
+      I applied
+    </Button>
+  )
+}
+
 function RecommendedTable({ rows }: { rows: Candidate[] }): React.ReactElement {
   // Phone widths get the card as the title with the rest stacked underneath.
   const mobileColumns: Column<Candidate & { id: string }>[] = [
@@ -169,11 +216,12 @@ function RecommendedTable({ rows }: { rows: Candidate[] }): React.ReactElement {
       render: (c) => (
         <>
           <CardCell c={c} />
-          {c.referralLinkUrl && (
+          {(c.referralLinkUrl ?? c.applyUrl) && (
             <Box mt={8}>
-              <ReferralLink c={c} size="sm" fullWidth />
+              <ApplyLink c={c} size="sm" fullWidth />
             </Box>
           )}
+          <MarkAppliedButton c={c} fullWidth />
         </>
       )
     },
@@ -199,7 +247,7 @@ function RecommendedTable({ rows }: { rows: Candidate[] }): React.ReactElement {
         <Table.Tr>
           <Table.Th>Who</Table.Th>
           <Table.Th>Card</Table.Th>
-          <Table.Th>Referral</Table.Th>
+          <Table.Th>Apply</Table.Th>
           <Table.Th>Bonus</Table.Th>
           <Table.Th ta="right">Value</Table.Th>
           <Table.Th ta="right">Earn %</Table.Th>
@@ -216,7 +264,8 @@ function RecommendedTable({ rows }: { rows: Candidate[] }): React.ReactElement {
               <CardCell c={c} />
             </Table.Td>
             <Table.Td>
-              <ReferralLink c={c} />
+              <ApplyLink c={c} />
+              <MarkAppliedButton c={c} />
             </Table.Td>
             <Table.Td>
               <BonusCell c={c} />
