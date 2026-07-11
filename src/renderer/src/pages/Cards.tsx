@@ -26,7 +26,7 @@ import { useInlineCommit } from '../lib/useInlineCommit'
 import { CARD_STATUS_COLOR } from '../lib/statusColors'
 import { CARD_STATUS_LABELS, CARD_FIELD_LABELS, type CardStatus } from '@shared/constants'
 import { formatCents } from '@shared/format'
-import { formatDate } from '@shared/dates'
+import { formatDate, todayIso } from '@shared/dates'
 import type { CardRow } from '../lib/types'
 
 /** Product-level baseline earn rate, edited inline; feeds cash-back return in Reports. */
@@ -104,7 +104,7 @@ export function Cards(): React.ReactElement {
   const [reportOpen, setReportOpen] = useState(false)
 
   const remove = trpc.cards.delete.useMutation({ onSuccess: invalidate })
-  const setAutopay = trpc.cards.update.useMutation({ onSuccess: invalidate })
+  const updateCard = trpc.cards.update.useMutation({ onSuccess: invalidate })
   const setCashback = trpc.products.update.useMutation({ onSuccess: invalidate })
 
   const importCsv = trpc.cards.importCsv.useMutation({
@@ -161,9 +161,35 @@ export function Cards(): React.ReactElement {
     {
       header: 'Status',
       render: (c) => (
-        <Badge color={CARD_STATUS_COLOR[c.status as CardStatus] ?? 'gray'} variant="light">
-          {CARD_STATUS_LABELS[c.status as CardStatus] ?? c.status}
-        </Badge>
+        <>
+          <Badge color={CARD_STATUS_COLOR[c.status as CardStatus] ?? 'gray'} variant="light">
+            {CARD_STATUS_LABELS[c.status as CardStatus] ?? c.status}
+          </Badge>
+          {c.status === 'applied' && (
+            <Group gap={4} mt={6} wrap="nowrap">
+              <Button
+                size="compact-xs"
+                variant="light"
+                color="green"
+                onClick={() =>
+                  updateCard.mutate({ id: c.id, status: 'open', openedDate: todayIso() })
+                }
+              >
+                Approved
+              </Button>
+              <Button
+                size="compact-xs"
+                variant="light"
+                color="red"
+                onClick={() =>
+                  updateCard.mutate({ id: c.id, status: 'rejected', rejectedDate: todayIso() })
+                }
+              >
+                Rejected
+              </Button>
+            </Group>
+          )}
+        </>
       )
     },
     { header: 'Annual fee', render: (c) => formatCents(c.annualFeeCents) },
@@ -185,7 +211,7 @@ export function Cards(): React.ReactElement {
       render: (c) => (
         <Checkbox
           checked={c.autopay}
-          onChange={(e) => setAutopay.mutate({ id: c.id, autopay: e.currentTarget.checked })}
+          onChange={(e) => updateCard.mutate({ id: c.id, autopay: e.currentTarget.checked })}
           aria-label="Automatic payments set up"
         />
       )
