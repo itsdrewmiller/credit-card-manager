@@ -187,6 +187,16 @@ export function Cards(): React.ReactElement {
               >
                 Rejected
               </Button>
+              <Tooltip label="Backed out before submitting (e.g. Amex's no-bonus warning) — doesn't count as an application" withArrow>
+                <Button
+                  size="compact-xs"
+                  variant="light"
+                  color="gray"
+                  onClick={() => updateCard.mutate({ id: c.id, status: 'withdrawn' })}
+                >
+                  Withdrew
+                </Button>
+              </Tooltip>
             </Group>
           )}
         </>
@@ -275,7 +285,8 @@ export function Cards(): React.ReactElement {
             { label: 'Open', value: 'open' },
             { label: 'Closed', value: 'closed' },
             { label: 'Applied', value: 'applied' },
-            { label: 'Rejected', value: 'rejected' }
+            { label: 'Rejected', value: 'rejected' },
+            { label: 'Withdrawn', value: 'withdrawn' }
           ]}
         />
         <Chip checked={needsOnly} onChange={setNeedsOnly} variant="light" color="orange">

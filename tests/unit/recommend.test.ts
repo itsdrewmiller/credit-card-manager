@@ -539,6 +539,165 @@ describe('monthly spend projection', () => {
     })
   })
 
+  describe('withdrawn applications', () => {
+    const rich = { spendEntries: [], monthlySpendCents: 10000000 }
+    const withdrawnCsp = {
+      id: 1,
+      cardProductId: 100, // = the CSR offer's product
+      ownerPersonId: 1,
+      businessId: null,
+      appliedDate: '2026-07-04',
+      openedDate: null,
+      status: 'withdrawn',
+      productName: 'Sapphire Preferred',
+      productIssuerName: 'Chase'
+    }
+
+    it('never counts toward pacing/velocity rules', () => {
+      const [drew] = recommend(
+        base({
+          ...rich,
+          offers: [SPARK],
+          cards: [{ ...withdrawnCsp, productIssuerName: 'Capital One', productName: 'Spark Cash Plus', cardProductId: 999 }],
+          rules: [
+            { kind: 'max_recent_apps_person', params: { months: 3, max: 1 } },
+            { kind: 'max_recent_apps_issuer', params: { issuer: 'Capital One', days: 90, max: 1 } }
+          ]
+        })
+      )
+      expect(drew.blocked).toHaveLength(0)
+    })
+
+    it('does not count as family history, but blocks re-recommending the same product', () => {
+      const [drew] = recommend(
+        base({
+          ...rich,
+          offers: [CSR],
+          cards: [withdrawnCsp],
+          rules: [{ kind: 'no_duplicate_product', params: { scope: 'holder' } }]
+        })
+      )
+      // Not "already holds" — the built-in withdrawn block fires instead.
+      const csp = drew.blocked.find((c) => c.label.includes('Sapphire'))!
+      expect(csp.blocks.map((b) => b.kind)).toEqual(['withdrawn'])
+      expect(csp.blocks[0].reason).toContain('withdrawn before')
+    })
+  })
+
+  describe('Amex card rules (5-card / 1-in-5 / 2-in-90, charge cards exempt)', () => {
+    const rich = { spendEntries: [], monthlySpendCents: 10000000 }
+    const HILTON = {
+      id: 40,
+      cardProductId: 700,
+      productName: 'Hilton Honors',
+      issuerName: 'American Express',
+      isBusiness: false,
+      isCharge: false,
+      valueCents: 80000,
+      minSpendCents: 200000,
+      windowMonths: 6,
+      expires: null
+    }
+    const PLATINUM = {
+      ...HILTON,
+      id: 41,
+      cardProductId: 701,
+      productName: 'Platinum',
+      isCharge: true
+    }
+    const amexCard = (over: Record<string, unknown>) => ({
+      id: 90,
+      cardProductId: 702,
+      ownerPersonId: 1,
+      businessId: null,
+      appliedDate: '2026-07-04',
+      openedDate: '2026-07-04',
+      status: 'open',
+      productName: 'Blue Cash Everyday',
+      productIssuerName: 'American Express',
+      productIsCharge: false,
+      ...over
+    })
+
+    it('1-in-5: a credit app 2 days ago blocks credit offers until day 6, charge offers exempt', () => {
+      const RULE = [
+        { kind: 'max_recent_apps_issuer', params: { issuer: 'American Express', days: 5, max: 1, creditOnly: true } }
+      ]
+      const [drew] = recommend(base({ ...rich, offers: [HILTON, PLATINUM], cards: [amexCard({})], rules: RULE }))
+      const hilton = drew.blocked.find((c) => c.label.includes('Hilton'))!
+      expect(hilton.blocks[0].kind).toBe('max_recent_apps_issuer')
+      expect(hilton.blocks[0].waitUntil).toBe('2026-07-10')
+      expect(drew.recommended.map((c) => c.label)).toContain('American Express Platinum')
+    })
+
+    it('1-in-5: a charge-card application does not start the clock', () => {
+      const RULE = [
+        { kind: 'max_recent_apps_issuer', params: { issuer: 'American Express', days: 5, max: 1, creditOnly: true } }
+      ]
+      const [drew] = recommend(
+        base({
+          ...rich,
+          offers: [HILTON],
+          cards: [amexCard({ productName: 'Platinum', productIsCharge: true })],
+          rules: RULE
+        })
+      )
+      expect(drew.blocked).toHaveLength(0)
+    })
+
+    it("2-in-90: two approvals block the third credit card; denials don't count", () => {
+      const RULE = [
+        {
+          kind: 'max_recent_apps_issuer',
+          params: { issuer: 'American Express', days: 90, max: 2, creditOnly: true, approvalsOnly: true }
+        }
+      ]
+      const two = [
+        amexCard({ id: 1, appliedDate: '2026-05-10', openedDate: '2026-05-10' }),
+        amexCard({ id: 2, cardProductId: 703, appliedDate: '2026-06-20', openedDate: '2026-06-20' })
+      ]
+      const [drew] = recommend(base({ ...rich, offers: [HILTON], cards: two, rules: RULE }))
+      const hilton = drew.blocked.find((c) => c.label.includes('Hilton'))!
+      expect(hilton.blocks[0].reason).toContain('approvals in 90d')
+      // 90 days after the older approval, a slot frees up.
+      expect(hilton.blocks[0].waitUntil).toBe('2026-08-09')
+      // A rejection instead of the second approval leaves the slot open.
+      const [after] = recommend(
+        base({
+          ...rich,
+          offers: [HILTON],
+          cards: [two[0], { ...two[1], status: 'rejected', openedDate: null }],
+          rules: RULE
+        })
+      )
+      expect(after.blocked).toHaveLength(0)
+    })
+
+    it('five-card rule: 5 open credit cards block the 6th, charge cards neither count nor block', () => {
+      const RULE = [
+        { kind: 'max_open_cards_issuer', params: { issuer: 'American Express', max: 5, creditOnly: true } }
+      ]
+      const five = Array.from({ length: 5 }, (_, i) =>
+        amexCard({ id: i + 1, cardProductId: 710 + i, appliedDate: '2024-01-01', openedDate: '2024-01-01' })
+      )
+      const [drew] = recommend(base({ ...rich, offers: [HILTON, PLATINUM], cards: five, rules: RULE }))
+      const hilton = drew.blocked.find((c) => c.label.includes('Hilton'))!
+      expect(hilton.blocks[0].kind).toBe('max_open_cards_issuer')
+      expect(hilton.blocks[0].reason).toContain('5 open American Express credit cards')
+      expect(drew.recommended.map((c) => c.label)).toContain('American Express Platinum')
+      // 4 credit + 1 charge card: under the limit.
+      const [under] = recommend(
+        base({
+          ...rich,
+          offers: [HILTON],
+          cards: [...five.slice(0, 4), amexCard({ id: 9, productName: 'Gold', productIsCharge: true, appliedDate: '2024-01-01', openedDate: '2024-01-01' })],
+          rules: RULE
+        })
+      )
+      expect(under.blocked).toHaveLength(0)
+    })
+  })
+
   describe('Chase Ink rules (per person, across businesses)', () => {
     const INK_CASH = {
       id: 30,

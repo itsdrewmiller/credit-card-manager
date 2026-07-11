@@ -1,7 +1,16 @@
 /** Shared enums/labels used by both the main process (schema/validation) and the
  *  renderer (form selects). No DB or Node deps so it's safe to import anywhere. */
 
-export const CARD_STATUSES = ['applied', 'open', 'closed', 'product_changed', 'rejected'] as const
+export const CARD_STATUSES = [
+  'applied',
+  'open',
+  'closed',
+  'product_changed',
+  'rejected',
+  // Application abandoned before submitting (e.g. Amex's no-bonus warning):
+  // tracked, but never counts as an application or as having held the card.
+  'withdrawn'
+] as const
 export type CardStatus = (typeof CARD_STATUSES)[number]
 
 export const CARD_STATUS_LABELS: Record<CardStatus, string> = {
@@ -9,7 +18,8 @@ export const CARD_STATUS_LABELS: Record<CardStatus, string> = {
   open: 'Open',
   closed: 'Closed',
   product_changed: 'Product changed',
-  rejected: 'Rejected'
+  rejected: 'Rejected',
+  withdrawn: 'Withdrawn'
 }
 
 export const NETWORKS = ['Visa', 'Mastercard', 'Amex', 'Discover'] as const

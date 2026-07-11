@@ -114,8 +114,11 @@ export const cardsRouter = router({
         .where(eq(card.id, id))
         .returning()
         .get()
-      // A rejected application never had usable benefits — remove them all.
-      if (rest.status === 'rejected' && before?.status !== 'rejected') {
+      // A rejected or withdrawn application never had usable benefits.
+      if (
+        (rest.status === 'rejected' || rest.status === 'withdrawn') &&
+        before?.status !== rest.status
+      ) {
         ctx.db.delete(benefit).where(eq(benefit.cardId, id)).run()
       }
       // Closing a card sweeps its pending benefits (see sweptOnClose).

@@ -15,7 +15,8 @@ export const CARD_STATUS_COLOR: Record<CardStatus, string> = {
   open: 'green',
   closed: 'gray',
   product_changed: 'grape',
-  rejected: 'red'
+  rejected: 'red',
+  withdrawn: 'gray'
 }
 
 export const REFERRAL_STATUS_COLOR: Record<string, string> = {
