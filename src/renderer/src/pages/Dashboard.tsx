@@ -1,13 +1,12 @@
 import React from 'react'
 import {
   Anchor,
-  Badge,
   Button,
   Text,
   SimpleGrid,
   Card,
   Group,
-  Progress,
+  Paper,
   Stack,
   Table,
   ThemeIcon,
@@ -23,7 +22,7 @@ import { QueryGate } from '../components/QueryGate'
 import { VelocitySection } from '../components/VelocitySection'
 import { cardLabel } from '../components/useCardEditor'
 import { formatCents } from '@shared/format'
-import { formatDate } from '@shared/dates'
+import { formatDate, daysUntil } from '@shared/dates'
 import type { RouterOutputs } from '../lib/types'
 
 type Overview = RouterOutputs['reports']['overview']
@@ -136,120 +135,136 @@ const RATE_SOURCE_LABEL = {
   activity: 'from tracked spend'
 } as const
 
-const PACE: Record<string, { label: string; color: string }> = {
-  met: { label: 'spend met', color: 'teal' },
-  on_track: { label: 'on pace', color: 'teal' },
-  behind: { label: 'behind pace', color: 'red' },
-  overdue: { label: 'overdue', color: 'red' },
-  unknown: { label: 'no deadline', color: 'gray' }
+function daysColor(days: number | null): string {
+  if (days == null) return 'dimmed'
+  return days < 14 ? 'red' : days < 30 ? 'orange' : 'dimmed'
 }
 
+type KeyDates = RouterOutputs['reports']['keyDates']
+
+type KeyDateItem =
+  | { kind: 'bonus'; date: string | null; bonus: KeyDates['bonuses'][number] }
+  | { kind: 'fee'; date: string; fee: KeyDates['fees'][number] }
+  | { kind: 'clear'; date: string }
+
 /**
- * The action view: open bonus deadlines with progress and required pace,
- * upcoming annual fees, and the projected date all remaining min-spend
- * completes at the current rate (= free for the next application).
+ * The action view: one chronological list of every upcoming date — bonus
+ * deadlines, annual-fee renewals, and (prominently) the projected date all
+ * remaining min-spend completes at the current rate (= free for the next
+ * application). Undated items sort last.
  */
 function KeyDatesSection(): React.ReactElement | null {
   const kd = trpc.reports.keyDates.useQuery()
   const d = kd.data
   if (!d || (d.bonuses.length === 0 && d.fees.length === 0)) return null
 
+  const items: KeyDateItem[] = [
+    ...d.bonuses.map((b) => ({ kind: 'bonus' as const, date: b.deadline, bonus: b })),
+    ...d.fees.map((f) => ({ kind: 'fee' as const, date: f.renewal.renewalDate, fee: f })),
+    ...(d.clearDate ? [{ kind: 'clear' as const, date: d.clearDate }] : [])
+  ].sort((a, b) => ((a.date ?? '9999-12-31') < (b.date ?? '9999-12-31') ? -1 : 1))
+
   return (
     <Card withBorder radius="md" padding="lg" mb="lg">
-      <Group justify="space-between" align="baseline" mb={4}>
+      <Group justify="space-between" align="baseline" mb="md">
         <Text fw={600}>Key dates</Text>
         <Text size="xs" c="dimmed">
           projected spend {formatCents(d.monthlyRateCents)}/mo · {RATE_SOURCE_LABEL[d.rateSource]}
         </Text>
       </Group>
-      {d.totalRemainingCents > 0 && (
+      {d.totalRemainingCents > 0 && !d.clearDate && (
         <Text size="sm" c="dimmed" mb="md">
-          {formatCents(d.totalRemainingCents)} of bonus min-spend to go
-          {d.clearDate
-            ? ` — done ~${formatDate(d.clearDate)} at the current rate, then you're clear for the next application.`
-            : ' — set a projected monthly spend to see when it completes.'}
+          {formatCents(d.totalRemainingCents)} of bonus min-spend to go — set a projected monthly
+          spend to see when it completes.
         </Text>
       )}
 
-      <Stack gap="lg">
-        {d.bonuses.map((b) => {
-          const pct =
-            b.targetSpendCents && b.targetSpendCents > 0
-              ? Math.min(100, (b.spendSoFarCents / b.targetSpendCents) * 100)
-              : 0
-          const pace = PACE[b.pace] ?? PACE.unknown
-          return (
-            <div key={b.id}>
-              <Group justify="space-between" gap={6}>
-                <Text size="sm" fw={500} style={{ minWidth: 0 }}>
-                  {cardLabel(b.card)}{' '}
-                  <Text span size="xs" c="dimmed">
-                    {b.card.business?.name ?? b.card.owner?.name ?? ''}
-                  </Text>
-                </Text>
-                <Group gap={6} wrap="nowrap">
-                  {b.deadline && (
-                    <Text size="sm" c={b.daysLeft != null && b.daysLeft < 21 ? 'red' : undefined}>
-                      due {formatDate(b.deadline)}
-                      {b.daysLeft != null ? ` (${b.daysLeft}d)` : ''}
+      <Stack gap="sm">
+        {items.map((item) => {
+          if (item.kind === 'clear') {
+            const days = daysUntil(item.date)
+            return (
+              <Paper key="clear" radius="md" p="md" bg="var(--mantine-color-blue-light)">
+                <Group justify="space-between" gap={6}>
+                  <div style={{ minWidth: 0 }}>
+                    <Text fw={700}>Out of bonus min-spend</Text>
+                    <Text size="xs" c="dimmed">
+                      {formatCents(d.totalRemainingCents)} left across open bonuses at the current
+                      rate — free for the next application
                     </Text>
-                  )}
-                  <Badge size="sm" variant="light" color={pace.color}>
-                    {pace.label}
-                  </Badge>
-                </Group>
-              </Group>
-              {b.targetSpendCents != null && (
-                <Progress value={pct} mt={6} size="md" radius="xl" color={pace.color} />
-              )}
-              <Group justify="space-between" mt={4}>
-                <Text size="xs" c="dimmed">
-                  {b.targetSpendCents != null
-                    ? `${formatCents(b.spendSoFarCents)} of ${formatCents(b.targetSpendCents)} spent`
-                    : 'no spend target'}
-                  {b.valueCents != null ? ` · worth ${formatCents(b.valueCents)}` : ''}
-                </Text>
-                {b.requiredMonthlyCents != null && (
-                  <Text
-                    size="xs"
-                    c={b.requiredMonthlyCents > d.monthlyRateCents ? 'red' : 'dimmed'}
-                  >
-                    needs {formatCents(b.requiredMonthlyCents)}/mo
+                  </div>
+                  <Text fw={700} fz="lg" style={{ flexShrink: 0 }}>
+                    ~{formatDate(item.date)}
+                    {days != null && (
+                      <Text span size="sm" c="dimmed">
+                        {' '}
+                        ({days}d)
+                      </Text>
+                    )}
                   </Text>
-                )}
-              </Group>
-            </div>
-          )
-        })}
-      </Stack>
+                </Group>
+              </Paper>
+            )
+          }
 
-      {d.fees.length > 0 && (
-        <>
-          <Divider my="md" label="Annual fees coming due" labelPosition="left" />
-          <Stack gap={6}>
-            {d.fees.map(({ card: c, renewal }) => (
-              <Group key={c.id} justify="space-between" gap={6}>
+          if (item.kind === 'fee') {
+            const { card: c, renewal } = item.fee
+            return (
+              <Group key={`fee-${c.id}`} justify="space-between" gap={6}>
                 <Text size="sm" fw={500} style={{ minWidth: 0 }}>
                   {cardLabel(c)}{' '}
                   <Text span size="xs" c="dimmed">
                     {c.business?.name ?? c.owner?.name ?? ''}
                   </Text>
                 </Text>
-                <Text size="sm" style={{ flexShrink: 0 }}>
-                  {formatCents(renewal.feeCents)} on {formatDate(renewal.renewalDate)}{' '}
-                  <Text
-                    span
-                    size="xs"
-                    c={renewal.daysUntil < 14 ? 'red' : renewal.daysUntil < 30 ? 'orange' : 'dimmed'}
-                  >
+                <Text size="sm">
+                  {formatCents(renewal.feeCents)} annual fee · {formatDate(renewal.renewalDate)}{' '}
+                  <Text span size="xs" c={daysColor(renewal.daysUntil)}>
                     ({renewal.daysUntil}d)
                   </Text>
                 </Text>
               </Group>
-            ))}
-          </Stack>
-        </>
-      )}
+            )
+          }
+
+          const b = item.bonus
+          return (
+            <Group key={`bonus-${b.id}`} justify="space-between" gap={6}>
+              <Text size="sm" fw={500} style={{ minWidth: 0 }}>
+                {cardLabel(b.card)}{' '}
+                <Text span size="xs" c="dimmed">
+                  {b.card.business?.name ?? b.card.owner?.name ?? ''}
+                </Text>
+              </Text>
+              <Text size="sm">
+                {b.remainingCents != null
+                  ? `${formatCents(b.remainingCents)} bonus spend to go`
+                  : 'bonus (no spend target)'}
+                {b.requiredMonthlyCents != null && b.requiredMonthlyCents > d.monthlyRateCents && (
+                  <Text span size="xs" c="red">
+                    {' '}
+                    needs {formatCents(b.requiredMonthlyCents)}/mo
+                  </Text>
+                )}
+                {b.deadline ? (
+                  <>
+                    {' '}
+                    · {formatDate(b.deadline)}{' '}
+                    <Text span size="xs" c={daysColor(b.daysLeft)}>
+                      ({b.daysLeft}d)
+                    </Text>
+                  </>
+                ) : (
+                  <Text span size="xs" c="dimmed">
+                    {' '}
+                    · no deadline
+                  </Text>
+                )}
+              </Text>
+            </Group>
+          )
+        })}
+      </Stack>
     </Card>
   )
 }
