@@ -57,6 +57,12 @@ const KINDS: { value: string; label: string; hint: string; example: string }[] =
     example: '{"issuer": "Chase", "match": ["ink"], "max": 3}'
   },
   {
+    value: 'max_open_cards_issuer',
+    label: 'Open-card ceiling (issuer)',
+    hint: "Per-person cap on open cards with one issuer — Amex's five-card rule. creditOnly (default) exempts charge/hybrid cards like Green/Gold/Platinum.",
+    example: '{"issuer": "American Express", "max": 5, "creditOnly": true}'
+  },
+  {
     value: 'min_spend_capacity',
     label: 'Spend capacity',
     hint: 'Min-spend must fit your tracked monthly spend × the offer window.',

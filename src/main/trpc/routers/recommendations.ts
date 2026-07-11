@@ -35,6 +35,22 @@ function activityCents(db: DbLike, today: Date): number {
   return Math.round(total / 3)
 }
 
+/**
+ * The projected monthly spend every consumer shares (capacity rules, the
+ * dashboard's key-dates projection): manual override, else the credit-report
+ * default, else the trailing tracked activity rate.
+ */
+export function resolveMonthlySpendCents(
+  db: DbLike,
+  today = new Date()
+): { cents: number; source: 'manual' | 'reports' | 'activity' } {
+  const overrideRaw = getSetting(db, MONTHLY_SPEND_KEY)
+  if (overrideRaw != null) return { cents: Number(overrideRaw), source: 'manual' }
+  const report = reportDefaultCents(db)
+  if (report != null) return { cents: report, source: 'reports' }
+  return { cents: activityCents(db, today), source: 'activity' }
+}
+
 const ruleUpsert = z.object({
   kind: z.string().min(1),
   enabled: z.boolean().default(true),
@@ -95,6 +111,7 @@ export const recommendationsRouter = router({
         }),
         earnPct: o.product?.defaultCashbackPct ?? null,
         applyUrl: o.product?.applyUrl ?? null,
+        isCharge: o.product?.isCharge ?? false,
         referralValueCents: o.referralValueCents,
         annualFeeCents: o.product?.defaultAnnualFeeCents ?? null,
         feeWaivedFirstYear: o.feeWaivedFirstYear,
@@ -110,7 +127,8 @@ export const recommendationsRouter = router({
       .map((c) => ({
         ...c,
         productName: c.product?.name ?? null,
-        productIssuerName: c.product?.issuer?.name ?? null
+        productIssuerName: c.product?.issuer?.name ?? null,
+        productIsCharge: c.product?.isCharge ?? false
       }))
     const spendEntries = ctx.db
       .select({ amountCents: spendEntry.amountCents, date: spendEntry.date })

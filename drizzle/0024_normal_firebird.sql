@@ -1,0 +1,1 @@
+ALTER TABLE `card_product` ADD `is_charge` integer DEFAULT false NOT NULL;

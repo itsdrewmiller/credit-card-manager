@@ -26,8 +26,16 @@ export const RULE_PARAM_SCHEMAS = {
   max_recent_apps_issuer: z.strictObject({
     issuer: z.string().optional(),
     months: z.number().int().positive().optional(),
+    days: z.number().int().positive().optional(),
     max: z.number().int().min(1).optional(),
-    businessOnly: z.boolean().optional()
+    businessOnly: z.boolean().optional(),
+    creditOnly: z.boolean().optional(),
+    approvalsOnly: z.boolean().optional()
+  }),
+  max_open_cards_issuer: z.strictObject({
+    issuer: z.string().optional(),
+    max: z.number().int().min(1).optional(),
+    creditOnly: z.boolean().optional()
   }),
   max_open_matching: z.strictObject({
     issuer: z.string().optional(),

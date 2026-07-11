@@ -58,3 +58,34 @@ export function seedExtraProducts(db: DB): number {
   }
   return added
 }
+
+/**
+ * Flag Amex charge / hybrid pay-over-time products. These are exempt from
+ * Amex's 5-credit-card limit and the 1-in-5 / 2-in-90 velocity rules, so the
+ * recommendation engine needs to tell them apart from revolving credit cards.
+ * Green/Gold/Platinum (all variants) and the flexible-limit business cards
+ * (Business Gold/Platinum, Graphite, Plum) qualify; co-brands (Delta, Hilton,
+ * Marriott) and Blue Cash are ordinary credit cards. Runs every boot so new
+ * feed products get flagged too; idempotent.
+ */
+export function seedChargeCards(db: DB): number {
+  const amex = db.select({ id: issuer.id }).from(issuer).where(eq(issuer.name, 'American Express')).get()
+  if (!amex) return 0
+  const CHARGE = ['green', 'gold', 'platinum', 'graphite', 'plum']
+  const NOT_CHARGE = ['delta', 'hilton', 'marriott', 'bonvoy', 'blue cash', 'everyday']
+  const products = db
+    .select({ id: cardProduct.id, name: cardProduct.name, isCharge: cardProduct.isCharge })
+    .from(cardProduct)
+    .where(eq(cardProduct.issuerId, amex.id))
+    .all()
+  let flagged = 0
+  for (const p of products) {
+    const n = p.name.toLowerCase()
+    const shouldFlag = CHARGE.some((t) => n.includes(t)) && !NOT_CHARGE.some((t) => n.includes(t))
+    if (shouldFlag && !p.isCharge) {
+      db.update(cardProduct).set({ isCharge: true }).where(eq(cardProduct.id, p.id)).run()
+      flagged++
+    }
+  }
+  return flagged
+}

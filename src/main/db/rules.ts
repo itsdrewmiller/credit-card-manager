@@ -79,6 +79,27 @@ const RULE_ADDITIONS: { key: string; kind: string; params: Record<string, unknow
     },
     notes:
       "Chase's Nov 2025 bonus rules: a no-AF Ink bonus is dead if you've ever had ANY no-AF Chase business card (any entity — eligibility follows you, not the EIN); annual-fee Inks are once-ever per exact card. Enforcement consistency is still unclear, so don't build on a second EIN for a repeat bonus."
+  },
+  {
+    key: 'rule_seed.amex_five_cards.v1',
+    kind: 'max_open_cards_issuer',
+    params: { issuer: 'American Express', max: 5, creditOnly: true },
+    notes:
+      "Amex five-card rule: at most 5 open Amex credit cards per person (personal + business combined). Charge/hybrid cards — Green, Gold, Platinum, Business Gold/Platinum — don't count."
+  },
+  {
+    key: 'rule_seed.amex_one_in_five.v1',
+    kind: 'max_recent_apps_issuer',
+    params: { issuer: 'American Express', days: 5, max: 1, creditOnly: true },
+    notes:
+      'Amex 1-in-5 rule: one credit-card application per 5 days. Charge/hybrid cards are exempt and can be applied for anytime.'
+  },
+  {
+    key: 'rule_seed.amex_two_in_ninety.v1',
+    kind: 'max_recent_apps_issuer',
+    params: { issuer: 'American Express', days: 90, max: 2, creditOnly: true, approvalsOnly: true },
+    notes:
+      'Amex 2-in-90 rule: at most two credit-card approvals in any 90 days (denials don\'t consume a slot). Charge/hybrid cards are exempt.'
   }
 ]
 

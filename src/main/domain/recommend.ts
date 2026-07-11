@@ -21,10 +21,15 @@ import { personVelocity, type VelocityCardLike } from './velocity'
  *        reserved slots only when spendLastSlots is true
  *  - max_recent_apps_person { months, max }           application pacing per person
  *  - max_recent_apps_business { months, max }         application pacing per business
- *  - max_recent_apps_issuer { issuer, months, max, businessOnly }
+ *  - max_recent_apps_issuer { issuer, months|days, max, businessOnly, creditOnly, approvalsOnly }
  *        per person for one issuer, counting personal AND business
  *        applications together (they share the SSN); businessOnly paces just
- *        the business-card queue (e.g. Chase's ~90-day consensus)
+ *        the business-card queue (Chase ~90-day consensus); creditOnly
+ *        exempts charge/hybrid products and approvalsOnly skips denials
+ *        (Amex 1-in-5 = days:5 max:1 creditOnly, 2-in-90 = days:90 max:2
+ *        creditOnly approvalsOnly)
+ *  - max_open_cards_issuer { issuer, max, creditOnly }  per-person cap on OPEN cards with
+ *        one issuer (Amex five-card rule; charge/hybrid cards exempt)
  *  - max_open_matching { issuer, match, max }          per-person cap on OPEN cards whose
  *        product name matches (e.g. 3 open Inks) — blocks matching offers
  *        until one is closed
@@ -127,6 +132,8 @@ export interface RecommendInput {
     rewardCategory?: RewardCategory
     /** Official issuer application page; the apply link when no referral is stored. */
     applyUrl?: string | null
+    /** Charge / hybrid pay-over-time product — exempt from credit-card-only rules. */
+    isCharge?: boolean
     /** Product's baseline earn rate (percent). */
     earnPct?: number | null
     /** What a referrer earns when this application uses their link. */
@@ -148,6 +155,8 @@ export interface RecommendInput {
     /** Linked product/issuer names — the family_bonus_order rule matches on these. */
     productName?: string | null
     productIssuerName?: string | null
+    /** Charge / hybrid product — doesn't count toward credit-card-only rules. */
+    productIsCharge?: boolean
   })[]
   spendEntries: { amountCents: number; date: string }[]
   /** Signup bonuses on held cards; unfinished ones gate new applications. */
@@ -244,6 +253,13 @@ const dollars = (cents: number): string => `$${Math.round(cents / 100).toLocaleS
 const appDate = (c: { appliedDate: string | null; openedDate: string | null }): string | null =>
   c.appliedDate ?? c.openedDate
 
+/** ISO date ± n days (negative subtracts). */
+function addDaysIso(iso: string, days: number): string {
+  const d = new Date(iso + 'T00:00:00')
+  d.setDate(d.getDate() + days)
+  return toIsoDate(d)
+}
+
 export function recommend(input: RecommendInput): PersonRecommendations[] {
   const { today } = input
 
@@ -265,8 +281,11 @@ export function recommend(input: RecommendInput): PersonRecommendations[] {
     ])
   )
 
+  // Withdrawn applications were never submitted — they don't count toward any
+  // pacing/velocity rule anywhere.
   const recentApps = (cards: RecommendInput['cards'], months: number): string[] =>
     cards
+      .filter((c) => c.status !== 'withdrawn')
       .map(appDate)
       .filter((d): d is string => d != null && d >= monthsAgoIso(months, today))
       .sort()
@@ -287,7 +306,11 @@ export function recommend(input: RecommendInput): PersonRecommendations[] {
       switch (rule.kind) {
         case 'no_duplicate_product': {
           const held = holderCards.some(
-            (c) => c.cardProductId === offer.cardProductId && c.status !== 'rejected' && c.status !== 'closed'
+            (c) =>
+              c.cardProductId === offer.cardProductId &&
+              c.status !== 'rejected' &&
+              c.status !== 'closed' &&
+              c.status !== 'withdrawn'
           )
           if (held) blocks.push({ kind: rule.kind, reason: 'already holds this card', waitUntil: null })
           break
@@ -357,22 +380,65 @@ export function recommend(input: RecommendInput): PersonRecommendations[] {
           // get its own lane.
           const businessOnly = p.businessOnly === true
           if (businessOnly && !offer.isBusiness) break
+          // creditOnly: Amex's velocity rules cover revolving credit cards
+          // only — charge/hybrid products neither trigger nor count.
+          const creditOnly = p.creditOnly === true
+          if (creditOnly && offer.isCharge === true) break
+          // approvalsOnly: 2-in-90 counts approvals, so denied applications
+          // don't consume a slot (1-in-5 paces applications and counts them).
+          const approvalsOnly = p.approvalsOnly === true
+          // The window is days when given (Amex 1-in-5, 2-in-90), else months.
+          const days = p.days != null ? Number(p.days) : null
           const months = Number(p.months ?? 1)
           const max = Number(p.max ?? 1)
           // Business cards carry the applicant's personal guarantee, so the
           // issuer sees every application — personal or under any business —
           // on one profile. Pace them together per person.
-          const apps = recentApps(
-            personCards.filter(
-              (c) => c.productIssuerName === issuer && (!businessOnly || c.businessId != null)
-            ),
-            months
+          const counted = personCards.filter(
+            (c) =>
+              c.status !== 'withdrawn' &&
+              c.productIssuerName === issuer &&
+              (!businessOnly || c.businessId != null) &&
+              (!creditOnly || c.productIsCharge !== true) &&
+              (!approvalsOnly || c.status !== 'rejected')
           )
+          const cutoff = days != null ? addDaysIso(todayIso(today), -days) : monthsAgoIso(months, today)
+          const apps = counted
+            .map(appDate)
+            .filter((d): d is string => d != null && d >= cutoff)
+            .sort()
           if (apps.length >= max) {
+            const windowLabel = days != null ? `${days}d` : `${months} mo`
             blocks.push({
               kind: rule.kind,
-              reason: `${apps.length} ${issuer}${businessOnly ? ' business' : ''} application${apps.length === 1 ? '' : 's'} in ${months} mo across personal + businesses (max ${max})`,
-              waitUntil: addMonthsIso(apps[apps.length - max], months)
+              reason: `${apps.length} ${issuer}${businessOnly ? ' business' : ''}${creditOnly ? ' credit-card' : ''} ${approvalsOnly ? 'approval' : 'application'}${apps.length === 1 ? '' : 's'} in ${windowLabel} across personal + businesses (max ${max})`,
+              waitUntil:
+                days != null
+                  ? addDaysIso(apps[apps.length - max], days + 1)
+                  : addMonthsIso(apps[apps.length - max], months)
+            })
+          }
+          break
+        }
+        case 'max_open_cards_issuer': {
+          const issuer = (p.issuer as string | undefined) ?? 'American Express'
+          if (offer.issuerName !== issuer) break
+          const creditOnly = p.creditOnly !== false // default true: Amex's 5-card rule
+          if (creditOnly && offer.isCharge === true) break
+          const max = Number(p.max ?? 5)
+          // Per person across every holder — personal and business credit
+          // cards share the limit; charge/hybrid cards sit outside it.
+          const open = personCards.filter(
+            (c) =>
+              c.status === 'open' &&
+              c.productIssuerName === issuer &&
+              (!creditOnly || c.productIsCharge !== true)
+          )
+          if (open.length >= max) {
+            blocks.push({
+              kind: rule.kind,
+              reason: `already holds ${open.length} open ${issuer} credit card${open.length === 1 ? '' : 's'} (max ${max}; charge cards exempt) — close one first`,
+              waitUntil: null
             })
           }
           break
@@ -496,7 +562,9 @@ export function recommend(input: RecommendInput): PersonRecommendations[] {
           // Welcome-offer eligibility is per person (Amex doesn't care which
           // business applies), and "have or have had" includes closed cards —
           // only rejected applications never held the card.
-          const everHeld = personCards.filter((c) => c.status !== 'rejected')
+          const everHeld = personCards.filter(
+            (c) => c.status !== 'rejected' && c.status !== 'withdrawn'
+          )
           for (const f of families) {
             const offerTier = familyTier(f, offer.productName, offer.issuerName)
             if (offerTier < 0) continue
@@ -550,6 +618,17 @@ export function recommend(input: RecommendInput): PersonRecommendations[] {
     // Expired offers never qualify.
     if (offer.expires && offer.expires < todayIso(today)) {
       blocks.push({ kind: 'expired', reason: `offer expired ${offer.expires}`, waitUntil: null })
+    }
+
+    // A withdrawn application for this product means the person saw the
+    // issuer's no-bonus warning and backed out — don't recommend it again.
+    // (Delete the withdrawn card to see the offer once eligibility changes.)
+    if (personCards.some((c) => c.cardProductId === offer.cardProductId && c.status === 'withdrawn')) {
+      blocks.push({
+        kind: 'withdrawn',
+        reason: 'application withdrawn before — bonus-ineligible per the issuer',
+        waitUntil: null
+      })
     }
 
     // Referral value needs a STORED LINK owned by a saved person/business —

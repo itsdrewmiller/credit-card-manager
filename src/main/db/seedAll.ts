@@ -2,7 +2,7 @@ import { sql } from 'drizzle-orm'
 import type { DbLike } from './index'
 import { seedIssuers } from './issuers'
 import { seedPointPrograms } from './points'
-import { seedExtraProducts } from './products'
+import { seedExtraProducts, seedChargeCards } from './products'
 import { seedCashbackRates, seedBureauReporting, seedReferralValues } from './cashback'
 import { generateUpcomingBenefits } from './generateBenefits'
 import { seedDefaultRules, seedRuleAdditions } from './rules'
@@ -38,6 +38,8 @@ export function seedAll(db: DbLike, resources: SeedResources): void {
     }
   }
   seedExtraProducts(db)
+  const charge = seedChargeCards(db)
+  if (charge) console.log(`[db] flagged ${charge} Amex charge/hybrid products`)
   const cleaned = dedupeCatalog(db)
   if (cleaned.renamed || cleaned.merged) {
     console.log(`[db] catalog cleanup: ${cleaned.renamed} renamed, ${cleaned.merged} merged`)

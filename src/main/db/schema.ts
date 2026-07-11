@@ -76,6 +76,9 @@ export const cardProduct = sqliteTable(
     // Official issuer page to apply for this product; recommendations link it
     // when no referral link is stored. Fed by the offer CSV's apply_url.
     applyUrl: text('apply_url'),
+    // Charge / hybrid pay-over-time products (Amex Green/Gold/Platinum…):
+    // exempt from Amex's 5-card, 1-in-5, and 2-in-90 credit-card rules.
+    isCharge: integer('is_charge', { mode: 'boolean' }).notNull().default(false),
     notes: text('notes'),
     ...timestamps
   },
