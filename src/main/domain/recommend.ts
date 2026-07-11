@@ -21,6 +21,9 @@ import { personVelocity, type VelocityCardLike } from './velocity'
  *        reserved slots only when spendLastSlots is true
  *  - max_recent_apps_person { months, max }           application pacing per person
  *  - max_recent_apps_business { months, max }         application pacing per business
+ *        (both generic pacing rules skip offers from issuers that have their
+ *        own max_recent_apps_issuer / max_open_cards_issuer rules — they only
+ *        govern issuers whose real rules aren't modeled)
  *  - max_recent_apps_issuer { issuer, months|days, max, businessOnly, creditOnly, approvalsOnly }
  *        per person for one issuer, counting personal AND business
  *        applications together (they share the SSN); businessOnly paces just
@@ -290,6 +293,19 @@ export function recommend(input: RecommendInput): PersonRecommendations[] {
       .filter((d): d is string => d != null && d >= monthsAgoIso(months, today))
       .sort()
 
+  // Issuers whose real application rules are modeled by issuer-specific
+  // rules; the generic person/business pacing rules step aside for their
+  // offers and only govern issuers we don't know the real rules for.
+  const issuersWithOwnRules = new Set(
+    input.rules
+      .filter((r) => r.kind === 'max_recent_apps_issuer' || r.kind === 'max_open_cards_issuer')
+      .map(
+        (r) =>
+          (r.params.issuer as string | undefined) ??
+          (r.kind === 'max_open_cards_issuer' ? 'American Express' : 'Chase')
+      )
+  )
+
   function evaluate(
     offer: RecommendInput['offers'][number],
     personId: number,
@@ -358,6 +374,7 @@ export function recommend(input: RecommendInput): PersonRecommendations[] {
           break
         }
         case 'max_recent_apps_person': {
+          if (offer.issuerName != null && issuersWithOwnRules.has(offer.issuerName)) break
           const months = Number(p.months ?? 3)
           const max = Number(p.max ?? 2)
           // Personal applications only — business apps are paced per business.
@@ -467,6 +484,7 @@ export function recommend(input: RecommendInput): PersonRecommendations[] {
         }
         case 'max_recent_apps_business': {
           if (businessId == null) break
+          if (offer.issuerName != null && issuersWithOwnRules.has(offer.issuerName)) break
           const months = Number(p.months ?? 6)
           const max = Number(p.max ?? 2)
           const apps = recentApps(input.cards.filter((c) => c.businessId === businessId), months)

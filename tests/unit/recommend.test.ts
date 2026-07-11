@@ -539,6 +539,48 @@ describe('monthly spend projection', () => {
     })
   })
 
+  describe('generic pacing defers to issuer-specific rules', () => {
+    const rich = { spendEntries: [], monthlySpendCents: 10000000 }
+    // Two recent personal applications — generic pacing (max 2/3mo) is full.
+    const twoApps = [1, 2].map((i) => ({
+      id: i,
+      cardProductId: 900 + i,
+      ownerPersonId: 1,
+      businessId: null,
+      appliedDate: '2026-06-15',
+      openedDate: '2026-06-15',
+      status: 'open',
+      productName: `Card ${i}`,
+      productIssuerName: 'Citi'
+    }))
+    const AMEX_HILTON = {
+      id: 50,
+      cardProductId: 800,
+      productName: 'Hilton Honors',
+      issuerName: 'American Express',
+      isBusiness: false,
+      isCharge: false,
+      valueCents: 80000,
+      minSpendCents: 100000,
+      windowMonths: 6,
+      expires: null
+    }
+
+    it('skips offers from issuers that have their own rules, still governs the rest', () => {
+      const rules = [
+        { kind: 'max_recent_apps_person', params: { months: 3, max: 2 } },
+        // Amex has its own modeled rules; the last app was >5d ago so they pass.
+        { kind: 'max_recent_apps_issuer', params: { issuer: 'American Express', days: 5, max: 1, creditOnly: true } }
+      ]
+      const [drew] = recommend(base({ ...rich, offers: [CSR, AMEX_HILTON], cards: twoApps, rules }))
+      // Chase has no issuer rule in THIS rule set -> generic pacing blocks it.
+      const csp = drew.blocked.find((c) => c.label.includes('Sapphire'))!
+      expect(csp.blocks[0].kind).toBe('max_recent_apps_person')
+      // Amex is covered by its own rule -> generic pacing steps aside.
+      expect(drew.recommended.map((c) => c.label)).toContain('American Express Hilton Honors')
+    })
+  })
+
   describe('withdrawn applications', () => {
     const rich = { spendEntries: [], monthlySpendCents: 10000000 }
     const withdrawnCsp = {

@@ -35,13 +35,13 @@ const KINDS: { value: string; label: string; hint: string; example: string }[] =
   {
     value: 'max_recent_apps_person',
     label: 'Application pacing (person)',
-    hint: 'At most N applications per person in a trailing window.',
+    hint: 'At most N applications per person in a trailing window. Skips issuers that have their own issuer-specific rules (Chase, Amex) — this only governs banks whose real rules aren\'t modeled.',
     example: '{"months": 3, "max": 2}'
   },
   {
     value: 'max_recent_apps_business',
     label: 'Application pacing (business)',
-    hint: 'At most N applications per business in a trailing window.',
+    hint: 'At most N applications per business in a trailing window. Skips issuers that have their own issuer-specific rules (Chase, Amex) — this only governs banks whose real rules aren\'t modeled.',
     example: '{"months": 6, "max": 2}'
   },
   {

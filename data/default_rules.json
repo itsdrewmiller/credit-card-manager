@@ -1,42 +1,68 @@
 [
   {
     "kind": "no_duplicate_product",
-    "params": { "scope": "holder" },
+    "params": {
+      "scope": "holder"
+    },
     "notes": "Skip offers for a product this person/business already holds (open or applied)."
   },
   {
     "kind": "under_524",
-    "params": { "issuers": ["Chase"] },
-    "notes": "Chase auto-declines at 5/24 — don't recommend Chase cards to anyone at or over."
+    "params": {
+      "issuers": [
+        "Chase"
+      ]
+    },
+    "notes": "Chase auto-declines at 5/24 \u2014 don't recommend Chase cards to anyone at or over."
   },
   {
     "kind": "reserve_524_slots",
-    "params": { "slots": 1, "forIssuers": ["Chase"], "spendLastSlots": false },
+    "params": {
+      "slots": 1,
+      "forIssuers": [
+        "Chase"
+      ],
+      "spendLastSlots": false
+    },
     "notes": "Never recommend a card that would reach 5/24. Set spendLastSlots true to let Chase use the reserved slot."
   },
   {
     "kind": "max_recent_apps_person",
-    "params": { "months": 3, "max": 2 },
-    "notes": "Pace personal applications: at most 2 in any trailing 3 months."
+    "params": {
+      "months": 3,
+      "max": 2
+    },
+    "notes": "Pace personal applications: at most 2 in any trailing 3 months. Only applies to issuers without their own issuer-specific rules (Chase and Amex are governed by their real rules)."
   },
   {
     "kind": "max_recent_apps_business",
-    "params": { "months": 6, "max": 2 },
-    "notes": "Pace applications per business: at most 2 in any trailing 6 months."
+    "params": {
+      "months": 6,
+      "max": 2
+    },
+    "notes": "Pace applications per business: at most 2 in any trailing 6 months. Only applies to issuers without their own issuer-specific rules (Chase and Amex are governed by their real rules)."
   },
   {
     "kind": "min_spend_capacity",
-    "params": { "lookbackMonths": 3, "buffer": 1 },
+    "params": {
+      "lookbackMonths": 3,
+      "buffer": 1
+    },
     "notes": "The bonus min-spend must fit your tracked monthly spend rate over the offer window."
   },
   {
     "kind": "finish_open_bonuses",
-    "params": { "maxOpenMonths": 2, "lookbackMonths": 3 },
+    "params": {
+      "maxOpenMonths": 2,
+      "lookbackMonths": 3
+    },
     "notes": "Don't open anything while 2+ months of min-spend (at the tracked pace) remain on current bonuses."
   },
   {
     "kind": "min_bonus_value",
-    "params": { "minCents": 30000 },
+    "params": {
+      "minCents": 30000
+    },
     "notes": "Skip bonuses worth less than $300."
   }
 ]
