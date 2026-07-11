@@ -44,14 +44,16 @@ function bonusText(c: Candidate): string {
 
 function WhoCell({ c }: { c: Candidate }): React.ReactElement {
   return (
-    <Group gap={6} wrap="nowrap">
+    <>
       <Text size="sm">{c.personName}</Text>
       {c.isBusiness && (
-        <Badge size="xs" variant="light" color="grape">
+        // Own line under the name so the business is readable; only names
+        // longer than the column ellipsize.
+        <Badge size="xs" variant="light" color="grape" mt={2} display="block" style={{ maxWidth: 160 }}>
           {c.businessName ?? 'business'}
         </Badge>
       )}
-    </Group>
+    </>
   )
 }
 
@@ -396,7 +398,7 @@ function CombinedResults({ results }: { results: PersonResult[] }): React.ReactE
                   wrap="nowrap"
                 >
                   <div>
-                    <Group gap={6} wrap="nowrap">
+                    <Group gap={6}>
                       <Text size="sm" fw={500}>
                         {c.label}
                       </Text>
