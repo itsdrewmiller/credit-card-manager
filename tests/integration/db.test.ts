@@ -110,7 +110,6 @@ describe('database + router integration', () => {
       cardId: c.id,
       targetSpendCents: 400000,
       spendSoFarCents: 100000,
-      startDate: '2026-01-01',
       deadline: '2026-04-01'
     })
     // Inline edits set a new total; the router turns that into a delta entry.

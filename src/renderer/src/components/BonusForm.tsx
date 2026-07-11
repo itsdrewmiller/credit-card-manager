@@ -16,7 +16,6 @@ export interface BonusFormValue {
   cashAmountCents: number | null
   targetSpendCents: number | null
   spendSoFarCents: number
-  startDate: string | null
   deadline: string | null
   received: boolean
   receivedDate: string | null
@@ -27,6 +26,8 @@ export interface BonusFormValue {
 interface Option {
   value: string
   label: string
+  /** The card's open date — the bonus window always starts there. */
+  openedDate?: string | null
 }
 
 export function BonusForm({
@@ -54,9 +55,8 @@ export function BonusForm({
       cashAmountDollars: centsToDollars(initial?.cashAmountCents),
       targetSpendDollars: centsToDollars(initial?.targetSpendCents),
       spendSoFarDollars: centsToDollars(initial?.spendSoFarCents) || 0,
-      startDate: isoToDate(initial?.startDate),
       deadline: isoToDate(initial?.deadline),
-      windowDays: daysBetween(isoToDate(initial?.startDate), isoToDate(initial?.deadline)) ?? ('' as number | ''),
+      windowDays: daysBetween(isoToDate(initial?.card?.openedDate), isoToDate(initial?.deadline)) ?? ('' as number | ''),
       received: initial?.received ?? false,
       receivedDate: isoToDate(initial?.receivedDate),
       referralBonus: initial?.referralBonus ?? '',
@@ -65,24 +65,29 @@ export function BonusForm({
     validate: { cardId: (v) => (v ? null : 'Card is required') }
   })
 
-  // The spend window (in days) drives the deadline: deadline = (start || today) + window.
-  const applyWindow = (start: Date | null, days: number | ''): void => {
-    if (days === '') return
-    form.setFieldValue('deadline', addDays(start ?? new Date(), Number(days)))
-  }
+  // The window always starts at the card's open date (today until one is set).
+  const windowStart = (cardId: string): Date | null =>
+    isoToDate(cardOptions.find((o) => o.value === cardId)?.openedDate) ?? new Date()
+
+  // The spend window (in days) drives the deadline: deadline = open date + window.
   const onWindowChange = (value: number | string): void => {
     const days = value === '' ? '' : Number(value)
     form.setFieldValue('windowDays', days)
-    applyWindow(form.values.startDate, days)
+    if (days !== '') {
+      form.setFieldValue('deadline', addDays(windowStart(form.values.cardId), Number(days)))
+    }
   }
-  const onStartChange = (date: Date | null): void => {
-    form.setFieldValue('startDate', date)
-    applyWindow(date, form.values.windowDays)
+  // Switching cards moves the window start, so re-derive the window field.
+  const onCardChange = (cardId: string | null): void => {
+    form.setFieldValue('cardId', cardId ?? '')
+    if (cardId && form.values.deadline) {
+      form.setFieldValue('windowDays', daysBetween(windowStart(cardId), form.values.deadline) ?? '')
+    }
   }
   // Editing the deadline by hand keeps the window field in sync.
   const onDeadlineChange = (date: Date | null): void => {
     form.setFieldValue('deadline', date)
-    form.setFieldValue('windowDays', daysBetween(form.values.startDate, date) ?? '')
+    form.setFieldValue('windowDays', daysBetween(windowStart(form.values.cardId), date) ?? '')
   }
 
   const isCash = form.values.rewardKind === 'cash'
@@ -102,7 +107,6 @@ export function BonusForm({
       cashAmountCents: isCash ? parseCents(v.cashAmountDollars) : null,
       targetSpendCents: parseCents(v.targetSpendDollars),
       spendSoFarCents: parseCents(v.spendSoFarDollars) ?? 0,
-      startDate: dateToIso(v.startDate),
       deadline: dateToIso(v.deadline),
       received: v.received,
       receivedDate: dateToIso(v.receivedDate),
@@ -119,6 +123,7 @@ export function BonusForm({
         data={cardOptions}
         searchable
         {...form.getInputProps('cardId')}
+        onChange={onCardChange}
         mb="sm"
       />
       <Select
@@ -185,17 +190,10 @@ export function BonusForm({
           {...form.getInputProps('spendSoFarDollars')}
         />
       </SimpleGrid>
-      <SimpleGrid cols={{ base: 1, sm: 3 }} mb="sm">
-        <DateInput
-          label="Start"
-          valueFormat="YYYY-MM-DD"
-          clearable
-          value={form.values.startDate}
-          onChange={onStartChange}
-        />
+      <SimpleGrid cols={{ base: 1, sm: 2 }} mb="sm">
         <NumberInput
           label="Window (days)"
-          description="Sets the deadline"
+          description="Sets the deadline from the card's open date"
           min={0}
           value={form.values.windowDays}
           onChange={onWindowChange}

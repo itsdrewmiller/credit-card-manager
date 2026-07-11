@@ -24,9 +24,14 @@ export function useBusinessOptions(): SelectOption[] {
   return (businesses.data ?? []).map((b) => ({ value: String(b.id), label: b.name }))
 }
 
-export function useCardOptions(): SelectOption[] {
+export function useCardOptions(): (SelectOption & { openedDate: string | null })[] {
   const cards = trpc.cards.list.useQuery()
-  return (cards.data ?? []).map((c) => ({ value: String(c.id), label: cardSelectLabel(c) }))
+  return (cards.data ?? []).map((c) => ({
+    value: String(c.id),
+    label: cardSelectLabel(c),
+    // Bonus windows open with the card, so pickers can anchor date math on it.
+    openedDate: c.openedDate
+  }))
 }
 
 export function useProgramOptions(): (SelectOption & { valuationCpp: number | null })[] {

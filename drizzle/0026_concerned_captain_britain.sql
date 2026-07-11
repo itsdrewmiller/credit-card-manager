@@ -1,0 +1,1 @@
+ALTER TABLE `signup_bonus` DROP COLUMN `start_date`;

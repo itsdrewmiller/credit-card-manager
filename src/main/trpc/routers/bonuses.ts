@@ -18,7 +18,6 @@ function recordSpendDelta(db: DbLike, bonusId: number, deltaCents: number, date:
 const upsert = z.object({
   cardId: z.number().int(),
   targetSpendCents: z.number().int().nullish(),
-  startDate: z.string().nullish(),
   deadline: z.string().nullish(),
   spendSoFarCents: z.number().int().default(0),
   rewardKind: z.enum(REWARD_KINDS).nullish(),
@@ -39,6 +38,7 @@ const withRelations = {
 function enrich<
   T extends {
     pointProgram?: { valuationCpp: number | null } | null
+    card?: { openedDate: string | null } | null
     cashAmountCents: number | null
     pointsAmount: number | null
     targetSpendCents: number | null

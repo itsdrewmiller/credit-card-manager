@@ -93,12 +93,12 @@ export const reportsRouter = router({
         cashbackPct: e.bonus?.card?.product?.defaultCashbackPct ?? null
       }))
     const bonuses = ctx.db.query.signupBonus
-      .findMany({ with: { pointProgram: true } })
+      .findMany({ with: { pointProgram: true, card: { columns: { openedDate: true } } } })
       .sync()
       .map((b) => ({
         received: b.received,
         receivedDate: b.receivedDate,
-        startDate: b.startDate,
+        cardOpenedDate: b.card?.openedDate ?? null,
         cashAmountCents: b.cashAmountCents,
         pointsAmount: b.pointsAmount,
         valuationCpp: b.pointProgram?.valuationCpp ?? null

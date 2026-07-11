@@ -18,10 +18,10 @@ import { addMonthsIso, todayIso } from '@shared/dates'
  * of its history, and waived/refunded fees aren't modeled.
  *
  * The report window opens on Jan 1 of the year the first tracked bonus starts
- * (its startDate, else receivedDate) — card history predates bonus tracking,
- * and counting years of synthesized fees against returns that were never
- * recorded would just report noise. With no dated bonuses the window is
- * unbounded.
+ * (its card's openedDate — the spend window always opens with the card — else
+ * receivedDate) — card history predates bonus tracking, and counting years of
+ * synthesized fees against returns that were never recorded would just report
+ * noise. With no dated bonuses the window is unbounded.
  */
 
 export interface MonthRow {
@@ -43,8 +43,8 @@ export interface ReportInput {
   bonuses: {
     received: boolean
     receivedDate: string | null
-    /** Bonus window start; anchors the report window. */
-    startDate?: string | null
+    /** The bonus's card open date (= bonus window start); anchors the report window. */
+    cardOpenedDate?: string | null
     cashAmountCents: number | null
     pointsAmount: number | null
     valuationCpp: number | null
@@ -106,7 +106,7 @@ function nextMonth(month: string): string {
 
 export function buildReport(input: ReportInput, today = todayIso()): ReportOverview {
   const firstBonusDate = input.bonuses
-    .map((b) => b.startDate ?? b.receivedDate)
+    .map((b) => b.cardOpenedDate ?? b.receivedDate)
     .filter((d): d is string => d != null)
     .sort()[0]
   const startMonth = firstBonusDate ? `${firstBonusDate.slice(0, 4)}-01` : null

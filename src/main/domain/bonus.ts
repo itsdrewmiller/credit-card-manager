@@ -7,7 +7,7 @@ import { daysUntil, isoToDate } from '@shared/dates'
  * - on_track: spend fraction >= elapsed-time fraction of the window
  * - behind: spending slower than the window is elapsing
  * - overdue: deadline passed without meeting the target
- * - unknown: not enough data (no target, no deadline, or no start date)
+ * - unknown: not enough data (no target, no deadline, or no card open date)
  */
 export type BonusPace = 'met' | 'on_track' | 'behind' | 'overdue' | 'unknown'
 
@@ -26,7 +26,8 @@ interface BonusLike {
   pointsAmount?: number | null
   targetSpendCents?: number | null
   spendSoFarCents?: number | null
-  startDate?: string | null
+  /** The spend window always opens when the card is opened. */
+  card?: { openedDate?: string | null } | null
   deadline?: string | null
 }
 
@@ -37,7 +38,7 @@ function paceOf(b: BonusLike, spendMet: boolean, today: Date): BonusPace {
   const daysLeft = daysUntil(b.deadline, today)
   if (daysLeft == null) return 'unknown'
   if (daysLeft < 0) return 'overdue'
-  const startDate = isoToDate(b.startDate)
+  const startDate = isoToDate(b.card?.openedDate)
   const endDate = isoToDate(b.deadline)
   if (!startDate || !endDate) return 'unknown'
   const start = startDate.getTime()

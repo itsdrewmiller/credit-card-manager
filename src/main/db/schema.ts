@@ -211,7 +211,7 @@ export const signupBonus = sqliteTable(
       .references(() => card.id, { onDelete: 'cascade' }),
 
     targetSpendCents: integer('target_spend_cents'),
-    startDate: text('start_date'),
+    // The spend window opens when the card is opened (card.openedDate).
     deadline: text('deadline'),
     spendSoFarCents: integer('spend_so_far_cents').notNull().default(0),
 

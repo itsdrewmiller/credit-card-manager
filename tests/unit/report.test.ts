@@ -193,7 +193,7 @@ describe('buildReport', () => {
           {
             received: false,
             receivedDate: null,
-            startDate: '2026-05-24',
+            cardOpenedDate: '2026-05-24',
             cashAmountCents: 50000,
             pointsAmount: null,
             valuationCpp: null
